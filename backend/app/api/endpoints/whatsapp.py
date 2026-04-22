@@ -19,6 +19,10 @@ class WhatsAppMessageRequest(BaseModel):
     to: str
     message: str
 
+class ChatDirectRequest(BaseModel):
+    to: str
+    message: str
+
 
 class WhatsAppTemplateRequest(BaseModel):
     to: str
@@ -176,6 +180,17 @@ async def receive_whatsapp_webhook(
                         message.is_read = True
                     elif status_val == "failed":
                         message.is_delivered = False
+                        if errors:
+                            import json
+                            meta_data = {}
+                            if message.meta:
+                                try:
+                                    meta_data = json.loads(message.meta)
+                                except:
+                                    pass
+                            meta_data["errors"] = errors
+                            message.meta = json.dumps(meta_data)
+                            logger.error(f"Message {wa_msg_id} failed with errors: {errors}")
                     db.commit()
                     logger.info(f"Updated message {wa_msg_id} status to {status_val}")
 
@@ -204,16 +219,87 @@ def get_message_statuses(
         elif msg.is_delivered:
             status_val = "delivered"
         elif msg.wa_message_id:
-            status_val = "sent"
+            # Check meta for errors to know if it failed
+            import json
+            meta_data = {}
+            if msg.meta:
+                try:
+                    meta_data = json.loads(msg.meta)
+                except:
+                    pass
+            if "errors" in meta_data:
+                status_val = "failed"
+            else:
+                status_val = "sent"
         
+        error_code = None
+        error_message = None
+        if status_val == "failed" and msg.meta:
+            import json
+            try:
+                meta_data = json.loads(msg.meta)
+                errors = meta_data.get("errors", [])
+                if errors:
+                    error_code = str(errors[0].get("code", ""))
+                    error_message = errors[0].get("message", "Unknown error")
+                    error_details = errors[0].get("error_data", {}).get("details", "")
+                    if error_details:
+                        error_message += f" - {error_details}"
+            except:
+                pass
+
         statuses.append(MessageStatusResponse(
             wa_message_id=msg.wa_message_id or "",
             status=status_val,
             timestamp=msg.created_at.replace(tzinfo=timezone.utc),
-            recipient_id=msg.wa_from
+            recipient_id=msg.wa_from,
+            error_code=error_code,
+            error_message=error_message
         ))
 
     return {"total": len(statuses), "statuses": statuses}
+
+@router.get("/failed-messages")
+def get_failed_messages(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    """Consultar mensagens que falharam com detalhes do erro"""
+    messages = db.query(Message).filter(
+        Message.wa_message_id.isnot(None),
+        Message.meta.like('%"errors"%')
+    ).order_by(Message.created_at.desc()).offset(skip).limit(limit).all()
+
+    failed = []
+    for msg in messages:
+        import json
+        error_code = None
+        error_message = None
+        if msg.meta:
+            try:
+                meta_data = json.loads(msg.meta)
+                errors = meta_data.get("errors", [])
+                if errors:
+                    error_code = str(errors[0].get("code", ""))
+                    error_message = errors[0].get("message", "Unknown error")
+                    error_details = errors[0].get("error_data", {}).get("details", "")
+                    if error_details:
+                        error_message += f" - {error_details}"
+            except:
+                pass
+        
+        failed.append({
+            "wa_message_id": msg.wa_message_id,
+            "content": msg.content,
+            "to": msg.wa_from,
+            "error_code": error_code,
+            "error_message": error_message,
+            "timestamp": msg.created_at.replace(tzinfo=timezone.utc)
+        })
+
+    return {"total": len(failed), "failed_messages": failed}
+
 
 
 @router.post("/send")
@@ -316,4 +402,65 @@ async def send_whatsapp_template(
         return {"status": "success", "data": result}
     except Exception as e:
         logger.error(f"Error sending template: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/chat-direct")
+async def chat_direct(
+    request: ChatDirectRequest,
+    db: Session = Depends(get_db)
+):
+    """Endpoint for testing the RAG bot directly from the frontend, bypassing WhatsApp Meta API."""
+    logger.info(f"Direct chat received from {request.to}: {request.message}")
+    
+    wa_from = request.to
+    content = request.message
+    
+    # Same logic as webhook for saving the user's message
+    patient = db.query(Patient).filter(Patient.whatsapp == wa_from).first()
+
+    if not patient:
+        patient = Patient(
+            name=f"App User {wa_from[-4:]}",
+            phone=wa_from,
+            whatsapp=wa_from
+        )
+        db.add(patient)
+        db.commit()
+        db.refresh(patient)
+
+    db_message = Message(
+        patient_id=patient.id,
+        content=content,
+        message_type="text",
+        source="whatsapp", # Pretend it's from whatsapp so it shows up similarly
+        wa_message_id=f"simulated_{datetime.now().timestamp()}",
+        wa_from=wa_from,
+        is_delivered=True
+    )
+    db.add(db_message)
+    db.commit()
+
+    # Get AI response
+    try:
+        from app.services.ai_service import ai_service
+        ai_response = await ai_service.get_ai_response(content)
+        
+        bot_message = Message(
+            patient_id=patient.id,
+            content=ai_response,
+            message_type="text",
+            source="bot",
+            wa_from=settings.WHATSAPP_PHONE_NUMBER_ID or "BOT",
+            wa_message_id=f"simulated_resp_{datetime.now().timestamp()}",
+            is_delivered=True
+        )
+        db.add(bot_message)
+        db.commit()
+        
+        return {
+            "status": "success", 
+            "response": ai_response
+        }
+    except Exception as e:
+        logger.error(f"Error generating AI response in direct chat: {e}")
         raise HTTPException(status_code=500, detail=str(e))
