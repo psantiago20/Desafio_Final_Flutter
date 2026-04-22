@@ -12,6 +12,7 @@ from app.models.service import Service
 from app.api.endpoints.auth import get_current_user
 from app.models.user import User
 from pydantic import BaseModel
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -114,3 +115,22 @@ def get_upcoming_appointments(
         Appointment.status == "pending"
     ).order_by(Appointment.appointment_date).limit(limit).all()
     return appointments
+
+
+@router.get("/system-status")
+def get_system_status():
+    # Verifica se as credenciais basicas estao configuradas
+    whatsapp_status = "Conectado" if settings.WHATSAPP_PHONE_NUMBER_ID and settings.WHATSAPP_ACCESS_TOKEN else "Desconectado"
+    
+    # Obtem a IA configurada baseada no AIService
+    if settings.NVIDIA_API_KEY:
+        ia_engine = "Nvidia (Llama 3.1)"
+    elif settings.OLLAMA_MODEL:
+        ia_engine = f"Ollama ({settings.OLLAMA_MODEL})"
+    else:
+        ia_engine = "Nenhuma IA configurada"
+    
+    return {
+        "whatsapp_status": whatsapp_status,
+        "ia_engine": ia_engine
+    }
