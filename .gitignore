@@ -58,4 +58,6 @@ build/
 
 # Operating System
 .DS_Store
-Thumbs.db
+Thumbs.dbsqlite3
+*.db
+*.sqlite3
