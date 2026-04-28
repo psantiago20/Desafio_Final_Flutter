@@ -214,11 +214,23 @@ class RAGService:
                 Medico.whatsapp == wa_to, Medico.ativo == True
             ).first()
             if medico:
+                import json
+                convenios_lista = []
+                if medico.convenios:
+                    try:
+                        convenios_lista = json.loads(medico.convenios)
+                    except:
+                        convenios_lista = [medico.convenios]
+
                 return {
                     "id": medico.id,
                     "nome": medico.nome_completo,
                     "cidade": getattr(medico, "cidade", None),
+                    "endereco": getattr(medico, "endereco", "Não informado"),
                     "especialidade": medico.especialidade,
+                    "telefone": medico.telefone,
+                    "valor_consulta": medico.valor_consulta,
+                    "convenios": convenios_lista
                 }
         except Exception as e:
             logger.error(f"Erro ao buscar médico para boas-vindas: {e}")
@@ -354,7 +366,7 @@ class RAGService:
                 logger.info(f"CPF já coletado para {wa_from}, prosseguindo com operação '{operacao}'")
                 # Injetar CPF no query para o agente usar
                 enriched_query = f"{query} (CPF do paciente: {cpf_existente})"
-                response = await self._run_agent_pipeline(enriched_query, doctor_id, db, top_k)
+                response = await self._run_agent_pipeline(enriched_query, doc_info, db, top_k)
                 return response + get_footer_message()
             else:
                 # Precisa coletar CPF primeiro
@@ -369,7 +381,7 @@ class RAGService:
         else:
             enriched_query = query
 
-        response = await self._run_agent_pipeline(enriched_query, doctor_id, db, top_k)
+        response = await self._run_agent_pipeline(enriched_query, doc_info, db, top_k)
         return response + get_footer_message()
 
     # ------------------------------------------------------------------ #
@@ -423,7 +435,7 @@ class RAGService:
     async def _run_agent_pipeline(
         self,
         query: str,
-        doctor_id: Optional[int],
+        doc_info: Optional[dict],
         db,
         top_k: int = 5
     ) -> str:
@@ -434,16 +446,27 @@ class RAGService:
         2. Se LLM responde com tool_calls → executa tools → envia resultados de volta
         3. Repete até LLM dar resposta final (ou atingir MAX_TOOL_ITERATIONS)
         """
-        logger.info(f"Agent Pipeline Core: query='{query[:80]}' doctor_id={doctor_id}")
+        logger.info(f"Agent Pipeline Core: query='{query[:80]}'")
 
         if not self.api_key:
+            doctor_id = doc_info["id"] if doc_info else None
             return self._fallback_without_llm(query, doctor_id, db)
 
         # Montar system prompt com contexto do médico (se identificado)
         system_content = AGENT_SYSTEM_PROMPT
-        if doctor_id:
-            system_content += f"\n\nContexto: O paciente está conversando pelo WhatsApp do médico com ID={doctor_id}. "
-            system_content += "Use este ID nas ferramentas quando necessário.\n"
+        if doc_info:
+            convs = ', '.join(doc_info['convenios']) if doc_info.get('convenios') else 'Nenhum'
+            system_content += f"\n\n--- DADOS DO MÉDICO ATUAL ---\n"
+            system_content += f"Você é o assistente virtual do(a) {doc_info['nome']}.\n"
+            system_content += f"Especialidade: {doc_info['especialidade']}\n"
+            system_content += f"Endereço: {doc_info['endereco']} - {doc_info.get('cidade', '')}\n"
+            system_content += f"Telefone da clínica: {doc_info['telefone']}\n"
+            system_content += f"Valor da consulta: R$ {doc_info['valor_consulta']}\n"
+            system_content += f"Convênios aceitos: {convs}\n"
+            system_content += f"Horário de atendimento: Segunda a Sexta, das 08:00 às 18:00\n"
+            system_content += "\nREGRAS DE CONTEXTO:\n"
+            system_content += "- Use os dados acima para responder diretamente perguntas sobre endereço, especialidade, horários padrões, preço e convênios (não precisa usar ferramenta para isso).\n"
+            system_content += f"- Para buscar a agenda e horários livres/ocupados do médico, use a ferramenta buscar_horarios passando medico_id={doc_info['id']}.\n"
 
         # Histórico de mensagens para o loop
         messages = [
