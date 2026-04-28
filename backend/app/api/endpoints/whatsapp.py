@@ -113,11 +113,19 @@ async def receive_whatsapp_webhook(
 
             logger.info(f"Message saved from {wa_from}")
 
-            # --- INTEGRAÇÃO IA RAG ---
-            # Gerar resposta inteligente
+            # --- INTEGRAÇÃO RAG (Retrieval-Augmented Generation) ---
+            # Identificar o médico pelo phone_number_id do webhook
             try:
-                from app.services.ai_service import ai_service
-                ai_response = await ai_service.get_ai_response(content)
+                from app.services.rag_service import rag_service
+                from app.services.doctor_mapper import doctor_mapper
+
+                # Extrair phone_number_id do payload da Meta
+                phone_number_id = value.get("metadata", {}).get("phone_number_id", "")
+                doctor = doctor_mapper.get_doctor_by_phone_number_id(phone_number_id, db)
+                doctor_id = doctor.id if doctor else None
+
+                # Pipeline RAG: FAQ (ChromaDB) + dados do médico (PostgreSQL) → LLM
+                ai_response = await rag_service.get_rag_response(content, doctor_id, db)
                 
                 # Salvar resposta do Bot no banco
                 bot_message = Message(
@@ -130,7 +138,7 @@ async def receive_whatsapp_webhook(
                 )
                 db.add(bot_message)
                 db.commit()
-                logger.info(f"AI response generated and saved for {wa_from}")
+                logger.info(f"RAG response generated and saved for {wa_from} (doctor_id={doctor_id})")
 
                 # Tentar enviar de volta via WhatsApp (Bot -> User)
                 try:
@@ -141,7 +149,7 @@ async def receive_whatsapp_webhook(
                         wa_msg_id_sent = send_result["messages"][0].get("id")
                         bot_message.wa_message_id = wa_msg_id_sent
                         db.commit()
-                        logger.info(f"AI response successfully sent and ID tracked: {wa_msg_id_sent}")
+                        logger.info(f"RAG response successfully sent and ID tracked: {wa_msg_id_sent}")
                     
                 except Exception as e:
                     import json
@@ -152,11 +160,11 @@ async def receive_whatsapp_webhook(
                             error_msg = error_data.get("error", {}).get("message", error_msg)
                         except:
                             error_msg = e.response.text
-                    logger.error(f"Failed to send AI response back via WhatsApp: {error_msg}")
+                    logger.error(f"Failed to send RAG response back via WhatsApp: {error_msg}")
 
 
             except Exception as e:
-                logger.error(f"Error generating AI response: {e}")
+                logger.error(f"Error generating RAG response: {e}")
             # --------------------------
 
         # Processar status de entrega (sent, delivered, read, failed)
@@ -440,10 +448,11 @@ async def chat_direct(
     db.add(db_message)
     db.commit()
 
-    # Get AI response
+    # Get RAG response
     try:
-        from app.services.ai_service import ai_service
-        ai_response = await ai_service.get_ai_response(content)
+        from app.services.rag_service import rag_service
+        # Para chat direto, usar doctor_id=None (busca apenas global) ou parametrizar
+        ai_response = await rag_service.get_rag_response(content, doctor_id=None, db=db)
         
         bot_message = Message(
             patient_id=patient.id,
@@ -462,5 +471,5 @@ async def chat_direct(
             "response": ai_response
         }
     except Exception as e:
-        logger.error(f"Error generating AI response in direct chat: {e}")
+        logger.error(f"Error generating RAG response in direct chat: {e}")
         raise HTTPException(status_code=500, detail=str(e))
