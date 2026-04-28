@@ -5,8 +5,8 @@ import logging
 
 from app.core.config import settings
 from app.db.database import engine
-from app.models import user, patient, appointment, message, service, doctor_profile
-from app.api.endpoints import auth, patients, appointments, messages, dashboard, finance, whatsapp, chat, test_notifications, rag
+from app.models import user, patient, appointment, message, service, doctor_profile, medico
+from app.api.endpoints import auth, patients, appointments, messages, dashboard, finance, whatsapp, chat, test_notifications, rag, simulator_admin
 
 # Configuração de Logging
 logging.basicConfig(
@@ -41,6 +41,7 @@ app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(whatsapp.router, prefix="/webhook", tags=["whatsapp-webhook"])
 app.include_router(test_notifications.router, prefix="/api/test", tags=["test"])
 app.include_router(rag.router, prefix="/api/rag", tags=["rag"])
+app.include_router(simulator_admin.router, prefix="/api/simulator", tags=["simulator"])
 
 
 @app.get("/")
@@ -51,3 +52,18 @@ def root():
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+
+# Servir arquivos estáticos (simulador de chat)
+import os
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
+
+static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+@app.get("/chat")
+def chat_simulator_redirect():
+    """Redireciona para o simulador de chat"""
+    return RedirectResponse(url="/static/chat_simulator.html")

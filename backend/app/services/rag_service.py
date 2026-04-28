@@ -1,12 +1,27 @@
 """
-rag_service.py — Serviço core do RAG (Retrieval-Augmented Generation)
+rag_service.py — Agente de IA com Tool Calling + Gerenciamento de Conversa
 
-Pipeline completo:
-1. Recebe pergunta do paciente + doctor_id
-2. Busca contexto semântico na FAQ (ChromaDB)
-3. Busca dados do médico no PostgreSQL (horários, serviços, etc.)
-4. Monta prompt enriquecido e chama a LLM (NVIDIA Nim)
-5. Retorna resposta contextualizada
+Fluxo do agente (baseado no diagrama de arquitetura):
+
+    Paciente → É primeira interação ou inativo > 1h?
+                    │ Sim                        │ Não
+                    ▼                            ▼
+              Boas-vindas                   Precisa de CPF?
+           (nome + cidade                  (agendamento, cancelamento,
+            do médico)                      consulta de agendamentos)
+                                               │ Sim        │ Não
+                                               ▼            ▼
+                                          Pedir CPF     Agente de IA
+                                               │        (Tool Calling)
+                                               ▼            │
+                                          Validar CPF       │
+                                               │            │
+                                               ▼            ▼
+                                          Executar       Resposta ao
+                                          operação       paciente
+
+O agente usa Tool Calling nativo do Llama 3.1 via NVIDIA Nim para
+decidir QUANDO e QUAL tool chamar baseado na pergunta do paciente.
 """
 
 import json
@@ -18,6 +33,17 @@ import httpx
 import chromadb
 
 from app.core.config import settings
+from app.services.agent_tools import TOOLS_DEFINITIONS, execute_tool
+from app.services.conversation_state import (
+    conversation_manager, validate_cpf, looks_like_cpf
+)
+from app.services.standard_messages import (
+    get_welcome_message, get_welcome_message_without_doctor,
+    get_cpf_request_message, get_cpf_invalid_message,
+    get_cpf_confirmed_message, get_cpf_not_found_message,
+    detect_cpf_required_intent, get_help_duvidas_message,
+    get_help_exames_message, get_footer_message, get_menu_message
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +52,40 @@ CHROMA_PERSIST_DIR = os.environ.get(
     os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "chroma_data")
 )
 
+# Número máximo de iterações de tool calling (evitar loops infinitos)
+MAX_TOOL_ITERATIONS = 3
+
+# System prompt do agente
+AGENT_SYSTEM_PROMPT = (
+    "Você é o assistente virtual do OmniConnect, uma plataforma de gestão médica. "
+    "Você ajuda pacientes via WhatsApp a:\n"
+    "- Agendar consultas e exames\n"
+    "- Tirar dúvidas sobre preparos de exames\n"
+    "- Consultar horários de médicos\n"
+    "- Ver e gerenciar agendamentos\n"
+    "- Informar sobre convênios aceitos\n\n"
+    "REGRAS:\n"
+    "1. Responda SEMPRE em português brasileiro.\n"
+    "2. Seja profissional, gentil e conciso.\n"
+    "3. Use as ferramentas disponíveis para buscar informações ANTES de responder.\n"
+    "4. Se a pergunta for GERAL (preparo de exame, convênios, etc), use 'buscar_faq'.\n"
+    "5. Se a pergunta mencionar um MÉDICO específico, use 'buscar_medico'.\n"
+    "6. Se a pergunta for sobre HORÁRIOS/DISPONIBILIDADE, use 'buscar_horarios'.\n"
+    "7. Se o paciente quiser ver/cancelar AGENDAMENTOS, use 'buscar_agendamentos'.\n"
+    "8. NUNCA invente informações. Se não encontrar, diga que não tem a informação.\n"
+    "9. Formate para WhatsApp (texto simples, emojis com moderação).\n"
+    "10. Você PODE chamar múltiplas ferramentas se necessário.\n"
+    "11. O CPF do paciente já foi validado e está no contexto. Use-o diretamente nas ferramentas.\n"
+)
+
 
 class RAGService:
     """
-    Serviço RAG que combina busca semântica na FAQ (ChromaDB)
-    com dados do médico (PostgreSQL) para gerar respostas contextualizadas.
+    Agente de IA com Tool Calling que combina:
+    - Gerenciamento de estado da conversa (boas-vindas, CPF)
+    - Busca semântica na FAQ (ChromaDB) via tool buscar_faq
+    - Busca dinâmica no banco de dados via tools buscar_medico/horarios/agendamentos
+    - LLM (NVIDIA Nim / Llama 3.1) com suporte nativo a tool calling
     """
 
     def __init__(self):
@@ -47,7 +102,7 @@ class RAGService:
         return self._chroma_client
 
     # ------------------------------------------------------------------ #
-    #  1. BUSCA SEMÂNTICA NA FAQ (ChromaDB)
+    #  BUSCA SEMÂNTICA NA FAQ (mantido para endpoints de admin)
     # ------------------------------------------------------------------ #
 
     def search_faq(
@@ -56,28 +111,15 @@ class RAGService:
         doctor_id: Optional[int],
         top_k: int = 5
     ) -> List[Dict]:
-        """
-        Busca semântica na collection FAQ do médico.
-        
-        Args:
-            query: Pergunta do paciente
-            doctor_id: ID do médico (None = buscar apenas global)
-            top_k: Número máximo de resultados
-            
-        Returns:
-            Lista de chunks relevantes com metadados
-        """
+        """Busca semântica na FAQ (ChromaDB). Usado pelos endpoints de admin."""
         collection_name = f"faq_doctor_{doctor_id}" if doctor_id else "faq_global"
 
         try:
             collection = self.chroma_client.get_collection(collection_name)
         except Exception:
-            # Collection não existe — tentar fallback para global
-            logger.warning(f"Collection '{collection_name}' não encontrada. Tentando faq_doctor_0...")
             try:
                 collection = self.chroma_client.get_collection("faq_doctor_0")
             except Exception:
-                logger.warning("Nenhuma collection FAQ encontrada no ChromaDB")
                 return []
 
         try:
@@ -89,7 +131,6 @@ class RAGService:
             logger.error(f"Erro na busca semântica: {e}")
             return []
 
-        # Formatar resultados
         chunks = []
         if results and results["documents"]:
             for i, doc in enumerate(results["documents"][0]):
@@ -102,142 +143,27 @@ class RAGService:
                     "distance": distance
                 })
 
-        logger.info(f"FAQ search: {len(chunks)} chunks encontrados para doctor_id={doctor_id}")
         return chunks
 
-    # ------------------------------------------------------------------ #
-    #  2. BUSCA DE DADOS DO MÉDICO NO POSTGRESQL
-    # ------------------------------------------------------------------ #
-
-    def get_doctor_context(self, doctor_id: Optional[int], db) -> str:
-        """
-        Busca dados dinâmicos do médico no PostgreSQL e formata como contexto.
-        
-        Inclui: nome, especialidades, horários, convênios, endereço, serviços.
-        """
-        if doctor_id is None:
-            return ""
-
-        from app.models.doctor_profile import DoctorProfile
-        from app.models.user import User
-        from app.models.service import Service
-
-        try:
-            # Buscar perfil do médico
-            profile = db.query(DoctorProfile).filter(
-                DoctorProfile.id == doctor_id
-            ).first()
-
-            if not profile:
-                # Tentar por user_id
-                profile = db.query(DoctorProfile).filter(
-                    DoctorProfile.user_id == doctor_id
-                ).first()
-
-            if not profile:
-                logger.info(f"DoctorProfile não encontrado para doctor_id={doctor_id}")
-                return ""
-
-            # Buscar dados do usuário
-            user = db.query(User).filter(User.id == profile.user_id).first()
-
-            # Buscar serviços disponíveis
-            services = db.query(Service).filter(
-                Service.patient_id == None  # Serviços "template" do médico
-            ).limit(20).all()
-
-            # Montar contexto estruturado
-            context_parts = []
-
-            if user:
-                context_parts.append(f"**Médico**: {user.full_name or user.username}")
-
-            if profile.clinic_name:
-                context_parts.append(f"**Clínica**: {profile.clinic_name}")
-
-            if profile.specialties:
-                try:
-                    specs = json.loads(profile.specialties)
-                    context_parts.append(f"**Especialidades**: {', '.join(specs)}")
-                except (json.JSONDecodeError, TypeError):
-                    context_parts.append(f"**Especialidades**: {profile.specialties}")
-
-            if profile.working_hours:
-                try:
-                    hours = json.loads(profile.working_hours)
-                    hours_str = ", ".join([f"{k}: {v}" for k, v in hours.items()])
-                    context_parts.append(f"**Horários**: {hours_str}")
-                except (json.JSONDecodeError, TypeError):
-                    context_parts.append(f"**Horários**: {profile.working_hours}")
-
-            if profile.accepted_insurances:
-                try:
-                    insurances = json.loads(profile.accepted_insurances)
-                    context_parts.append(f"**Convênios aceitos**: {', '.join(insurances)}")
-                except (json.JSONDecodeError, TypeError):
-                    context_parts.append(f"**Convênios aceitos**: {profile.accepted_insurances}")
-
-            if profile.clinic_address:
-                context_parts.append(f"**Endereço**: {profile.clinic_address}")
-
-            if profile.clinic_phone:
-                context_parts.append(f"**Telefone**: {profile.clinic_phone}")
-
-            if profile.consultation_price:
-                context_parts.append(f"**Valor da consulta**: {profile.consultation_price}")
-
-            if profile.consultation_duration:
-                context_parts.append(f"**Duração da consulta**: {profile.consultation_duration} minutos")
-
-            if services:
-                service_names = [s.name for s in services[:10]]
-                context_parts.append(f"**Serviços disponíveis**: {', '.join(service_names)}")
-
-            context = "\n".join(context_parts)
-            logger.info(f"Contexto do médico montado ({len(context)} chars)")
-            return context
-
-        except Exception as e:
-            logger.error(f"Erro ao buscar contexto do médico: {e}")
-            return ""
+    def search_only(self, query: str, doctor_id: Optional[int], top_k: int = 5) -> List[Dict]:
+        """Busca sem LLM. Útil para debug."""
+        return self.search_faq(query, doctor_id, top_k)
 
     # ------------------------------------------------------------------ #
-    #  3. CHAMADA À LLM (NVIDIA Nim)
+    #  CHAMADA LLM COM TOOL CALLING
     # ------------------------------------------------------------------ #
 
-    async def _call_llm(
+    async def _call_llm_with_tools(
         self,
-        user_message: str,
-        faq_context: str,
-        doctor_context: str
-    ) -> str:
+        messages: list,
+        tools: list = None
+    ) -> dict:
         """
-        Chama a LLM (NVIDIA Nim) com o prompt enriquecido pelo RAG.
+        Chama a LLM (NVIDIA Nim) com suporte a tool calling.
+        
+        Returns:
+            Dict com 'content' e/ou 'tool_calls'
         """
-        if not self.api_key:
-            return self._fallback_response(user_message, faq_context)
-
-        # Montar prompt do sistema
-        system_prompt = (
-            "Você é o assistente virtual do OmniConnect, uma plataforma de gestão médica. "
-            "Você ajuda pacientes a agendar consultas, tirar dúvidas sobre exames, "
-            "horários, preparos e informações gerais da clínica.\n\n"
-            "REGRAS IMPORTANTES:\n"
-            "- Responda SEMPRE em português brasileiro.\n"
-            "- Seja profissional, gentil e conciso.\n"
-            "- Use APENAS as informações do contexto abaixo para responder.\n"
-            "- Se a informação não estiver no contexto, diga que não tem essa informação "
-            "e sugira que o paciente entre em contato diretamente com a clínica.\n"
-            "- NUNCA invente informações sobre horários, preços ou procedimentos.\n"
-            "- Formate a resposta de forma amigável para WhatsApp (use emojis com moderação).\n"
-        )
-
-        if doctor_context:
-            system_prompt += f"\n--- DADOS DO MÉDICO/CLÍNICA ---\n{doctor_context}\n"
-
-        if faq_context:
-            system_prompt += f"\n--- BASE DE CONHECIMENTO (FAQ) ---\n{faq_context}\n"
-
         url = f"{self.base_url}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -246,46 +172,87 @@ class RAGService:
 
         payload = {
             "model": self.model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
-            ],
-            "temperature": 0.3,  # Mais determinístico para respostas factuais
+            "messages": messages,
+            "temperature": 0.3,
             "max_tokens": 1024
         }
 
+        if tools:
+            payload["tools"] = tools
+            payload["tool_choice"] = "auto"
+
         async with httpx.AsyncClient() as client:
             try:
-                response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+                response = await client.post(url, json=payload, headers=headers, timeout=45.0)
+
                 if response.status_code != 200:
-                    logger.error(f"NVIDIA API Error: {response.text}")
-                    return self._fallback_response(user_message, faq_context)
+                    logger.error(f"NVIDIA API Error ({response.status_code}): {response.text}")
+                    return {"content": None, "tool_calls": None, "error": response.text}
 
                 result = response.json()
-                return result["choices"][0]["message"]["content"]
+                choice = result["choices"][0]["message"]
+
+                return {
+                    "content": choice.get("content"),
+                    "tool_calls": choice.get("tool_calls"),
+                    "role": choice.get("role", "assistant")
+                }
+
             except Exception as e:
                 logger.error(f"Erro ao chamar NVIDIA Nim: {e}")
-                return self._fallback_response(user_message, faq_context)
-
-    def _fallback_response(self, user_message: str, faq_context: str) -> str:
-        """
-        Resposta de fallback quando a LLM não está disponível.
-        Retorna o contexto da FAQ diretamente se encontrado.
-        """
-        if faq_context:
-            return (
-                "⚠️ Nosso assistente IA está temporariamente indisponível, "
-                "mas encontrei estas informações que podem ajudar:\n\n"
-                f"{faq_context[:1500]}\n\n"
-                "Para mais detalhes, entre em contato diretamente com a clínica."
-            )
-        return (
-            "Desculpe, estou com dificuldades técnicas no momento. "
-            "Por favor, entre em contato diretamente com a clínica por telefone."
-        )
+                return {"content": None, "tool_calls": None, "error": str(e)}
 
     # ------------------------------------------------------------------ #
-    #  4. PIPELINE RAG COMPLETO
+    #  BUSCA DE MÉDICO PARA BOAS-VINDAS
+    # ------------------------------------------------------------------ #
+
+    def _get_doctor_info(self, doctor_id: int, db) -> dict:
+        """Busca dados do médico no banco para a mensagem de boas-vindas."""
+        try:
+            from app.models.medico import Medico
+            medico = db.query(Medico).filter(
+                Medico.id == doctor_id, Medico.ativo == True
+            ).first()
+            if medico:
+                return {
+                    "nome": medico.nome_completo,
+                    "cidade": getattr(medico, "cidade", None),
+                    "especialidade": medico.especialidade,
+                }
+        except Exception as e:
+            logger.error(f"Erro ao buscar médico para boas-vindas: {e}")
+        return None
+
+    # ------------------------------------------------------------------ #
+    #  VALIDAÇÃO DE CPF E BUSCA DE PACIENTE
+    # ------------------------------------------------------------------ #
+
+    def _find_patient_by_cpf(self, cpf: str, db) -> dict:
+        """Busca paciente no banco pelo CPF."""
+        try:
+            from app.models.patient import Patient
+            cpf_limpo = "".join(c for c in cpf if c.isdigit())
+            
+            # Banco pode ter CPF formatado (123.456.789-00) ou apenas números
+            cpf_formatado = ""
+            if len(cpf_limpo) == 11:
+                cpf_formatado = f"{cpf_limpo[:3]}.{cpf_limpo[3:6]}.{cpf_limpo[6:9]}-{cpf_limpo[9:]}"
+
+            patient = db.query(Patient).filter(
+                (Patient.cpf == cpf_limpo) | (Patient.cpf == cpf_formatado) | (Patient.cpf == cpf)
+            ).first()
+            if patient:
+                return {
+                    "id": patient.id,
+                    "nome": patient.name,
+                    "cpf": patient.cpf,
+                }
+        except Exception as e:
+            logger.error(f"Erro ao buscar paciente por CPF: {e}")
+        return None
+
+    # ------------------------------------------------------------------ #
+    #  PIPELINE PRINCIPAL (COM GERENCIAMENTO DE ESTADO)
     # ------------------------------------------------------------------ #
 
     async def get_rag_response(
@@ -293,55 +260,297 @@ class RAGService:
         query: str,
         doctor_id: Optional[int],
         db,
-        top_k: int = 5
+        top_k: int = 5,
+        wa_from: str = None
     ) -> str:
         """
-        Pipeline RAG completo:
-        1. Busca semântica na FAQ do médico (ChromaDB)
-        2. Busca dados dinâmicos do médico (PostgreSQL)
-        3. Chama LLM com contexto enriquecido
+        Pipeline do Agente de IA com gerenciamento de estado de conversa.
+        
+        Fluxo:
+        1. Verifica se é primeira interação ou inativo > 1h → boas-vindas
+        2. Verifica se está aguardando CPF → valida CPF
+        3. Detecta se a operação requer CPF → pede CPF
+        4. Executa pipeline normal de Tool Calling
         
         Args:
-            query: Pergunta do paciente
-            doctor_id: ID do DoctorProfile (None = sem médico específico)
-            db: Sessão do banco SQLAlchemy
-            top_k: Quantidade de chunks FAQ a buscar
+            query: Mensagem do paciente
+            doctor_id: ID do Medico (pode ser None)
+            db: Sessão SQLAlchemy
+            top_k: Chunks para busca FAQ
+            wa_from: Número WhatsApp do paciente (para tracking de estado)
             
         Returns:
-            Resposta gerada pela LLM com contexto RAG
+            Resposta do agente como string
         """
-        logger.info(f"RAG Pipeline: query='{query[:80]}...' doctor_id={doctor_id}")
+        # Se não tiver wa_from, gerar um identificador genérico
+        if not wa_from:
+            wa_from = f"anonymous_{id(query)}"
 
-        # 1. Busca semântica na FAQ
-        faq_chunks = self.search_faq(query, doctor_id, top_k=top_k)
-        faq_context = "\n\n".join([chunk["content"] for chunk in faq_chunks])
-        logger.info(f"FAQ: {len(faq_chunks)} chunks, {len(faq_context)} chars de contexto")
+        logger.info(f"Agent Pipeline: query='{query[:80]}' doctor_id={doctor_id} wa_from={wa_from}")
 
-        # 2. Busca dados do médico no PostgreSQL
-        doctor_context = self.get_doctor_context(doctor_id, db)
-        logger.info(f"Doctor context: {len(doctor_context)} chars")
+        # ---- PASSO 1: Verificar se é primeira interação ou inatividade ----
+        if conversation_manager.is_first_or_inactive(wa_from):
+            conversation_manager.update_activity(wa_from)
+            conversation_manager.mark_welcome_sent(wa_from)
 
-        # 3. Chamar LLM
-        response = await self._call_llm(query, faq_context, doctor_context)
+            # Buscar dados do médico para personalizar boas-vindas
+            if doctor_id:
+                doc_info = self._get_doctor_info(doctor_id, db)
+                if doc_info:
+                    welcome = get_welcome_message(
+                        nome_medico=doc_info["nome"],
+                        cidade=doc_info.get("cidade")
+                    )
+                    logger.info(f"Enviando boas-vindas para {wa_from} (médico: {doc_info['nome']})")
+                    return welcome
 
-        logger.info(f"RAG response generated ({len(response)} chars)")
-        return response
+            # Sem médico identificado → boas-vindas genérica
+            welcome = get_welcome_message_without_doctor()
+            logger.info(f"Enviando boas-vindas genéricas para {wa_from}")
+            return welcome
+
+        # Atualizar timestamp de atividade
+        conversation_manager.update_activity(wa_from)
+
+        # ---- PASSO 2: Verificar interceptações diretas (menu e opções) ----
+        msg_lower = query.strip().lower()
+        
+        # Voltar ao menu principal
+        if msg_lower == "0":
+            conversation_manager.clear_cpf_flow(wa_from)
+            return get_menu_message()
+            
+        # Finalizar atendimento
+        if msg_lower in ("x", "❌", "finalizar", "sair"):
+            conversation_manager.clear_state(wa_from)
+            return "Atendimento finalizado. Qualquer dúvida, é só me chamar novamente! 👋"
+            
+        # Opção 1 (Dúvidas)
+        if msg_lower == "1":
+            return get_help_duvidas_message() + get_footer_message()
+            
+        # Opção 5 (Preparo de exame)
+        if msg_lower == "5":
+            return get_help_exames_message() + get_footer_message()
+
+        # ---- PASSO 3: Verificar se está aguardando CPF ----
+        if conversation_manager.is_awaiting_cpf(wa_from):
+            return self._handle_cpf_response(query, doctor_id, db, wa_from)
+
+        # ---- PASSO 4: Detectar se a operação requer CPF ----
+        operacao = detect_cpf_required_intent(query)
+        if operacao:
+            # Verificar se já temos o CPF coletado nesta sessão
+            cpf_existente = conversation_manager.get_cpf(wa_from)
+            if cpf_existente:
+                # Já temos o CPF → prosseguir normalmente com o agente
+                logger.info(f"CPF já coletado para {wa_from}, prosseguindo com operação '{operacao}'")
+                # Injetar CPF no query para o agente usar
+                enriched_query = f"{query} (CPF do paciente: {cpf_existente})"
+                response = await self._run_agent_pipeline(enriched_query, doctor_id, db, top_k)
+                return response + get_footer_message()
+            else:
+                # Precisa coletar CPF primeiro
+                conversation_manager.set_awaiting_cpf(wa_from, operacao, query)
+                return get_cpf_request_message(operacao)
+
+        # ---- PASSO 5: Pipeline normal do agente ----
+        # Injetar CPF se já coletado (para que o agente possa usar em tools)
+        cpf_existente = conversation_manager.get_cpf(wa_from)
+        if cpf_existente:
+            enriched_query = f"{query} (CPF do paciente: {cpf_existente})"
+        else:
+            enriched_query = query
+
+        response = await self._run_agent_pipeline(enriched_query, doctor_id, db, top_k)
+        return response + get_footer_message()
 
     # ------------------------------------------------------------------ #
-    #  5. BUSCA SIMPLES (sem LLM, apenas retorna chunks)
+    #  HANDLER DE RESPOSTA COM CPF
     # ------------------------------------------------------------------ #
 
-    def search_only(
+    def _handle_cpf_response(self, text: str, doctor_id, db, wa_from: str) -> str:
+        """
+        Processa a resposta quando estamos aguardando o CPF do paciente.
+        """
+        text_stripped = text.strip().lower()
+
+        # Verificar se quer cancelar
+        if text_stripped in ("cancelar", "voltar", "sair", "não", "nao"):
+            conversation_manager.clear_cpf_flow(wa_from)
+            return "Ok! Operação cancelada. Como posso te ajudar? 😊"
+
+        # Verificar se parece ser um CPF
+        if looks_like_cpf(text):
+            cpf_validado = validate_cpf(text)
+            if cpf_validado:
+                # CPF válido → buscar paciente no banco
+                paciente = self._find_patient_by_cpf(cpf_validado, db)
+                if paciente:
+                    # Paciente encontrado!
+                    conversation_manager.set_cpf(wa_from, cpf_validado)
+                    operacao = conversation_manager.get_pending_operation(wa_from)
+                    mensagem_original = conversation_manager.get_pending_message(wa_from)
+                    conversation_manager.clear_cpf_flow(wa_from)
+
+                    confirmed_msg = get_cpf_confirmed_message(paciente["nome"], operacao)
+                    logger.info(f"CPF validado para {wa_from}: paciente={paciente['nome']}")
+
+                    # Retornar mensagem de confirmação
+                    # A próxima mensagem do paciente (ou re-execução) usará o CPF armazenado
+                    return confirmed_msg
+                else:
+                    # CPF válido mas paciente não encontrado
+                    return get_cpf_not_found_message()
+            else:
+                # CPF inválido (formato errado)
+                return get_cpf_invalid_message()
+        else:
+            # Texto não parece CPF
+            return get_cpf_invalid_message()
+
+    # ------------------------------------------------------------------ #
+    #  PIPELINE DO AGENTE (LOOP DE TOOL CALLING)
+    # ------------------------------------------------------------------ #
+
+    async def _run_agent_pipeline(
         self,
         query: str,
         doctor_id: Optional[int],
+        db,
         top_k: int = 5
-    ) -> List[Dict]:
+    ) -> str:
         """
-        Retorna apenas os chunks da FAQ sem chamar a LLM.
-        Útil para debug e testes.
+        Pipeline do Agente de IA com Tool Calling (lógica core).
+        
+        1. Envia mensagem do paciente + definições de tools à LLM
+        2. Se LLM responde com tool_calls → executa tools → envia resultados de volta
+        3. Repete até LLM dar resposta final (ou atingir MAX_TOOL_ITERATIONS)
         """
-        return self.search_faq(query, doctor_id, top_k)
+        logger.info(f"Agent Pipeline Core: query='{query[:80]}' doctor_id={doctor_id}")
+
+        if not self.api_key:
+            return self._fallback_without_llm(query, doctor_id, db)
+
+        # Montar system prompt com contexto do médico (se identificado)
+        system_content = AGENT_SYSTEM_PROMPT
+        if doctor_id:
+            system_content += f"\n\nContexto: O paciente está conversando pelo WhatsApp do médico com ID={doctor_id}. "
+            system_content += "Use este ID nas ferramentas quando necessário.\n"
+
+        # Histórico de mensagens para o loop
+        messages = [
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": query}
+        ]
+
+        # Loop de Tool Calling
+        for iteration in range(MAX_TOOL_ITERATIONS):
+            logger.info(f"Agent iteration {iteration + 1}/{MAX_TOOL_ITERATIONS}")
+
+            # Chamar LLM com tools
+            result = await self._call_llm_with_tools(messages, TOOLS_DEFINITIONS)
+
+            # Se houve erro, usar fallback
+            if result.get("error"):
+                logger.error(f"LLM error: {result['error']}")
+                return self._fallback_without_llm(query, doctor_id, db)
+
+            # Se LLM respondeu SEM tool calls → é a resposta final
+            if not result.get("tool_calls"):
+                final_response = result.get("content", "")
+                if final_response:
+                    logger.info(f"Agent final response (iteration {iteration + 1}): {len(final_response)} chars")
+                    return final_response
+                else:
+                    # LLM não retornou conteúdo nem tools — fallback
+                    return self._fallback_without_llm(query, doctor_id, db)
+
+            # LLM pediu tool calls → executar cada uma
+            tool_calls = result["tool_calls"]
+            logger.info(f"LLM requested {len(tool_calls)} tool call(s)")
+
+            # Adicionar a mensagem do assistente (com tool_calls) ao histórico
+            assistant_msg = {"role": "assistant", "content": result.get("content") or ""}
+            assistant_msg["tool_calls"] = tool_calls
+            messages.append(assistant_msg)
+
+            # Executar cada tool e adicionar resultado ao histórico
+            for tc in tool_calls:
+                tool_name = tc["function"]["name"]
+                try:
+                    tool_args = json.loads(tc["function"]["arguments"]) if isinstance(tc["function"]["arguments"], str) else tc["function"]["arguments"]
+                except (json.JSONDecodeError, TypeError):
+                    tool_args = {}
+
+                logger.info(f"Executing tool: {tool_name}({tool_args})")
+
+                # Executar a tool
+                tool_result = execute_tool(tool_name, tool_args, db)
+
+                # Adicionar resultado ao histórico
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.get("id", f"call_{tool_name}"),
+                    "content": tool_result
+                })
+
+                logger.info(f"Tool {tool_name} returned {len(tool_result)} chars")
+
+        # Se chegou aqui, atingiu MAX_TOOL_ITERATIONS sem resposta final
+        logger.warning("Agent atingiu MAX_TOOL_ITERATIONS sem resposta final")
+
+        # Fazer uma última chamada SEM tools para forçar resposta
+        messages.append({
+            "role": "user",
+            "content": "Por favor, responda a pergunta original do paciente com as informações que você já coletou."
+        })
+        final_result = await self._call_llm_with_tools(messages, tools=None)
+
+        if final_result.get("content"):
+            return final_result["content"]
+
+        return self._fallback_without_llm(query, doctor_id, db)
+
+    # ------------------------------------------------------------------ #
+    #  FALLBACK (sem LLM)
+    # ------------------------------------------------------------------ #
+
+    def _fallback_without_llm(self, query: str, doctor_id: Optional[int], db) -> str:
+        """
+        Fallback quando a LLM não está disponível.
+        Tenta usar as tools diretamente sem intermediação da LLM.
+        """
+        logger.info("Usando fallback sem LLM")
+
+        # Tentar buscar na FAQ
+        from app.services.agent_tools import buscar_faq
+        faq_result = buscar_faq(pergunta=query, medico_id=doctor_id)
+
+        if faq_result and "Nenhuma" not in faq_result and "Erro" not in faq_result:
+            return (
+                "⚠️ Nosso assistente IA está temporariamente indisponível, "
+                "mas encontrei estas informações na nossa base:\n\n"
+                f"{faq_result[:1500]}\n\n"
+                "Para mais detalhes, entre em contato diretamente com a clínica."
+            )
+
+        return (
+            "Desculpe, estou com dificuldades técnicas no momento. 😔\n"
+            "Por favor, entre em contato diretamente com a clínica por telefone."
+        )
+
+    # ------------------------------------------------------------------ #
+    #  GERENCIAMENTO DE ESTADO (APIs para endpoints)
+    # ------------------------------------------------------------------ #
+
+    def clear_conversation(self, wa_from: str):
+        """Limpa o estado de uma conversa (para testes/novo atendimento)."""
+        conversation_manager.clear_state(wa_from)
+
+    def get_conversation_state(self, wa_from: str) -> dict:
+        """Retorna o estado da conversa (para debug)."""
+        return conversation_manager.get_state(wa_from)
 
 
 # Singleton

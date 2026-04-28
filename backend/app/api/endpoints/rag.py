@@ -56,6 +56,7 @@ class RAGQueryRequest(BaseModel):
     query: str
     doctor_id: Optional[int] = None
     top_k: int = 5
+    wa_from: Optional[str] = None  # Número WhatsApp (para tracking de estado)
 
 
 class RAGQueryResponse(BaseModel):
@@ -151,12 +152,13 @@ async def query_rag(
             top_k=request.top_k
         )
 
-        # Pipeline completo
+        # Pipeline completo (com gerenciamento de estado se wa_from fornecido)
         response = await rag_service.get_rag_response(
             query=request.query,
             doctor_id=request.doctor_id,
             db=db,
-            top_k=request.top_k
+            top_k=request.top_k,
+            wa_from=request.wa_from
         )
 
         return RAGQueryResponse(

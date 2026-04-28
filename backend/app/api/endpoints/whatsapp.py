@@ -125,7 +125,8 @@ async def receive_whatsapp_webhook(
                 doctor_id = doctor.id if doctor else None
 
                 # Pipeline RAG: FAQ (ChromaDB) + dados do médico (PostgreSQL) → LLM
-                ai_response = await rag_service.get_rag_response(content, doctor_id, db)
+                # Passa wa_from para gerenciamento de estado (boas-vindas, CPF)
+                ai_response = await rag_service.get_rag_response(content, doctor_id, db, wa_from=wa_from)
                 
                 # Salvar resposta do Bot no banco
                 bot_message = Message(
@@ -412,9 +413,15 @@ async def send_whatsapp_template(
         logger.error(f"Error sending template: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+class ChatDirectRequestV2(BaseModel):
+    to: str
+    message: str
+    doctor_id: Optional[int] = None
+
+
 @router.post("/chat-direct")
 async def chat_direct(
-    request: ChatDirectRequest,
+    request: ChatDirectRequestV2,
     db: Session = Depends(get_db)
 ):
     """Endpoint for testing the RAG bot directly from the frontend, bypassing WhatsApp Meta API."""
@@ -422,6 +429,7 @@ async def chat_direct(
     
     wa_from = request.to
     content = request.message
+    doctor_id = request.doctor_id
     
     # Same logic as webhook for saving the user's message
     patient = db.query(Patient).filter(Patient.whatsapp == wa_from).first()
@@ -451,8 +459,10 @@ async def chat_direct(
     # Get RAG response
     try:
         from app.services.rag_service import rag_service
-        # Para chat direto, usar doctor_id=None (busca apenas global) ou parametrizar
-        ai_response = await rag_service.get_rag_response(content, doctor_id=None, db=db)
+        # Passa wa_from e doctor_id para gerenciamento de estado
+        ai_response = await rag_service.get_rag_response(
+            content, doctor_id=doctor_id, db=db, wa_from=wa_from
+        )
         
         bot_message = Message(
             patient_id=patient.id,
@@ -473,3 +483,23 @@ async def chat_direct(
     except Exception as e:
         logger.error(f"Error generating RAG response in direct chat: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/clear-conversation")
+def clear_conversation(
+    wa_from: str = Query(..., description="Número WhatsApp do paciente")
+):
+    """Limpa o estado da conversa (para testes — simula nova conversa)."""
+    from app.services.rag_service import rag_service
+    rag_service.clear_conversation(wa_from)
+    return {"status": "success", "message": f"Estado da conversa de {wa_from} limpo"}
+
+
+@router.get("/conversation-state")
+def get_conversation_state(
+    wa_from: str = Query(..., description="Número WhatsApp do paciente")
+):
+    """Retorna o estado da conversa de um número (para debug)."""
+    from app.services.rag_service import rag_service
+    state = rag_service.get_conversation_state(wa_from)
+    return {"wa_from": wa_from, "state": state}
