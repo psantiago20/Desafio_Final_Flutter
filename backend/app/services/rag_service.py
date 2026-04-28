@@ -206,15 +206,16 @@ class RAGService:
     #  BUSCA DE MÉDICO PARA BOAS-VINDAS
     # ------------------------------------------------------------------ #
 
-    def _get_doctor_info(self, doctor_id: int, db) -> dict:
-        """Busca dados do médico no banco para a mensagem de boas-vindas."""
+    def _get_doctor_info_by_phone(self, wa_to: str, db) -> dict:
+        """Busca dados do médico no banco usando o WhatsApp para a mensagem de boas-vindas e contexto."""
         try:
             from app.models.medico import Medico
             medico = db.query(Medico).filter(
-                Medico.id == doctor_id, Medico.ativo == True
+                Medico.whatsapp == wa_to, Medico.ativo == True
             ).first()
             if medico:
                 return {
+                    "id": medico.id,
                     "nome": medico.nome_completo,
                     "cidade": getattr(medico, "cidade", None),
                     "especialidade": medico.especialidade,
@@ -258,7 +259,7 @@ class RAGService:
     async def get_rag_response(
         self,
         query: str,
-        doctor_id: Optional[int],
+        wa_to: Optional[str],
         db,
         top_k: int = 5,
         wa_from: str = None
@@ -274,7 +275,7 @@ class RAGService:
         
         Args:
             query: Mensagem do paciente
-            doctor_id: ID do Medico (pode ser None)
+            wa_to: Número WhatsApp de destino (do médico/clínica)
             db: Sessão SQLAlchemy
             top_k: Chunks para busca FAQ
             wa_from: Número WhatsApp do paciente (para tracking de estado)
@@ -286,7 +287,15 @@ class RAGService:
         if not wa_from:
             wa_from = f"anonymous_{id(query)}"
 
-        logger.info(f"Agent Pipeline: query='{query[:80]}' doctor_id={doctor_id} wa_from={wa_from}")
+        logger.info(f"Agent Pipeline: query='{query[:80]}' wa_to={wa_to} wa_from={wa_from}")
+
+        # Buscar dados do médico pelo wa_to
+        doc_info = None
+        doctor_id = None
+        if wa_to:
+            doc_info = self._get_doctor_info_by_phone(wa_to, db)
+            if doc_info:
+                doctor_id = doc_info["id"]
 
         # ---- PASSO 1: Verificar se é primeira interação ou inatividade ----
         if conversation_manager.is_first_or_inactive(wa_from):
@@ -294,9 +303,7 @@ class RAGService:
             conversation_manager.mark_welcome_sent(wa_from)
 
             # Buscar dados do médico para personalizar boas-vindas
-            if doctor_id:
-                doc_info = self._get_doctor_info(doctor_id, db)
-                if doc_info:
+            if doc_info:
                     welcome = get_welcome_message(
                         nome_medico=doc_info["nome"],
                         cidade=doc_info.get("cidade")

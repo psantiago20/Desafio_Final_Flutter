@@ -525,9 +525,10 @@
             <input type="text" id="apiUrl" value="http://localhost:8000">
         </div>
 
-        <div class="config-group">
-            <label>Doctor ID (para contexto do RAG)</label>
-            <input type="number" id="doctorId" value="1" min="0">
+        <div class="input-group">
+            <label>WhatsApp Médico (Destino)</label>
+            <input type="text" id="waTo" value="5511912345678">
+            <small style="color: #6b7280; font-size: 11px;">Telefone do médico para o bot cruzar os dados</small>
         </div>
 
         <div class="config-group">
@@ -715,7 +716,7 @@
         setLoading(true);
 
         const apiUrl = document.getElementById('apiUrl').value;
-        const doctorId = parseInt(document.getElementById('doctorId').value) || null;
+        const waTo = document.getElementById('waTo').value.trim();
         const mode = document.getElementById('mode').value;
 
         try {
@@ -728,7 +729,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         query: text,
-                        doctor_id: doctorId,
+                        wa_to: waTo,
                         top_k: 5,
                         wa_from: document.getElementById('waFrom').value
                     })
@@ -753,7 +754,7 @@
                     body: JSON.stringify({
                         to: document.getElementById('waFrom').value,
                         message: text,
-                        doctor_id: doctorId
+                        wa_to: waTo
                     })
                 });
 
@@ -780,7 +781,9 @@
 
     async function ingestFaq() {
         const apiUrl = document.getElementById('apiUrl').value;
-        const doctorId = document.getElementById('doctorId').value;
+        
+        // Mantém ID 1 fixo para ingestão, pois a pasta atual de faq é faq/doctor_1/
+        const doctorId = 1; 
 
         addMessage(`📥 Indexando FAQs para doctor_id=${doctorId}...`, 'system');
 

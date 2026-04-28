@@ -54,14 +54,14 @@ class SearchResponse(BaseModel):
 
 class RAGQueryRequest(BaseModel):
     query: str
-    doctor_id: Optional[int] = None
+    wa_to: Optional[str] = None
     top_k: int = 5
     wa_from: Optional[str] = None  # Número WhatsApp (para tracking de estado)
 
 
 class RAGQueryResponse(BaseModel):
     query: str
-    doctor_id: Optional[int]
+    wa_to: Optional[str]
     response: str
     faq_chunks_used: int
 
@@ -145,17 +145,17 @@ async def query_rag(
     Endpoint para testar o RAG diretamente.
     """
     try:
-        # Buscar chunks para retornar a contagem
+        # Buscar chunks para retornar a contagem (usando id 1 por enquanto para faq, ou ignorar doctor_id)
         chunks = rag_service.search_only(
             query=request.query,
-            doctor_id=request.doctor_id,
+            doctor_id=None,
             top_k=request.top_k
         )
 
         # Pipeline completo (com gerenciamento de estado se wa_from fornecido)
         response = await rag_service.get_rag_response(
             query=request.query,
-            doctor_id=request.doctor_id,
+            wa_to=request.wa_to,
             db=db,
             top_k=request.top_k,
             wa_from=request.wa_from
@@ -163,7 +163,7 @@ async def query_rag(
 
         return RAGQueryResponse(
             query=request.query,
-            doctor_id=request.doctor_id,
+            wa_to=request.wa_to,
             response=response,
             faq_chunks_used=len(chunks)
         )

@@ -95,6 +95,38 @@ def seed():
             print(f"ℹ️  Médico já existe: {medico.nome_completo} (ID: {medico.id})")
 
         # ------------------------------------------------------------ #
+        #  2B. MÉDICA DRA. MARIA
+        # ------------------------------------------------------------ #
+        medica_maria = db.query(Medico).filter(Medico.crm == "54321").first()
+        if not medica_maria:
+            medica_maria = Medico(
+                nome_completo="Dra. Maria Oliveira",
+                crm="54321",
+                crm_estado="SP",
+                cidade="Campinas",
+                endereco="Av. Brasil, 500 - Sala 10",
+                especialidade="Dermatologia",
+                email="dra.maria@omniconnect.com",
+                telefone="5511922223333",
+                whatsapp="5511922223333",
+                whatsapp_phone_number_id="TEST_PHONE_ID_002",
+                bio_resumida="Dermatologista com foco em estética e saúde da pele. "
+                             "Especialista em tratamentos a laser e rejuvenescimento.",
+                foto_url="",
+                duracao_consulta_min=30,
+                valor_consulta=350.00,
+                aceita_convenio=True,
+                convenios=json.dumps(["Unimed", "Amil"]),
+                ativo=True
+            )
+            db.add(medica_maria)
+            db.commit()
+            db.refresh(medica_maria)
+            print(f"✅ Médica criada: {medica_maria.nome_completo} (ID: {medica_maria.id}, CRM: {medica_maria.crm}/{medica_maria.crm_estado})")
+        else:
+            print(f"ℹ️  Médica já existe: {medica_maria.nome_completo} (ID: {medica_maria.id})")
+
+        # ------------------------------------------------------------ #
         #  3. USER (login no app) para o Dr. Carlos
         # ------------------------------------------------------------ #
         user_doctor = db.query(User).filter(User.username == "dr.carlos").first()
@@ -119,6 +151,30 @@ def seed():
             print(f"✅ User criado para Dr. Carlos (user_id: {user_doctor.id})")
         else:
             print(f"ℹ️  User dr.carlos já existe (ID: {user_doctor.id})")
+
+        # User para Dra. Maria
+        user_maria = db.query(User).filter(User.username == "dra.maria").first()
+        if not user_maria:
+            password = b"maria123"
+            hashed = hashlib.sha256(password).hexdigest()
+            user_maria = User(
+                username="dra.maria",
+                email="dra.maria@omniconnect.com",
+                hashed_password=hashed,
+                full_name="Dra. Maria Oliveira",
+                role="doctor",
+                is_active=True
+            )
+            db.add(user_maria)
+            db.commit()
+            db.refresh(user_maria)
+
+            # Vincular user a medica
+            medica_maria.user_id = user_maria.id
+            db.commit()
+            print(f"✅ User criado para Dra. Maria (user_id: {user_maria.id})")
+        else:
+            print(f"ℹ️  User dra.maria já existe (ID: {user_maria.id})")
 
         # ------------------------------------------------------------ #
         #  4. AGENDAMENTOS DE TESTE
@@ -170,14 +226,18 @@ def seed():
         print("\n" + "=" * 60)
         print("  DADOS DE TESTE PRONTOS")
         print("=" * 60)
+        print("=" * 60)
         print(f"  Paciente: {patient.name}")
         print(f"    CPF: {patient.cpf}")
         print(f"    WhatsApp: {patient.whatsapp}")
-        print(f"  Médico: {medico.nome_completo}")
+        print(f"  Médico 1: {medico.nome_completo}")
         print(f"    CRM: {medico.crm}/{medico.crm_estado}")
         print(f"    Especialidade: {medico.especialidade}")
-        print(f"    Medico ID: {medico.id}")
-        print(f"    Phone Number ID: {medico.whatsapp_phone_number_id}")
+        print(f"    WhatsApp Médico (wa_to): {medico.whatsapp}")
+        print(f"  Médica 2: {medica_maria.nome_completo}")
+        print(f"    CRM: {medica_maria.crm}/{medica_maria.crm_estado}")
+        print(f"    Especialidade: {medica_maria.especialidade}")
+        print(f"    WhatsApp Médico (wa_to): {medica_maria.whatsapp}")
         print("=" * 60)
         print("\n🧪 Para testar o agente:")
         print(f"  curl -X POST http://localhost:8000/api/rag/query \\")
