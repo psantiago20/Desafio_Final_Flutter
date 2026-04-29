@@ -93,9 +93,10 @@ function switchTab(tab) {
         }
     });
 
-    // If navigating to dashboard, redirect
+    // If navigating to dashboard, redirect to the app's internal dashboard route
     if (tab === 'dashboard') {
-        window.location.href = 'index.html';
+        window.location.href = 'index.html#/dashboard';
+        return;
     }
 }
 

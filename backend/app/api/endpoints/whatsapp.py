@@ -4,6 +4,7 @@ from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime, timezone
 import logging
+import json
 
 from app.db.database import get_db
 from app.models.patient import Patient
@@ -37,6 +38,8 @@ class MessageStatusResponse(BaseModel):
     recipient_id: Optional[str] = None
     error_code: Optional[str] = None
     error_message: Optional[str] = None
+    content: Optional[str] = None
+    meta: Optional[str] = None
 
 
 class StatusListResponse(BaseModel):
@@ -46,50 +49,56 @@ class StatusListResponse(BaseModel):
 
 @router.get("")
 @router.get("/whatsapp")
-@router.get("/webhook")
-def verify_webhook(
-    hub_mode: Optional[str] = Query(None, alias="hub.mode"),
-    hub_challenge: Optional[str] = Query(None, alias="hub.challenge"),
-    hub_verify_token: Optional[str] = Query(None, alias="hub.verify_token"),
-):
-    logger.info(f"Webhook verification: mode={hub_mode}, token={hub_verify_token}")
-    if hub_mode == "subscribe" and hub_verify_token == settings.WHATSAPP_VERIFY_TOKEN:
-        logger.info("Webhook verified successfully")
-        return int(hub_challenge) if hub_challenge else {"challenge": "ok"}
-    raise HTTPException(status_code=403, detail="Verification failed")
+async def verify_webhook(request: Request):
+    """Verificar webhook da Meta"""
+    params = dict(request.query_params)
+    mode = params.get("hub.mode")
+    token = params.get("hub.verify_token")
+    challenge = params.get("hub.challenge")
+
+    if mode and token:
+        if mode == "subscribe" and token == settings.WHATSAPP_VERIFY_TOKEN:
+            logger.info("Webhook verified successfully")
+            return int(challenge)
+        else:
+            logger.warning("Webhook verification failed")
+            raise HTTPException(status_code=403, detail="Verification token mismatch")
+    
+    return {"status": "ok"}
 
 
+@router.post("")
 @router.post("/whatsapp")
-@router.post("/webhook")
-async def receive_whatsapp_webhook(
-    request: Request,
-    db: Session = Depends(get_db)
-):
-    body = await request.json()
-    logger.info(f"Received WhatsApp webhook: {body}")
-
+async def handle_webhook(request: Request, db: Session = Depends(get_db)):
+    """Receber eventos do WhatsApp"""
     try:
-        entry = body.get("entry", [])[0]
-        changes = entry.get("changes", [])[0]
-        value = changes.get("value", {})
+        body = await request.json()
+        logger.info(f"Webhook received: {body}")
 
-        # Processar mensagens recebidas (do usuário)
+        entry = body.get("entry", [])
+        if not entry:
+            return {"status": "ok"}
+
+        changes = entry[0].get("changes", [])
+        if not changes:
+            return {"status": "ok"}
+
+        value = changes[0].get("value", {})
+        
+        # Processar mensagens recebidas
         messages = value.get("messages", [])
-        for msg in messages:
-            wa_from = msg.get("from")
-            wa_msg_id = msg.get("id")
-            msg_type = msg.get("type")
+        for msg_data in messages:
+            wa_from = msg_data.get("from")
+            wa_id = msg_data.get("id")
+            timestamp = msg_data.get("timestamp")
+            
+            text_data = msg_data.get("text", {})
+            content = text_data.get("body", "")
 
-            content = ""
-            if msg_type == "text":
-                content = msg.get("text", {}).get("body", "")
-            elif msg_type == "interactive":
-                button_reply = msg.get("interactive", {}).get("button_reply", {})
-                content = button_reply.get("title", "")
-
+            # Salvar no banco
             patient = db.query(Patient).filter(Patient.whatsapp == wa_from).first()
-
             if not patient:
+                # Criar paciente básico se não existir
                 patient = Patient(
                     name=f"WhatsApp User {wa_from[-4:]}",
                     phone=wa_from,
@@ -99,40 +108,40 @@ async def receive_whatsapp_webhook(
                 db.commit()
                 db.refresh(patient)
 
-            db_message = Message(
+            # Criar mensagem
+            message = Message(
                 patient_id=patient.id,
                 content=content,
-                message_type=msg_type,
+                message_type="text",
                 source="whatsapp",
-                wa_message_id=wa_msg_id,
-                wa_from=wa_from,
-                is_delivered=True
+                wa_message_id=wa_id,
+                wa_from=wa_from
             )
-            db.add(db_message)
+            db.add(message)
             db.commit()
+            logger.info(f"Message saved from {wa_from}: {content}")
 
-            logger.info(f"Message saved from {wa_from}")
-
-            # --- INTEGRAÇÃO IA RAG ---
-            # Gerar resposta inteligente
+            # --------------------------
+            # INTEGRAÇÃO RAG / RESPOSTA AUTOMÁTICA
+            # --------------------------
             try:
                 from app.services.ai_service import ai_service
-                ai_response = await ai_service.get_ai_response(content)
                 
-                # Salvar resposta do Bot no banco
+                # Gerar resposta usando RAG
+                ai_response = await ai_service.generate_response(content, patient_id=patient.id)
+                
+                # Salvar resposta da IA no banco
                 bot_message = Message(
                     patient_id=patient.id,
                     content=ai_response,
                     message_type="text",
-                    source="bot",
-                    wa_from=settings.WHATSAPP_PHONE_NUMBER_ID, # Remetente é o bot
-                    is_delivered=False
+                    source="ai",
+                    wa_from="system"
                 )
                 db.add(bot_message)
                 db.commit()
-                logger.info(f"AI response generated and saved for {wa_from}")
-
-                # Tentar enviar de volta via WhatsApp (Bot -> User)
+                
+                # Enviar de volta pelo WhatsApp
                 try:
                     send_result = await wa_service.send_message(to=wa_from, message=ai_response)
                     
@@ -144,7 +153,6 @@ async def receive_whatsapp_webhook(
                         logger.info(f"AI response successfully sent and ID tracked: {wa_msg_id_sent}")
                     
                 except Exception as e:
-                    import json
                     error_msg = str(e)
                     if hasattr(e, "response"):
                         try:
@@ -153,7 +161,6 @@ async def receive_whatsapp_webhook(
                         except:
                             error_msg = e.response.text
                     logger.error(f"Failed to send AI response back via WhatsApp: {error_msg}")
-
 
             except Exception as e:
                 logger.error(f"Error generating AI response: {e}")
@@ -181,7 +188,6 @@ async def receive_whatsapp_webhook(
                     elif status_val == "failed":
                         message.is_delivered = False
                         if errors:
-                            import json
                             meta_data = {}
                             if message.meta:
                                 try:
@@ -220,7 +226,6 @@ def get_message_statuses(
             status_val = "delivered"
         elif msg.wa_message_id:
             # Check meta for errors to know if it failed
-            import json
             meta_data = {}
             if msg.meta:
                 try:
@@ -234,17 +239,32 @@ def get_message_statuses(
         
         error_code = None
         error_message = None
-        if status_val == "failed" and msg.meta:
-            import json
+        if msg.meta:
             try:
                 meta_data = json.loads(msg.meta)
-                errors = meta_data.get("errors", [])
-                if errors:
-                    error_code = str(errors[0].get("code", ""))
-                    error_message = errors[0].get("message", "Unknown error")
-                    error_details = errors[0].get("error_data", {}).get("details", "")
+                
+                # Check for Webhook errors (plural)
+                errors_list = meta_data.get("errors", [])
+                if errors_list:
+                    error_code = str(errors_list[0].get("code", ""))
+                    error_message = errors_list[0].get("message", "Unknown error")
+                    error_details = errors_list[0].get("error_data", {}).get("details", "")
                     if error_details:
                         error_message += f" - {error_details}"
+                
+                # Check for Direct API errors (singular)
+                elif "error" in meta_data:
+                    err = meta_data["error"]
+                    error_code = str(err.get("code", ""))
+                    error_message = err.get("message", "Unknown API error")
+                    if "error_data" in err:
+                        details = err["error_data"].get("details", "")
+                        if details:
+                            error_message += f" - {details}"
+                
+                # If we have any error, force status to failed
+                if (errors_list or "error" in meta_data) and status_val != "failed":
+                    status_val = "failed"
             except:
                 pass
 
@@ -254,7 +274,9 @@ def get_message_statuses(
             timestamp=msg.created_at.replace(tzinfo=timezone.utc),
             recipient_id=msg.wa_from,
             error_code=error_code,
-            error_message=error_message
+            error_message=error_message,
+            content=msg.content,
+            meta=msg.meta
         ))
 
     return {"total": len(statuses), "statuses": statuses}
@@ -266,14 +288,17 @@ def get_failed_messages(
     db: Session = Depends(get_db)
 ):
     """Consultar mensagens que falharam com detalhes do erro"""
+    from sqlalchemy import or_
     messages = db.query(Message).filter(
         Message.wa_message_id.isnot(None),
-        Message.meta.like('%"errors"%')
+        or_(
+            Message.meta.like('%"error"%'),
+            Message.meta.like('%"errors"%')
+        )
     ).order_by(Message.created_at.desc()).offset(skip).limit(limit).all()
 
     failed = []
     for msg in messages:
-        import json
         error_code = None
         error_message = None
         if msg.meta:
@@ -329,7 +354,6 @@ async def send_whatsapp_message(
             db.add(patient)
             db.commit()
             db.refresh(patient)
-            logger.info(f"Auto-created patient for {request.to}")
 
         wa_msg_id = result.get("messages", [{}])[0].get("id") if result.get("messages") else None
         msg = Message(
@@ -339,14 +363,14 @@ async def send_whatsapp_message(
             source="app",
             wa_message_id=wa_msg_id,
             wa_from=request.to,
-            is_delivered=False
+            is_delivered=False,
+            meta=json.dumps(result)
         )
         db.add(msg)
         db.commit()
         
         return {"status": "success", "data": result}
     except Exception as e:
-        import json
         error_msg = str(e)
         status_code = 500
         
@@ -393,74 +417,14 @@ async def send_whatsapp_template(
                 source="app",
                 wa_message_id=wa_msg_id,
                 wa_from=request.to,
-                is_delivered=False
+                is_delivered=False,
+                meta=json.dumps(result)
             )
             db.add(msg)
             db.commit()
-            logger.info(f"Message saved to database")
+            logger.info(f"Template message saved in DB")
         
         return {"status": "success", "data": result}
     except Exception as e:
         logger.error(f"Error sending template: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/chat-direct")
-async def chat_direct(
-    request: ChatDirectRequest,
-    db: Session = Depends(get_db)
-):
-    """Endpoint for testing the RAG bot directly from the frontend, bypassing WhatsApp Meta API."""
-    logger.info(f"Direct chat received from {request.to}: {request.message}")
-    
-    wa_from = request.to
-    content = request.message
-    
-    # Same logic as webhook for saving the user's message
-    patient = db.query(Patient).filter(Patient.whatsapp == wa_from).first()
-
-    if not patient:
-        patient = Patient(
-            name=f"App User {wa_from[-4:]}",
-            phone=wa_from,
-            whatsapp=wa_from
-        )
-        db.add(patient)
-        db.commit()
-        db.refresh(patient)
-
-    db_message = Message(
-        patient_id=patient.id,
-        content=content,
-        message_type="text",
-        source="whatsapp", # Pretend it's from whatsapp so it shows up similarly
-        wa_message_id=f"simulated_{datetime.now().timestamp()}",
-        wa_from=wa_from,
-        is_delivered=True
-    )
-    db.add(db_message)
-    db.commit()
-
-    # Get AI response
-    try:
-        from app.services.ai_service import ai_service
-        ai_response = await ai_service.get_ai_response(content)
-        
-        bot_message = Message(
-            patient_id=patient.id,
-            content=ai_response,
-            message_type="text",
-            source="bot",
-            wa_from=settings.WHATSAPP_PHONE_NUMBER_ID or "BOT",
-            wa_message_id=f"simulated_resp_{datetime.now().timestamp()}",
-            is_delivered=True
-        )
-        db.add(bot_message)
-        db.commit()
-        
-        return {
-            "status": "success", 
-            "response": ai_response
-        }
-    except Exception as e:
-        logger.error(f"Error generating AI response in direct chat: {e}")
         raise HTTPException(status_code=500, detail=str(e))
