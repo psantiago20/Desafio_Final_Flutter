@@ -30,6 +30,9 @@ class Patient(Base):
     insurance = Column(String(100))
     insurance_number = Column(String(50))
     
+    cep = Column(String(10))                                          # CEP do paciente
+    preferencia_notificacao = Column(String(50), default="whatsapp")  # whatsapp, sms, email
+    
     notes = Column(Text)
     tags = Column(Text)
     

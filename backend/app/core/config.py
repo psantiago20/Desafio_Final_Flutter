@@ -6,7 +6,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "OmniConnect"
     DEBUG: bool = True
     
-    DATABASE_URL: str = "postgresql://omniconnect:omniconnect123@localhost:5432/omniconnect"
+    # Usa SQLite como fallback para testes locais (sem Docker/PostgreSQL)
+    # Em produção, definir DATABASE_URL como variável de ambiente para PostgreSQL
+    DATABASE_URL: str = "sqlite:///./omniconnect_test.db"
     
     SECRET_KEY: str = "supersecretkeychangeinproduction"
     ALGORITHM: str = "HS256"
