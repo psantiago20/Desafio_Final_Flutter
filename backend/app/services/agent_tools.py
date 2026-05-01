@@ -127,27 +127,82 @@ TOOLS_DEFINITIONS = [
                 "required": ["cpf"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "listar_especialidades",
+            "description": (
+                "Lista todas as especialidades médicas atendidas na clínica. "
+                "Use esta ferramenta quando o paciente perguntar 'quais especialidades vocês atendem?', "
+                "'quais médicos tem?' ou se ele estiver em dúvida sobre qual profissional procurar."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
     }
 ]
+
+def listar_especialidades(db: Session) -> str:
+    """
+    Retorna a lista de especialidades baseada nos médicos cadastrados + FAQ global.
+    """
+    from app.models.medico import Medico
+    
+    # 1. Buscar no Banco de Dados (Dinâmico)
+    try:
+        medicos = db.query(Medico).filter(Medico.ativo == True).all()
+        especialidades_db = sorted(list(set([m.especialidade for m in medicos if m.especialidade])))
+    except Exception:
+        especialidades_db = []
+
+    # 2. Buscar no FAQ Global (Referência)
+    faq_ref = buscar_faq("especialidades")
+    
+    resultado = "Aqui estão as especialidades disponíveis no momento:\n\n"
+    
+    if especialidades_db:
+        resultado += "🩺 **Médicos em Atendimento:**\n- " + "\n- ".join(especialidades_db) + "\n\n"
+    
+    if "Nenhuma informação encontrada" not in faq_ref:
+        resultado += "📚 **Informações Adicionais:**\n" + faq_ref
+    
+    if not especialidades_db and "Nenhuma informação encontrada" in faq_ref:
+        return "No momento não consegui carregar a lista de especialidades. Por favor, tente novamente em instantes ou fale com nossa recepção."
+
+    return resultado
 
 
 # ------------------------------------------------------------------ #
 #  IMPLEMENTAÇÃO DAS TOOLS
 # ------------------------------------------------------------------ #
 
-def buscar_faq(pergunta: str, medico_id: int = None, chroma_client=None) -> str:
-    """
-    Busca na FAQ (ChromaDB) por perguntas gerais.
-    """
-    import chromadb
-    import os
+# Cliente ChromaDB compartilhado para evitar locks de arquivo
+_CHROMA_CLIENT = None
 
-    if chroma_client is None:
+def _get_chroma_client():
+    global _CHROMA_CLIENT
+    if _CHROMA_CLIENT is None:
+        import os
+        import chromadb
         chroma_dir = os.environ.get(
             "CHROMA_DIR",
             os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "chroma_data")
         )
-        chroma_client = chromadb.PersistentClient(path=chroma_dir)
+        logger.info(f"Inicializando cliente ChromaDB em: {chroma_dir}")
+        _CHROMA_CLIENT = chromadb.PersistentClient(path=chroma_dir)
+    return _CHROMA_CLIENT
+
+
+def buscar_faq(pergunta: str, medico_id: int = None, chroma_client=None) -> str:
+    """
+    Busca na FAQ (ChromaDB) por perguntas gerais.
+    """
+    if chroma_client is None:
+        chroma_client = _get_chroma_client()
 
     collection_name = f"faq_doctor_{medico_id}" if medico_id else "faq_doctor_0"
 
@@ -167,9 +222,10 @@ def buscar_faq(pergunta: str, medico_id: int = None, chroma_client=None) -> str:
         return "A base de FAQ está vazia. Execute a indexação primeiro."
 
     try:
+        # top_k=3: reduz tokens de contexto enviados para a LLM → geração mais rápida
         results = collection.query(
             query_texts=[pergunta],
-            n_results=min(5, collection.count())
+            n_results=min(3, collection.count())
         )
     except Exception as e:
         logger.error(f"Erro na busca FAQ: {e}")
@@ -198,46 +254,56 @@ def buscar_medico(
     """
     from app.models.medico import Medico
 
-    query = db.query(Medico).filter(Medico.ativo == True)
+    try:
+        query = db.query(Medico).filter(Medico.ativo == True)
 
-    if crm:
-        query = query.filter(Medico.crm == crm)
-    elif nome:
-        query = query.filter(Medico.nome_completo.ilike(f"%{nome}%"))
-    elif especialidade:
-        query = query.filter(Medico.especialidade.ilike(f"%{especialidade}%"))
-    else:
-        # Sem filtros, retorna os primeiros 5
-        query = query.limit(5)
+        if especialidade:
+            # Limpeza de termos comuns que a IA confunde com especialidade
+            termos_invalidos = ["disponível", "disponivel", "livre", "agenda", "horário", "horario", "médico", "medico"]
+            if especialidade.lower().strip() in termos_invalidos:
+                especialidade = None
 
-    medicos = query.all()
+        if crm:
+            query = query.filter(Medico.crm == crm)
+        elif nome:
+            query = query.filter(Medico.nome_completo.ilike(f"%{nome}%"))
+        elif especialidade:
+            query = query.filter(Medico.especialidade.ilike(f"%{especialidade}%"))
+        else:
+            # Sem filtros, retorna os primeiros 5
+            query = query.limit(5)
 
-    if not medicos:
-        return "Nenhum médico encontrado com os critérios informados."
+        medicos = query.all()
+        logger.info(f"[DB Debug] Médicos encontrados na query: {len(medicos)}")
+
+        if not medicos:
+            return "Nenhum médico encontrado com os critérios informados."
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro no banco de dados em buscar_medico: {e}")
+        return "Erro temporário ao acessar os dados dos médicos. Tente novamente."
+
 
     resultados = []
     for m in medicos:
-        info = {
-            "id": m.id,
-            "nome": m.nome_completo,
-            "crm": f"{m.crm}/{m.crm_estado}",
-            "especialidade": m.especialidade,
-            "telefone": m.telefone or "Não informado",
-            "whatsapp": m.whatsapp or "Não informado",
-            "bio": m.bio_resumida or "Sem bio disponível",
-            "duracao_consulta": f"{m.duracao_consulta_min} minutos",
-            "valor_consulta": f"R$ {m.valor_consulta}" if m.valor_consulta else "Consultar",
-            "aceita_convenio": "Sim" if m.aceita_convenio else "Não",
-        }
-
-        if m.aceita_convenio and m.convenios:
+        bio = m.bio_resumida or "Sem bio disponível"
+        val = f"R$ {m.valor_consulta}" if m.valor_consulta else "Consultar"
+        convs = m.convenios if (m.aceita_convenio and m.convenios) else "Nenhum"
+        if isinstance(convs, str) and convs.startswith("["):
             try:
-                convs = json.loads(m.convenios)
-                info["convenios"] = ", ".join(convs)
-            except (json.JSONDecodeError, TypeError):
-                info["convenios"] = m.convenios
-
-        resultados.append(json.dumps(info, ensure_ascii=False))
+                convs = ", ".join(json.loads(convs))
+            except Exception:
+                pass
+        
+        info = (
+            f"**{m.nome_completo}** ({m.especialidade})\n"
+            f"- CRM: {m.crm}/{m.crm_estado}\n"
+            f"- Status: Disponível para agendamentos\n"
+            f"- Valor Consulta: {val} (Duração: {m.duracao_consulta_min} min)\n"
+            f"- Convênios aceitos: {convs}\n"
+            f"- Bio: {bio}"
+        )
+        resultados.append(info)
 
     return "\n\n".join(resultados)
 
@@ -255,28 +321,33 @@ def buscar_horarios(
     from datetime import datetime, timedelta
 
     # Resolver médico
-    medico = None
-    if medico_id:
-        medico = db.query(Medico).filter(Medico.id == medico_id, Medico.ativo == True).first()
-    elif nome_medico:
-        medico = db.query(Medico).filter(
-            Medico.nome_completo.ilike(f"%{nome_medico}%"),
-            Medico.ativo == True
-        ).first()
+    try:
+        medico = None
+        if medico_id:
+            medico = db.query(Medico).filter(Medico.id == medico_id, Medico.ativo == True).first()
+        elif nome_medico:
+            medico = db.query(Medico).filter(
+                Medico.nome_completo.ilike(f"%{nome_medico}%"),
+                Medico.ativo == True
+            ).first()
 
-    if not medico:
-        return "Médico não encontrado. Verifique o nome ou ID informado."
+        if not medico:
+            return "Médico não encontrado. Verifique o nome ou ID informado."
 
-    # Buscar agendamentos futuros (próximos 30 dias)
-    agora = datetime.utcnow()
-    ate = agora + timedelta(days=30)
+        # Buscar agendamentos futuros (próximos 30 dias)
+        agora = datetime.utcnow()
+        ate = agora + timedelta(days=30)
 
-    agendamentos = db.query(Appointment).filter(
-        Appointment.medico_id == medico.id,
-        Appointment.appointment_date >= agora,
-        Appointment.appointment_date <= ate,
-        Appointment.status.in_(["pending", "confirmed"])
-    ).order_by(Appointment.appointment_date).all()
+        agendamentos = db.query(Appointment).filter(
+            Appointment.medico_id == medico.id,
+            Appointment.appointment_date >= agora,
+            Appointment.appointment_date <= ate,
+            Appointment.status.in_(["pending", "confirmed"])
+        ).order_by(Appointment.appointment_date).all()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro no banco de dados em buscar_horarios: {e}")
+        return "Erro temporário ao acessar os horários. Tente novamente."
 
     info = {
         "medico": medico.nome_completo,
@@ -316,18 +387,23 @@ def buscar_agendamentos(db: Session, cpf: str) -> str:
     if len(cpf_limpo) == 11:
         cpf_formatado = f"{cpf_limpo[:3]}.{cpf_limpo[3:6]}.{cpf_limpo[6:9]}-{cpf_limpo[9:]}"
 
-    # Buscar paciente
-    patient = db.query(Patient).filter(
-        (Patient.cpf == cpf_limpo) | (Patient.cpf == cpf_formatado) | (Patient.cpf == cpf)
-    ).first()
+    try:
+        # Buscar paciente
+        patient = db.query(Patient).filter(
+            (Patient.cpf == cpf_limpo) | (Patient.cpf == cpf_formatado) | (Patient.cpf == cpf)
+        ).first()
 
-    if not patient:
-        return f"Nenhum paciente encontrado com CPF {cpf}. Verifique se o CPF está correto."
+        if not patient:
+            return f"Nenhum paciente encontrado com CPF {cpf}. Verifique se o CPF está correto."
 
-    # Buscar agendamentos
-    agendamentos = db.query(Appointment).filter(
-        Appointment.patient_id == patient.id
-    ).order_by(Appointment.appointment_date.desc()).limit(10).all()
+        # Buscar agendamentos
+        agendamentos = db.query(Appointment).filter(
+            Appointment.patient_id == patient.id
+        ).order_by(Appointment.appointment_date.desc()).limit(10).all()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro no banco de dados em buscar_agendamentos: {e}")
+        return "Erro temporário ao acessar os agendamentos. Tente novamente."
 
     if not agendamentos:
         return f"Paciente {patient.name} encontrado, mas não possui agendamentos registrados."
@@ -402,6 +478,9 @@ def execute_tool(tool_name: str, arguments: dict, db: Session) -> str:
                 db=db,
                 cpf=arguments.get("cpf", "")
             )
+
+        elif tool_name == "listar_especialidades":
+            return listar_especialidades(db=db)
 
         else:
             return f"Tool '{tool_name}' não reconhecida."

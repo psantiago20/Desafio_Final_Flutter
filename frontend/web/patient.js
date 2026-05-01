@@ -119,7 +119,11 @@ async function sendChatMessage() {
         const response = await fetch(`${API_BASE}/api/webhooks/chat-direct`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ to: 'paciente_web', message: text })
+            body: JSON.stringify({ 
+                to: '5511988888888', 
+                message: text,
+                wa_to: '5511912345678'
+            })
         });
 
         removeLoadingBubble(loadingId);
@@ -326,6 +330,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial AI greeting
     setTimeout(() => {
-        appendMessage('Olá! Sou a IA do Sua Consulta. Como posso te ajudar hoje?', 'ai');
+        appendMessage('Oi! Tudo bem? ✨ Sou a Isis, sua assistente virtual. Estou aqui para cuidar de você e facilitar seu atendimento. Como posso te ajudar hoje? 😊', 'ai');
     }, 400);
 });

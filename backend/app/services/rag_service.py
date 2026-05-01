@@ -1,272 +1,454 @@
 """
-rag_service.py — Agente de IA com Tool Calling + Gerenciamento de Conversa
-
-Fluxo do agente (baseado no diagrama de arquitetura):
-
-    Paciente → É primeira interação ou inativo > 1h?
-                    │ Sim                        │ Não
-                    ▼                            ▼
-              Boas-vindas                   Precisa de CPF?
-           (nome + cidade                  (agendamento, cancelamento,
-            do médico)                      consulta de agendamentos)
-                                               │ Sim        │ Não
-                                               ▼            ▼
-                                          Pedir CPF     Agente de IA
-                                               │        (Tool Calling)
-                                               ▼            │
-                                          Validar CPF       │
-                                               │            │
-                                               ▼            ▼
-                                          Executar       Resposta ao
-                                          operação       paciente
-
-O agente usa Tool Calling nativo do Llama 3.1 via NVIDIA Nim para
-decidir QUANDO e QUAL tool chamar baseado na pergunta do paciente.
+rag_service.py — LangChain + LangGraph + LangSmith | Motor: Groq (primário) → NVIDIA (fallback)
 """
 
+import os
 import json
 import logging
-import os
-from typing import Optional, List, Dict
+import asyncio
+from typing import Annotated, List, Dict, Optional, TypedDict, Any, Sequence
 
-import httpx
-import chromadb
+# LangChain, NVIDIA & Groq
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from langchain_groq import ChatGroq
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage
+from langchain_core.tools import tool
+from langchain_chroma import Chroma
+from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
+
+# LangGraph
+from langgraph.graph import StateGraph, END, START
+from langgraph.prebuilt import ToolNode
+from langgraph.checkpoint.memory import MemorySaver
+from langchain_core.runnables import RunnableConfig
+
+# LangSmith
+from langsmith import Client
+
+try:
+    from langchain_community.cache import SQLiteCache
+    import langchain_community
+    # Configurar cache semântico local (sem necessidade de Redis ou infra paga)
+    # Evita re-invocar a LLM para perguntas idênticas recentes
+    langchain_community.llm_cache = SQLiteCache(database_path=".langchain_cache.db")
+except Exception:
+    pass  # Cache é opcional — sistema funciona normalmente sem ele
 
 from app.core.config import settings
-from app.services.agent_tools import TOOLS_DEFINITIONS, execute_tool
-from app.services.conversation_state import (
-    conversation_manager, validate_cpf, looks_like_cpf
-)
+from app.services.agent_tools import execute_tool, TOOLS_DEFINITIONS
+from app.services.conversation_state import conversation_manager, validate_cpf, looks_like_cpf
 from app.services.standard_messages import (
     get_welcome_message, get_welcome_message_without_doctor,
     get_cpf_request_message, get_cpf_invalid_message,
     get_cpf_confirmed_message, get_cpf_not_found_message,
-    detect_cpf_required_intent, get_help_duvidas_message,
-    get_help_exames_message, get_footer_message, get_menu_message
+    detect_cpf_required_intent, get_footer_message, get_menu_message,
+    get_help_duvidas_message, get_help_exames_message
 )
 
 logger = logging.getLogger(__name__)
+# Debug log to file
+fh = logging.FileHandler("backend_debug.log")
+fh.setLevel(logging.INFO)
+fh.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+logger.addHandler(fh)
+
+# Configuração LangSmith
+if settings.LANGSMITH_API_KEY:
+    os.environ["LANGSMITH_API_KEY"] = settings.LANGSMITH_API_KEY
+    os.environ["LANGSMITH_TRACING"] = str(settings.LANGSMITH_TRACING).lower()
+    os.environ["LANGSMITH_PROJECT"] = settings.LANGSMITH_PROJECT
 
 CHROMA_PERSIST_DIR = os.environ.get(
     "CHROMA_DIR",
     os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "chroma_data")
 )
 
-# Número máximo de iterações de tool calling (evitar loops infinitos)
-MAX_TOOL_ITERATIONS = 3
+from langgraph.graph.message import add_messages
 
-# System prompt do agente
-AGENT_SYSTEM_PROMPT = (
-    "Você é o assistente virtual do OmniConnect, uma plataforma de gestão médica. "
-    "Você ajuda pacientes via WhatsApp a:\n"
-    "- Agendar consultas e exames\n"
-    "- Tirar dúvidas sobre preparos de exames\n"
-    "- Consultar horários de médicos\n"
-    "- Ver e gerenciar agendamentos\n"
-    "- Informar sobre convênios aceitos\n\n"
-    "REGRAS:\n"
-    "1. Responda SEMPRE em português brasileiro.\n"
-    "2. Seja profissional, gentil e conciso.\n"
-    "3. Use as ferramentas disponíveis para buscar informações ANTES de responder.\n"
-    "4. Se a pergunta for GERAL (preparo de exame, convênios, etc), use 'buscar_faq'.\n"
-    "5. Se a pergunta mencionar um MÉDICO específico, use 'buscar_medico'.\n"
-    "6. Se a pergunta for sobre HORÁRIOS/DISPONIBILIDADE, use 'buscar_horarios'.\n"
-    "7. Se o paciente quiser ver/cancelar AGENDAMENTOS, use 'buscar_agendamentos'.\n"
-    "8. NUNCA invente informações. Se não encontrar, diga que não tem a informação.\n"
-    "9. Formate para WhatsApp (texto simples, emojis com moderação).\n"
-    "10. Você PODE chamar múltiplas ferramentas se necessário.\n"
-    "11. O CPF do paciente já foi validado e está no contexto. Use-o diretamente nas ferramentas.\n"
-)
+# --- DEFINIÇÃO DO ESTADO DO GRAFO ---
 
+class AgentState(TypedDict):
+    messages: Annotated[Sequence[BaseMessage], add_messages]
+    wa_from: str
+    wa_to: str
+    doctor_info: Optional[dict]
+    next_node: str # Controle de fluxo
+    loop_count: int  # Contador de chamadas de ferramenta no turno atual
+
+# --- TOOLS LANGCHAIN ---
+
+@tool
+def buscar_faq_tool(pergunta: str):
+    """Busca informações técnicas, preparo de exames e convênios na base de conhecimento (PDFs/FAQs)."""
+    # Esta tool será chamada pelo LangGraph
+    # Implementação simplificada chamando a lógica existente
+    from app.services.agent_tools import buscar_faq
+    return buscar_faq(pergunta=pergunta)
+
+@tool
+def buscar_medico_tool(nome: str = None, crm: str = None, especialidade: str = None):
+    """Busca dados de médicos da clínica. 
+    SE o paciente perguntar quais médicos trabalham ou pedir a lista de médicos, USE ESTA FERRAMENTA SEM ARGUMENTOS UMA ÚNICA VEZ.
+    NÃO chame esta ferramenta repetidas vezes tentando adivinhar parâmetros. 
+    Se você já chamou buscar_medico, use o resultado e não chame novamente.
+    IMPORTANTE: O campo 'especialidade' deve ser APENAS o nome da especialidade (ex: Cardiologia)."""
+    from app.services.agent_tools import buscar_medico
+    return buscar_medico(nome=nome, crm=crm, especialidade=especialidade)
+
+@tool
+def buscar_horarios_tool(medico_id: int):
+    """Consulta a agenda de horários disponíveis de um médico. Se não souber o ID do médico, use buscar_medico para encontrá-lo antes."""
+    from app.services.agent_tools import buscar_horarios
+    return buscar_horarios(medico_id=medico_id)
+
+@tool
+def buscar_agendamentos_tool(cpf: str):
+    """Lista todos os agendamentos vinculados a um CPF de paciente."""
+    from app.services.agent_tools import buscar_agendamentos
+    return buscar_agendamentos(cpf=cpf)
+
+@tool
+def listar_especialidades_tool():
+    """Retorna a lista de todas as especialidades médicas atendidas na clínica."""
+    from app.services.agent_tools import listar_especialidades
+    # Aqui precisamos do DB, mas como o @tool do LangChain não passa o config automaticamente,
+    # o _tools_node cuidará de chamar a implementação correta com o DB.
+    return "Listando especialidades..."
+
+# Mapeamento para o ToolNode
+langchain_tools = [buscar_faq_tool, buscar_medico_tool, buscar_horarios_tool, buscar_agendamentos_tool, listar_especialidades_tool]
+
+# --- RAG SERVICE CLASS ---
 
 class RAGService:
-    """
-    Agente de IA com Tool Calling que combina:
-    - Gerenciamento de estado da conversa (boas-vindas, CPF)
-    - Busca semântica na FAQ (ChromaDB) via tool buscar_faq
-    - Busca dinâmica no banco de dados via tools buscar_medico/horarios/agendamentos
-    - LLM (NVIDIA Nim / Llama 3.1) com suporte nativo a tool calling
-    """
-
     def __init__(self):
-        self.api_key = settings.NVIDIA_API_KEY
-        self.base_url = "https://integrate.api.nvidia.com/v1"
-        self.model = "meta/llama-3.1-8b-instruct"
-        self._chroma_client = None
+        # ESTRATÉGIA DE LATÊNCIA (3 camadas, todas gratuitas):
+        # 1. Groq  llama-3.1-8b-instant  → ~0.5-2s  (hardware LPU, FREE em console.groq.com)
+        # 2. NVIDIA llama-3.1-8b-instruct → ~5-15s  (fallback se Groq falhar)
+        # 3. NVIDIA llama-3.1-70b-instruct→ ~15-30s (fallback se 8B NVIDIA falhar)
 
-    @property
-    def chroma_client(self) -> chromadb.ClientAPI:
-        """Lazy initialization do ChromaDB client."""
-        if self._chroma_client is None:
-            self._chroma_client = chromadb.PersistentClient(path=CHROMA_PERSIST_DIR)
-        return self._chroma_client
+        groq_llm = None
+        if settings.GROQ_API_KEY:
+            groq_llm = ChatGroq(
+                model="llama-3.1-8b-instant",
+                api_key=settings.GROQ_API_KEY,
+                temperature=0.1,
+                max_tokens=350,
+                timeout=5,
+                max_retries=0,
+            ).bind_tools(langchain_tools)
 
-    # ------------------------------------------------------------------ #
-    #  BUSCA SEMÂNTICA NA FAQ (mantido para endpoints de admin)
-    # ------------------------------------------------------------------ #
+        nvidia_8b = ChatNVIDIA(
+            model="meta/llama-3.1-8b-instruct",
+            nvidia_api_key=settings.NVIDIA_API_KEY,
+            temperature=0.1,
+            max_tokens=300,
+            timeout=7,
+            max_retries=0
+        ).bind_tools(langchain_tools)
 
-    def search_faq(
-        self,
-        query: str,
-        doctor_id: Optional[int],
-        top_k: int = 5
-    ) -> List[Dict]:
-        """Busca semântica na FAQ (ChromaDB). Usado pelos endpoints de admin."""
-        collection_name = f"faq_doctor_{doctor_id}" if doctor_id else "faq_global"
+        nvidia_70b = ChatNVIDIA(
+            model="meta/llama-3.1-70b-instruct",
+            nvidia_api_key=settings.NVIDIA_API_KEY,
+            temperature=0.1,
+            max_tokens=350,
+            timeout=5,
+            max_retries=0
+        ).bind_tools(langchain_tools)
 
-        try:
-            collection = self.chroma_client.get_collection(collection_name)
-        except Exception:
-            try:
-                collection = self.chroma_client.get_collection("faq_doctor_0")
-            except Exception:
-                return []
+        # Monta cadeia de fallback de acordo com as chaves disponíveis
+        if groq_llm:
+            logger.info("[RAGService] Motor: Groq (primário) -> NVIDIA 8B -> NVIDIA 70B")
+            self.llm = groq_llm.with_fallbacks([nvidia_8b, nvidia_70b])
+            # LLM base ultra-rápida: Timeout de 5s para garantir fluidez
+            self.llm_base = ChatGroq(model="llama-3.1-8b-instant", api_key=settings.GROQ_API_KEY, temperature=0.1, max_tokens=350, timeout=5, max_retries=0).with_fallbacks([
+                ChatNVIDIA(model="meta/llama-3.1-8b-instruct", nvidia_api_key=settings.NVIDIA_API_KEY, temperature=0.1, max_tokens=300, timeout=8, max_retries=0)
+            ])
+        else:
+            logger.warning("[RAGService] GROQ_API_KEY não configurada. Usando NVIDIA 8B como primário (latência alta).")
+            self.llm = nvidia_8b.with_fallbacks([nvidia_70b])
+            self.llm_base = ChatNVIDIA(model="meta/llama-3.1-8b-instruct", nvidia_api_key=settings.NVIDIA_API_KEY, temperature=0.1, max_tokens=300, timeout=20)
 
-        try:
-            results = collection.query(
-                query_texts=[query],
-                n_results=min(top_k, collection.count()) if collection.count() > 0 else 1
-            )
-        except Exception as e:
-            logger.error(f"Erro na busca semântica: {e}")
-            return []
+        self._setup_graph()
+        self.memory = MemorySaver()
+        self.app = self.graph.compile(checkpointer=self.memory)
 
-        chunks = []
-        if results and results["documents"]:
-            for i, doc in enumerate(results["documents"][0]):
-                metadata = results["metadatas"][0][i] if results["metadatas"] else {}
-                distance = results["distances"][0][i] if results.get("distances") else None
-                chunks.append({
-                    "content": doc,
-                    "source": metadata.get("source", "unknown"),
-                    "scope": metadata.get("scope", "unknown"),
-                    "distance": distance
-                })
+    def _setup_graph(self):
+        workflow = StateGraph(AgentState)
 
-        return chunks
+        # Nodes
+        workflow.add_node("triage", self._triage_node)
+        workflow.add_node("agent", self._agent_node)
+        workflow.add_node("tools", self._tools_node) # Nó customizado
+        workflow.add_node("welcome", self._welcome_node)
+        workflow.add_node("cpf_flow", self._cpf_node)
 
-    def search_only(self, query: str, doctor_id: Optional[int], top_k: int = 5) -> List[Dict]:
-        """Busca sem LLM. Útil para debug."""
-        return self.search_faq(query, doctor_id, top_k)
-
-    # ------------------------------------------------------------------ #
-    #  CHAMADA LLM COM TOOL CALLING
-    # ------------------------------------------------------------------ #
-
-    async def _call_llm_with_tools(
-        self,
-        messages: list,
-        tools: list = None
-    ) -> dict:
-        """
-        Chama a LLM (NVIDIA Nim) com suporte a tool calling.
+        # Edges
+        workflow.add_edge(START, "triage")
         
-        Returns:
-            Dict com 'content' e/ou 'tool_calls'
-        """
-        url = f"{self.base_url}/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+        # Triage decide o próximo passo
+        workflow.add_conditional_edges(
+            "triage",
+            self._triage_router,
+            {
+                "welcome": "welcome",
+                "cpf_flow": "cpf_flow",
+                "agent": "agent",
+                "menu": END
+            }
+        )
 
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": 0.3,
-            "max_tokens": 1024
-        }
+        workflow.add_edge("welcome", END)
+        workflow.add_edge("cpf_flow", END)
 
-        if tools:
-            payload["tools"] = tools
-            payload["tool_choice"] = "auto"
+        # Loop de Agente e Tools
+        workflow.add_conditional_edges(
+            "agent",
+            self._agent_router,
+            {
+                "continue": "tools",
+                "end": END
+            }
+        )
+        workflow.add_edge("tools", "agent")
 
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.post(url, json=payload, headers=headers, timeout=45.0)
+        self.graph = workflow
 
-                if response.status_code != 200:
-                    logger.error(f"NVIDIA API Error ({response.status_code}): {response.text}")
-                    return {"content": None, "tool_calls": None, "error": response.text}
+    # --- NODES & ROUTERS ---
 
-                result = response.json()
-                choice = result["choices"][0]["message"]
+    def _triage_node(self, state: AgentState):
+        """Identifica se é boas-vindas, menu ou se precisa de CPF."""
+        query = state["messages"][-1].content.strip().lower()
+        wa_from = state["wa_from"]
 
-                return {
-                    "content": choice.get("content"),
-                    "tool_calls": choice.get("tool_calls"),
-                    "role": choice.get("role", "assistant")
-                }
+        logger.info(f"[Triage] Query: {query} de {wa_from}")
+        
+        # Resetar contador de loops para o novo turno
+        state["loop_count"] = 0
 
-            except Exception as e:
-                logger.error(f"Erro ao chamar NVIDIA Nim: {e}")
-                return {"content": None, "tool_calls": None, "error": str(e)}
+        # 1. Interceptações de menu (0, 1, 5, X) - Prioridade total
+        if query == "0": return {"next_node": "menu"}
+        if query in ("x", "sair"): return {"next_node": "menu"}
 
-    # ------------------------------------------------------------------ #
-    #  BUSCA DE MÉDICO PARA BOAS-VINDAS
-    # ------------------------------------------------------------------ #
-
-    def _get_doctor_info_by_phone(self, wa_to: str, db) -> dict:
-        """Busca dados do médico no banco usando o WhatsApp para a mensagem de boas-vindas e contexto."""
-        try:
-            from app.models.medico import Medico
-            medico = db.query(Medico).filter(
-                Medico.whatsapp == wa_to, Medico.ativo == True
-            ).first()
-            if medico:
-                import json
-                convenios_lista = []
-                if medico.convenios:
-                    try:
-                        convenios_lista = json.loads(medico.convenios)
-                    except:
-                        convenios_lista = [medico.convenios]
-
-                return {
-                    "id": medico.id,
-                    "nome": medico.nome_completo,
-                    "cidade": getattr(medico, "cidade", None),
-                    "endereco": getattr(medico, "endereco", "Não informado"),
-                    "especialidade": medico.especialidade,
-                    "telefone": medico.telefone,
-                    "valor_consulta": medico.valor_consulta,
-                    "convenios": convenios_lista
-                }
-        except Exception as e:
-            logger.error(f"Erro ao buscar médico para boas-vindas: {e}")
-        return None
-
-    # ------------------------------------------------------------------ #
-    #  VALIDAÇÃO DE CPF E BUSCA DE PACIENTE
-    # ------------------------------------------------------------------ #
-
-    def _find_patient_by_cpf(self, cpf: str, db) -> dict:
-        """Busca paciente no banco pelo CPF."""
-        try:
-            from app.models.patient import Patient
-            cpf_limpo = "".join(c for c in cpf if c.isdigit())
+        # 2. Verificar se a operação requer CPF (prioridade sobre boas-vindas)
+        if conversation_manager.is_awaiting_cpf(wa_from):
+            return {"next_node": "cpf_flow"}
             
-            # Banco pode ter CPF formatado (123.456.789-00) ou apenas números
-            cpf_formatado = ""
-            if len(cpf_limpo) == 11:
-                cpf_formatado = f"{cpf_limpo[:3]}.{cpf_limpo[3:6]}.{cpf_limpo[6:9]}-{cpf_limpo[9:]}"
+        operacao = detect_cpf_required_intent(query)
+        if operacao and not conversation_manager.get_cpf(wa_from):
+            conversation_manager.set_awaiting_cpf(wa_from, operacao, query)
+            return {"next_node": "cpf_flow"}
 
-            patient = db.query(Patient).filter(
-                (Patient.cpf == cpf_limpo) | (Patient.cpf == cpf_formatado) | (Patient.cpf == cpf)
-            ).first()
-            if patient:
-                return {
-                    "id": patient.id,
-                    "nome": patient.name,
-                    "cpf": patient.cpf,
-                }
+        # 3. Boas-vindas ou Inatividade
+        if conversation_manager.is_first_or_inactive(wa_from):
+            # Interceptar saudações iniciais
+            if query in ("oi", "olá", "bom dia", "boa tarde", "boa noite", "oie"):
+                return {"next_node": "welcome"}
+        
+        # Respostas curtas de cortesia (bem, tudo bem, ok, obrigado)
+        # Devem ir para o agente para que ele reconheça o diálogo sem repetir o Welcome.
+        cortesias = ("bem", "tudo bem", "obrigado", "obrigada", "vlw", "ok", "entendi")
+        if query in cortesias:
+            return {"next_node": "agent"}
+
+        return {"next_node": "agent"}
+
+    def _triage_router(self, state: AgentState):
+        node = state.get("next_node")
+        if node in ("welcome", "cpf_flow", "agent"):
+            return node
+        return "menu"
+
+    def _welcome_node(self, state: AgentState):
+        wa_from = state["wa_from"]
+        doc_info = state["doctor_info"]
+        
+        conversation_manager.update_activity(wa_from)
+        conversation_manager.mark_welcome_sent(wa_from)
+
+        if doc_info:
+            msg = get_welcome_message(doc_info["nome"], doc_info.get("cidade"))
+        else:
+            msg = get_welcome_message_without_doctor()
+        
+        return {"messages": [AIMessage(content=msg)]}
+
+    def _cpf_node(self, state: AgentState, config: RunnableConfig = None):
+        query = state["messages"][-1].content
+        wa_from = state["wa_from"]
+        db = config["configurable"].get("db")
+        
+        if not db:
+            logger.error("[CPF Flow] Erro: DB session não encontrada no config.")
+            return {"messages": [AIMessage(content="Desculpe, tive um problema técnico interno. Tente novamente mais tarde.")]}
+        
+        logger.info(f"[CPF Flow] Processando: {query}")
+
+        if conversation_manager.is_awaiting_cpf(wa_from):
+            # Processar resposta do CPF
+            if looks_like_cpf(query):
+                cpf_val = validate_cpf(query)
+                if cpf_val:
+                    # Buscar paciente
+                    from app.models.patient import Patient
+                    patient = db.query(Patient).filter(Patient.cpf == cpf_val).first()
+                    if patient:
+                        conversation_manager.set_cpf(wa_from, cpf_val)
+                        op = conversation_manager.get_pending_operation(wa_from)
+                        conversation_manager.clear_cpf_flow(wa_from)
+                        return {"messages": [AIMessage(content=get_cpf_confirmed_message(patient.name, op))]}
+                    return {"messages": [AIMessage(content=get_cpf_not_found_message())]}
+            return {"messages": [AIMessage(content=get_cpf_invalid_message())]}
+        
+        # Iniciar pedido de CPF
+        op = detect_cpf_required_intent(query)
+        return {"messages": [AIMessage(content=get_cpf_request_message(op))]}
+
+    async def _agent_node(self, state: AgentState, config: RunnableConfig = None):
+        doc = state["doctor_info"]
+        all_messages = state["messages"]
+
+        # Detectar se é a 2ª chamada (pós-tool) — usar prompt compacto
+        # Reduz drásticamente os tokens de entrada na chamada mais cara
+        last_is_tool = any(isinstance(m, ToolMessage) for m in all_messages[-3:])
+
+        if last_is_tool:
+            sys_prompt = (
+                "Você é a Isis, a assistente virtual super doce e prestativa da clínica. "
+                "Responda apenas sobre saúde e serviços da clínica. "
+                "Com base nos dados da ferramenta acima, responda ao paciente de forma muito amigável, "
+                "empática e concisa. Use uma linguagem natural, como se estivesse no WhatsApp. "
+                "Seja breve e use emojis carinhosos. ✨"
+            )
+        else:
+            sys_prompt = (
+                "Você é a Isis, assistente virtual da clínica, reconhecida por ser DOCE, PROATIVA e INTELIGENTE. ✨\n\n"
+                "DIRETRIZES SUPREMAS DE CONTEXTO:\n"
+                "1. PRIORIDADE DO MÉDICO ATUAL: Se o paciente já mencionou ou está visualizando informações de um médico (ex: Dr. Thorne), mantenha o foco TOTAL nele. Só mude para o médico de referência [INFO] se o paciente solicitar outro profissional ou se o histórico estiver vazio.\n"
+                "2. FOCO NA RESOLUÇÃO: Se o paciente pedir 'datas', 'horários' ou 'médicos', use as ferramentas IMEDIATAMENTE. Não faça perguntas antes de trazer os dados.\n"
+                "3. VISÃO CONSULTIVA: Sempre que citar um médico, explique sua especialidade e por que ele é uma ótima escolha. Humanize a lista de nomes.\n"
+                "4. RESPOSTA HUMANA: Se o paciente disser 'bem' ou agradecer, responda com carinho antes de prosseguir. NUNCA peça desculpas por erros técnicos ou lentidão, apenas foque no atendimento atual.\n"
+                "5. FOCO NO SERVIÇO: Se o assunto fugir da clínica, diga apenas que não entendeu e pergunte como pode ajudar com a saúde ou agendamentos. NUNCA use frases como 'vamos falar de algo mais interessante'.\n\n"
+                "FERRAMENTAS (INVISÍVEIS):\n"
+                "- buscar_faq: Dúvidas gerais (endereço, convênios).\n"
+                "- buscar_medico: Info sobre médicos (SEMPRE traga a especialidade).\n"
+                "- listar_especialidades: O que a clínica atende.\n"
+                "- buscar_horarios: Datas livres (use na hora se pedirem horários).\n"
+                "- buscar_agendamentos: Ver consultas (requer CPF)."
+            )
+            if doc:
+                sys_prompt += f"\n\n[INFO] Médico de referência do consultório: {doc['nome']} ({doc['especialidade']}). Use como fallback se nenhum médico tiver sido citado ainda."
+
+        # Janela deslizante filtrada: ignora mensagens de erro técnico para evitar apologias da IA
+        technical_terms = ["lentidão na conexão", "problema técnico", "tente novamente", "Desculpe pelo erro"]
+        raw_window = []
+        for msg in all_messages[-12:]:
+            if isinstance(msg, AIMessage) and any(term in msg.content for term in technical_terms):
+                continue
+            raw_window.append(msg)
+        
+        raw_window = raw_window[-10:]
+        
+        # Algoritmo de Validação Absoluta de Contexto (Evita Erro 400 Bad Request)
+        # OpenAI/Groq exigem que AIMessage(tool_calls) e ToolMessage ocorram sempre em pares.
+        valid_window = []
+        i = 0
+        while i < len(raw_window):
+            msg = raw_window[i]
+            if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
+                # Se for AIMessage com tool_calls, verifica se o próximo é o ToolMessage correspondente
+                if i + 1 < len(raw_window) and isinstance(raw_window[i+1], ToolMessage):
+                    valid_window.append(msg)
+                    valid_window.append(raw_window[i+1])
+                    i += 2
+                else:
+                    # AIMessage com tool_calls órfão (ex: loop interrompido no turno anterior), descartar
+                    i += 1
+            elif isinstance(msg, ToolMessage):
+                # ToolMessage órfão (AIMessage ficou de fora da janela), descartar
+                i += 1
+            else:
+                # Mensagens normais (HumanMessage, AIMessage de texto puro, etc)
+                valid_window.append(msg)
+                i += 1
+                
+        messages = [SystemMessage(content=sys_prompt)] + valid_window
+
+        try:
+            logger.info(f"[Agent] Chamando LLM (post_tool={last_is_tool}, msgs={len(messages)})...")
+            # Se já executamos a tool, usamos a LLM base (sem tools) para forçar uma resposta em texto
+            llm_to_use = self.llm_base if last_is_tool else self.llm
+            # TIMEOUT AGRESSIVO: 20s para resposta total ou erro.
+            response = await asyncio.wait_for(llm_to_use.ainvoke(messages), timeout=20)
+            return {"messages": [response]}
+        except asyncio.TimeoutError:
+            logger.error("[Agent] Timeout agressivo atingido (20s). Abortando.")
+            return {"messages": [AIMessage(content="Estou com uma pequena lentidão na conexão, mas não esqueci de você! ✨ Poderia repetir sua última dúvida rapidinho?")]}
         except Exception as e:
-            logger.error(f"Erro ao buscar paciente por CPF: {e}")
-        return None
+            logger.error(f"[Agent] Erro na LLM: {e}")
+            return {"messages": [AIMessage(content="Tive um probleminha técnico rápido. Vamos tentar de novo? 😊")]}
 
-    # ------------------------------------------------------------------ #
-    #  PIPELINE PRINCIPAL (COM GERENCIAMENTO DE ESTADO)
-    # ------------------------------------------------------------------ #
+    def _tools_node(self, state: AgentState, config: RunnableConfig = None):
+        """Executa as ferramentas mapeando-as para o banco de dados."""
+        last_message = state["messages"][-1]
+        tool_results = []
+
+        # Forçar apenas 1 tool call por vez para evitar que a LLM estoure a API
+        if hasattr(last_message, "tool_calls") and len(last_message.tool_calls) > 1:
+            logger.warning("[Tools Node] LLM tentou chamar múltiplas tools. Limitando a 1.")
+            last_message.tool_calls = [last_message.tool_calls[0]]
+
+        db = None
+        if config and "configurable" in config:
+            db = config["configurable"].get("db")
+
+        if not db:
+            logger.error("[Tools Node] Database session not found in config.")
+            for tool_call in last_message.tool_calls:
+                tool_results.append(ToolMessage(
+                    tool_call_id=tool_call["id"],
+                    content="Erro técnico: Banco de dados não disponível para esta operação."
+                ))
+            return {"messages": tool_results}
+
+        for tool_call in last_message.tool_calls:
+            tool_name = tool_call["name"]
+            arguments = tool_call["args"]
+            clean_name = tool_name.replace("_tool", "")
+
+            logger.info(f"[Tools] Executando: {clean_name}({arguments})")
+            result = execute_tool(clean_name, arguments, db)
+
+            # Truncar resultado a 800 chars — evita sobrecarregar o contexto da LLM
+            # A LLM não precisa de texto infinito para formatar a resposta
+            MAX_TOOL_CHARS = 800
+            if isinstance(result, str) and len(result) > MAX_TOOL_CHARS:
+                result = result[:MAX_TOOL_CHARS] + "\n[... resultado truncado para otimização de latência]"
+                logger.info(f"[Tools] Resultado truncado a {MAX_TOOL_CHARS} chars.")
+
+            tool_results.append(ToolMessage(
+                tool_call_id=tool_call["id"],
+                content=result
+            ))
+
+        return {"messages": tool_results}
+
+    def _agent_router(self, state: AgentState):
+        last_msg = state["messages"][-1]
+        
+        # Incrementar loop_count se houve tool_calls
+        if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
+            state["loop_count"] = state.get("loop_count", 0) + 1
+            
+            # Limite rigoroso de 1 rodada de ferramenta por turno de usuário
+            if state["loop_count"] > 1:
+                logger.warning(f"[AgentRouter] Interrompendo loop de Tool Calls. Limite atingido ({state['loop_count']}).")
+                return "end"
+            return "continue"
+            
+        return "end"
+
+    # --- MÉTODO PÚBLICO ---
 
     async def get_rag_response(
         self,
@@ -274,314 +456,137 @@ class RAGService:
         wa_to: Optional[str],
         db,
         top_k: int = 5,
-        wa_from: str = None
+        wa_from: str = None,
+        source: str = "whatsapp"
     ) -> str:
-        """
-        Pipeline do Agente de IA com gerenciamento de estado de conversa.
+        import time
+        start_time = time.time()
         
-        Fluxo:
-        1. Verifica se é primeira interação ou inativo > 1h → boas-vindas
-        2. Verifica se está aguardando CPF → valida CPF
-        3. Detecta se a operação requer CPF → pede CPF
-        4. Executa pipeline normal de Tool Calling
+        if not wa_from: wa_from = "anonymous"
+
+        # 1. Buscar info do médico
+        doc_info = self._get_doctor_info_by_phone(wa_to, db) if wa_to else None
         
-        Args:
-            query: Mensagem do paciente
-            wa_to: Número WhatsApp de destino (do médico/clínica)
-            db: Sessão SQLAlchemy
-            top_k: Chunks para busca FAQ
-            wa_from: Número WhatsApp do paciente (para tracking de estado)
-            
-        Returns:
-            Resposta do agente como string
-        """
-        # Se não tiver wa_from, gerar um identificador genérico
-        if not wa_from:
-            wa_from = f"anonymous_{id(query)}"
+        # 2. OTIMIZAÇÃO: Resposta ultrarrápida para saudações no App
+        import re
+        query_clean = re.sub(r'[^\w\s]', '', query.lower()).strip()
+        greetings = ["oi", "ola", "olá", "bom dia", "boa tarde", "boa noite", "oie"]
+        if source == "app" and query_clean in greetings:
+            self.clear_conversation(wa_from)  # Limpa o histórico preso (como loops anteriores)
+            conversation_manager.update_activity(wa_from)
+            conversation_manager.mark_welcome_sent(wa_from)
+            logger.info(f"[FastTrack] Saudação detectada no App. Tempo: {time.time() - start_time:.3f}s")
+            return "Olá! Tudo bem? ✨ Como posso te ajudar hoje? 😊"
 
-        logger.info(f"Agent Pipeline: query='{query[:80]}' wa_to={wa_to} wa_from={wa_from}")
-
-        # Buscar dados do médico pelo wa_to
-        doc_info = None
-        doctor_id = None
-        if wa_to:
-            doc_info = self._get_doctor_info_by_phone(wa_to, db)
-            if doc_info:
-                doctor_id = doc_info["id"]
-
-        # ---- PASSO 1: Verificar se é primeira interação ou inatividade ----
-        if conversation_manager.is_first_or_inactive(wa_from):
+        # Config do thread para persistência do LangGraph e rastreio do LangSmith
+        env_tag = "env:prod" if getattr(settings, "ENV", "dev") == "prod" else "env:dev"
+        config = {
+            "tags": [env_tag, f"source:{source}"],
+            "configurable": {"thread_id": wa_from, "db": db, "source": source},
+            "recursion_limit": 5
+        }
+        
+        # Se for a primeira mensagem vinda do APP e não for saudação (já tratada acima),
+        # pulamos o welcome para processar a dúvida.
+        if source == "app" and conversation_manager.is_first_or_inactive(wa_from):
             conversation_manager.update_activity(wa_from)
             conversation_manager.mark_welcome_sent(wa_from)
 
-            # Buscar dados do médico para personalizar boas-vindas
-            if doc_info:
-                    welcome = get_welcome_message(
-                        nome_medico=doc_info["nome"],
-                        cidade=doc_info.get("cidade")
-                    )
-                    logger.info(f"Enviando boas-vindas para {wa_from} (médico: {doc_info['nome']})")
-                    return welcome
-
-            # Sem médico identificado → boas-vindas genérica
-            welcome = get_welcome_message_without_doctor()
-            logger.info(f"Enviando boas-vindas genéricas para {wa_from}")
-            return welcome
-
-        # Atualizar timestamp de atividade
-        conversation_manager.update_activity(wa_from)
-
-        # ---- PASSO 2: Verificar interceptações diretas (menu e opções) ----
-        msg_lower = query.strip().lower()
+        # Executar grafo
+        inputs = {
+            "messages": [HumanMessage(content=query)],
+            "wa_from": wa_from,
+            "doctor_info": doc_info
+        }
         
-        # Voltar ao menu principal
-        if msg_lower == "0":
-            conversation_manager.clear_cpf_flow(wa_from)
-            return get_menu_message()
-            
-        # Finalizar atendimento
-        if msg_lower in ("x", "❌", "finalizar", "sair"):
-            conversation_manager.clear_state(wa_from)
-            return "Atendimento finalizado. Qualquer dúvida, é só me chamar novamente! 👋"
-            
-        # Opção 1 (Dúvidas)
-        if msg_lower == "1":
-            return get_help_duvidas_message() + get_footer_message()
-            
-        # Opção 5 (Preparo de exame)
-        if msg_lower == "5":
-            return get_help_exames_message() + get_footer_message()
-
-        # ---- PASSO 3: Verificar se está aguardando CPF ----
-        if conversation_manager.is_awaiting_cpf(wa_from):
-            return self._handle_cpf_response(query, doctor_id, db, wa_from)
-
-        # ---- PASSO 4: Detectar se a operação requer CPF ----
-        operacao = detect_cpf_required_intent(query)
-        if operacao:
-            # Verificar se já temos o CPF coletado nesta sessão
-            cpf_existente = conversation_manager.get_cpf(wa_from)
-            if cpf_existente:
-                # Já temos o CPF → prosseguir normalmente com o agente
-                logger.info(f"CPF já coletado para {wa_from}, prosseguindo com operação '{operacao}'")
-                # Injetar CPF no query para o agente usar
-                enriched_query = f"{query} (CPF do paciente: {cpf_existente})"
-                response = await self._run_agent_pipeline(enriched_query, doc_info, db, top_k)
-                return response + get_footer_message()
-            else:
-                # Precisa coletar CPF primeiro
-                conversation_manager.set_awaiting_cpf(wa_from, operacao, query)
-                return get_cpf_request_message(operacao)
-
-        # ---- PASSO 5: Pipeline normal do agente ----
-        # Injetar CPF se já coletado (para que o agente possa usar em tools)
-        cpf_existente = conversation_manager.get_cpf(wa_from)
-        if cpf_existente:
-            enriched_query = f"{query} (CPF do paciente: {cpf_existente})"
-        else:
-            enriched_query = query
-
-        response = await self._run_agent_pipeline(enriched_query, doc_info, db, top_k)
-        return response + get_footer_message()
-
-    # ------------------------------------------------------------------ #
-    #  HANDLER DE RESPOSTA COM CPF
-    # ------------------------------------------------------------------ #
-
-    def _handle_cpf_response(self, text: str, doctor_id, db, wa_from: str) -> str:
-        """
-        Processa a resposta quando estamos aguardando o CPF do paciente.
-        """
-        text_stripped = text.strip().lower()
-
-        # Verificar se quer cancelar
-        if text_stripped in ("cancelar", "voltar", "sair", "não", "nao"):
-            conversation_manager.clear_cpf_flow(wa_from)
-            return "Ok! Operação cancelada. Como posso te ajudar? 😊"
-
-        # Verificar se parece ser um CPF
-        if looks_like_cpf(text):
-            cpf_validado = validate_cpf(text)
-            if cpf_validado:
-                # CPF válido → buscar paciente no banco
-                paciente = self._find_patient_by_cpf(cpf_validado, db)
-                if paciente:
-                    # Paciente encontrado!
-                    conversation_manager.set_cpf(wa_from, cpf_validado)
-                    operacao = conversation_manager.get_pending_operation(wa_from)
-                    mensagem_original = conversation_manager.get_pending_message(wa_from)
-                    conversation_manager.clear_cpf_flow(wa_from)
-
-                    confirmed_msg = get_cpf_confirmed_message(paciente["nome"], operacao)
-                    logger.info(f"CPF validado para {wa_from}: paciente={paciente['nome']}")
-
-                    # Retornar mensagem de confirmação
-                    # A próxima mensagem do paciente (ou re-execução) usará o CPF armazenado
-                    return confirmed_msg
-                else:
-                    # CPF válido mas paciente não encontrado
-                    return get_cpf_not_found_message()
-            else:
-                # CPF inválido (formato errado)
-                return get_cpf_invalid_message()
-        else:
-            # Texto não parece CPF
-            return get_cpf_invalid_message()
-
-    # ------------------------------------------------------------------ #
-    #  PIPELINE DO AGENTE (LOOP DE TOOL CALLING)
-    # ------------------------------------------------------------------ #
-
-    async def _run_agent_pipeline(
-        self,
-        query: str,
-        doc_info: Optional[dict],
-        db,
-        top_k: int = 5
-    ) -> str:
-        """
-        Pipeline do Agente de IA com Tool Calling (lógica core).
+        logger.info(f"[RAG] Iniciando execução do grafo para {wa_from}...")
+        graph_start = time.time()
+        final_state = await self.app.ainvoke(inputs, config=config)
+        logger.info(f"[RAG] Grafo concluído em {time.time() - graph_start:.3f}s")
         
-        1. Envia mensagem do paciente + definições de tools à LLM
-        2. Se LLM responde com tool_calls → executa tools → envia resultados de volta
-        3. Repete até LLM dar resposta final (ou atingir MAX_TOOL_ITERATIONS)
+        # Procurar a resposta final no estado resultante (Apenas mensagens deste turno)
+        response_text = None
+        for msg in reversed(final_state["messages"]):
+            if isinstance(msg, HumanMessage):
+                break # Chegamos na pergunta do usuário, não há resposta nova à frente
+            if isinstance(msg, AIMessage) and msg.content:
+                response_text = msg.content
+                break
+        
+        if response_text:
+            total_time = time.time() - start_time
+            logger.info(f"[RAG] Resposta final gerada em {total_time:.3f}s")
+            return response_text + get_footer_message()
+
+        return "Desculpe, não consegui processar sua solicitação no momento. ✨"
+
+    def _get_doctor_info_by_phone(self, wa_to: str, db) -> dict:
+        """Portado da versão anterior."""
+        try:
+            from app.models.medico import Medico
+            medico = db.query(Medico).filter(Medico.whatsapp == wa_to, Medico.ativo == True).first()
+            if medico:
+                return {
+                    "id": medico.id, "nome": medico.nome_completo,
+                    "endereco": medico.endereco, "especialidade": medico.especialidade,
+                    "convenios": medico.convenios
+                }
+        except: pass
+        return None
+
+    def search_only(self, query: str, doctor_id: Optional[int] = None, top_k: int = 5) -> List[Dict[str, Any]]:
         """
-        logger.info(f"Agent Pipeline Core: query='{query[:80]}'")
-
-        if not self.api_key:
-            doctor_id = doc_info["id"] if doc_info else None
-            return self._fallback_without_llm(query, doctor_id, db)
-
-        # Montar system prompt com contexto do médico (se identificado)
-        system_content = AGENT_SYSTEM_PROMPT
-        if doc_info:
-            convs = ', '.join(doc_info['convenios']) if doc_info.get('convenios') else 'Nenhum'
-            system_content += f"\n\n--- DADOS DO MÉDICO ATUAL ---\n"
-            system_content += f"Você é o assistente virtual do(a) {doc_info['nome']}.\n"
-            system_content += f"Especialidade: {doc_info['especialidade']}\n"
-            system_content += f"Endereço: {doc_info['endereco']} - {doc_info.get('cidade', '')}\n"
-            system_content += f"Telefone da clínica: {doc_info['telefone']}\n"
-            system_content += f"Valor da consulta: R$ {doc_info['valor_consulta']}\n"
-            system_content += f"Convênios aceitos: {convs}\n"
-            system_content += f"Horário de atendimento: Segunda a Sexta, das 08:00 às 18:00\n"
-            system_content += "\nREGRAS DE CONTEXTO:\n"
-            system_content += "- Use os dados acima para responder diretamente perguntas sobre endereço, especialidade, horários padrões, preço e convênios (não precisa usar ferramenta para isso).\n"
-            system_content += f"- Para buscar a agenda e horários livres/ocupados do médico, use a ferramenta buscar_horarios passando medico_id={doc_info['id']}.\n"
-
-        # Histórico de mensagens para o loop
-        messages = [
-            {"role": "system", "content": system_content},
-            {"role": "user", "content": query}
-        ]
-
-        # Loop de Tool Calling
-        for iteration in range(MAX_TOOL_ITERATIONS):
-            logger.info(f"Agent iteration {iteration + 1}/{MAX_TOOL_ITERATIONS}")
-
-            # Chamar LLM com tools
-            result = await self._call_llm_with_tools(messages, TOOLS_DEFINITIONS)
-
-            # Se houve erro, usar fallback
-            if result.get("error"):
-                logger.error(f"LLM error: {result['error']}")
-                return self._fallback_without_llm(query, doctor_id, db)
-
-            # Se LLM respondeu SEM tool calls → é a resposta final
-            if not result.get("tool_calls"):
-                final_response = result.get("content", "")
-                if final_response:
-                    logger.info(f"Agent final response (iteration {iteration + 1}): {len(final_response)} chars")
-                    return final_response
-                else:
-                    # LLM não retornou conteúdo nem tools — fallback
-                    return self._fallback_without_llm(query, doctor_id, db)
-
-            # LLM pediu tool calls → executar cada uma
-            tool_calls = result["tool_calls"]
-            logger.info(f"LLM requested {len(tool_calls)} tool call(s)")
-
-            # Adicionar a mensagem do assistente (com tool_calls) ao histórico
-            assistant_msg = {"role": "assistant", "content": result.get("content") or ""}
-            assistant_msg["tool_calls"] = tool_calls
-            messages.append(assistant_msg)
-
-            # Executar cada tool e adicionar resultado ao histórico
-            for tc in tool_calls:
-                tool_name = tc["function"]["name"]
-                try:
-                    tool_args = json.loads(tc["function"]["arguments"]) if isinstance(tc["function"]["arguments"], str) else tc["function"]["arguments"]
-                except (json.JSONDecodeError, TypeError):
-                    tool_args = {}
-
-                logger.info(f"Executing tool: {tool_name}({tool_args})")
-
-                # Executar a tool
-                tool_result = execute_tool(tool_name, tool_args, db)
-
-                # Adicionar resultado ao histórico
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tc.get("id", f"call_{tool_name}"),
-                    "content": tool_result
-                })
-
-                logger.info(f"Tool {tool_name} returned {len(tool_result)} chars")
-
-        # Se chegou aqui, atingiu MAX_TOOL_ITERATIONS sem resposta final
-        logger.warning("Agent atingiu MAX_TOOL_ITERATIONS sem resposta final")
-
-        # Fazer uma última chamada SEM tools para forçar resposta
-        messages.append({
-            "role": "user",
-            "content": "Por favor, responda a pergunta original do paciente com as informações que você já coletou."
-        })
-        final_result = await self._call_llm_with_tools(messages, tools=None)
-
-        if final_result.get("content"):
-            return final_result["content"]
-
-        return self._fallback_without_llm(query, doctor_id, db)
-
-    # ------------------------------------------------------------------ #
-    #  FALLBACK (sem LLM)
-    # ------------------------------------------------------------------ #
-
-    def _fallback_without_llm(self, query: str, doctor_id: Optional[int], db) -> str:
+        Busca semântica pura no ChromaDB sem envolver a LLM.
+        Utilizado para testes de recuperação e estatísticas.
         """
-        Fallback quando a LLM não está disponível.
-        Tenta usar as tools diretamente sem intermediação da LLM.
-        """
-        logger.info("Usando fallback sem LLM")
+        print(f"[DEBUG] Executando search_only para query: {query}")
+        from app.services.agent_tools import _get_chroma_client
+        chroma_client = _get_chroma_client()
+        
+        # Tenta a coleção específica do médico, ou cai para a global (0)
+        collection_name = f"faq_doctor_{doctor_id}" if doctor_id else "faq_doctor_0"
+        
+        try:
+            collection = chroma_client.get_collection(collection_name)
+        except Exception:
+            try:
+                collection = chroma_client.get_collection("faq_doctor_0")
+            except Exception:
+                logger.warning(f"Coleção {collection_name} não encontrada e fallback falhou.")
+                return []
 
-        # Tentar buscar na FAQ
-        from app.services.agent_tools import buscar_faq
-        faq_result = buscar_faq(pergunta=query, medico_id=doctor_id)
+        if collection.count() == 0:
+            return []
 
-        if faq_result and "Nenhuma" not in faq_result and "Erro" not in faq_result:
-            return (
-                "⚠️ Nosso assistente IA está temporariamente indisponível, "
-                "mas encontrei estas informações na nossa base:\n\n"
-                f"{faq_result[:1500]}\n\n"
-                "Para mais detalhes, entre em contato diretamente com a clínica."
+        try:
+            results = collection.query(
+                query_texts=[query],
+                n_results=min(top_k, collection.count())
             )
-
-        return (
-            "Desculpe, estou com dificuldades técnicas no momento. 😔\n"
-            "Por favor, entre em contato diretamente com a clínica por telefone."
-        )
-
-    # ------------------------------------------------------------------ #
-    #  GERENCIAMENTO DE ESTADO (APIs para endpoints)
-    # ------------------------------------------------------------------ #
+            
+            structured_results = []
+            if results and results["documents"] and results["documents"][0]:
+                for i, doc in enumerate(results["documents"][0]):
+                    meta = results["metadatas"][0][i] if results["metadatas"] else {}
+                    dist = results["distances"][0][i] if results["distances"] else None
+                    
+                    structured_results.append({
+                        "content": doc,
+                        "source": meta.get("source", "FAQ"),
+                        "scope": "doctor" if doctor_id else "global",
+                        "distance": dist
+                    })
+            return structured_results
+        except Exception as e:
+            logger.error(f"Erro na execução de search_only: {e}")
+            return []
 
     def clear_conversation(self, wa_from: str):
-        """Limpa o estado de uma conversa (para testes/novo atendimento)."""
         conversation_manager.clear_state(wa_from)
 
     def get_conversation_state(self, wa_from: str) -> dict:
-        """Retorna o estado da conversa (para debug)."""
         return conversation_manager.get_state(wa_from)
-
 
 # Singleton
 rag_service = RAGService()
+

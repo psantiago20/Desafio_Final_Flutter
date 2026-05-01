@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, HTTPException, status, Query
+from fastapi import APIRouter, Depends, Request, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from pydantic import BaseModel
@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import logging
 import json
 
-from app.db.database import get_db
+from app.db.database import get_db, SessionLocal
 from app.models.patient import Patient
 from app.models.message import Message
 from app.core.config import settings
@@ -14,6 +14,50 @@ from app.services.whatsapp_service import wa_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+async def process_rag_background(wa_from: str, content: str, phone_number_id: str, patient_id: int):
+    """Background task to decouple LangChain/RAG processing from Meta Webhook."""
+    db = SessionLocal()
+    try:
+        from app.services.rag_service import rag_service
+        from app.services.doctor_mapper import doctor_mapper
+        from app.services.whatsapp_service import wa_service
+
+        doctor = doctor_mapper.get_doctor_by_phone_number_id(phone_number_id, db)
+        wa_to = doctor.whatsapp if doctor else None
+
+        ai_response = await rag_service.get_rag_response(content, wa_to, db, wa_from=wa_from)
+        
+        bot_message = Message(
+            patient_id=patient_id,
+            content=ai_response,
+            message_type="text",
+            source="ai",
+            wa_from="system"
+        )
+        db.add(bot_message)
+        db.commit()
+
+        try:
+            send_result = await wa_service.send_message(to=wa_from, message=ai_response)
+            if send_result and "messages" in send_result:
+                wa_msg_id_sent = send_result["messages"][0].get("id")
+                bot_message.wa_message_id = wa_msg_id_sent
+                db.commit()
+                logger.info(f"RAG response successfully sent and ID tracked: {wa_msg_id_sent}")
+        except Exception as e:
+            error_msg = str(e)
+            if hasattr(e, "response"):
+                try:
+                    error_data = e.response.json()
+                    error_msg = error_data.get("error", {}).get("message", error_msg)
+                except:
+                    error_msg = getattr(e, "response").text
+            logger.error(f"Failed to send RAG response back via WhatsApp: {error_msg}")
+    except Exception as e:
+        logger.error(f"Error generating RAG response: {e}")
+    finally:
+        db.close()
 
 
 class WhatsAppMessageRequest(BaseModel):
@@ -69,7 +113,7 @@ async def verify_webhook(request: Request):
 
 @router.post("")
 @router.post("/whatsapp")
-async def handle_webhook(request: Request, db: Session = Depends(get_db)):
+async def handle_webhook(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Receber eventos do WhatsApp"""
     try:
         body = await request.json()
@@ -123,57 +167,9 @@ async def handle_webhook(request: Request, db: Session = Depends(get_db)):
 
             logger.info(f"Message saved from {wa_from}")
 
-            # --- INTEGRAÇÃO RAG (Retrieval-Augmented Generation) ---
-            # Identificar o médico pelo phone_number_id do webhook
-            try:
-                from app.services.rag_service import rag_service
-                from app.services.doctor_mapper import doctor_mapper
-
-                # Extrair phone_number_id do payload da Meta
-                phone_number_id = value.get("metadata", {}).get("phone_number_id", "")
-                doctor = doctor_mapper.get_doctor_by_phone_number_id(phone_number_id, db)
-                doctor_id = doctor.id if doctor else None
-
-                # Pipeline RAG: FAQ (ChromaDB) + dados do médico (PostgreSQL) → LLM
-                # Passa wa_from para gerenciamento de estado (boas-vindas, CPF)
-                ai_response = await rag_service.get_rag_response(content, doctor_id, db, wa_from=wa_from)
-                
-                # Salvar resposta da IA no banco
-                bot_message = Message(
-                    patient_id=patient.id,
-                    content=ai_response,
-                    message_type="text",
-                    source="ai",
-                    wa_from="system"
-                )
-                db.add(bot_message)
-                db.commit()
-
-                logger.info(f"RAG response generated and saved for {wa_from} (doctor_id={doctor_id})")
-
-                # Tentar enviar de volta via WhatsApp (Bot -> User)
-                try:
-                    send_result = await wa_service.send_message(to=wa_from, message=ai_response)
-                    
-                    # Capturar ID da mensagem enviada pela Meta
-                    if send_result and "messages" in send_result:
-                        wa_msg_id_sent = send_result["messages"][0].get("id")
-                        bot_message.wa_message_id = wa_msg_id_sent
-                        db.commit()
-                        logger.info(f"RAG response successfully sent and ID tracked: {wa_msg_id_sent}")
-                    
-                except Exception as e:
-                    error_msg = str(e)
-                    if hasattr(e, "response"):
-                        try:
-                            error_data = e.response.json()
-                            error_msg = error_data.get("error", {}).get("message", error_msg)
-                        except:
-                            error_msg = e.response.text
-                    logger.error(f"Failed to send RAG response back via WhatsApp: {error_msg}")
-
-            except Exception as e:
-                logger.error(f"Error generating RAG response: {e}")
+            # --- INTEGRAÇÃO RAG (Background Task) ---
+            phone_number_id = value.get("metadata", {}).get("phone_number_id", "")
+            background_tasks.add_task(process_rag_background, wa_from, content, phone_number_id, patient.id)
             # --------------------------
 
         # Processar status de entrega (sent, delivered, read, failed)
@@ -442,6 +438,7 @@ async def send_whatsapp_template(
 class ChatDirectRequestV2(BaseModel):
     to: str
     message: str
+    wa_to: Optional[str] = None
     doctor_id: Optional[int] = None
 
 
@@ -485,9 +482,13 @@ async def chat_direct(
     # Get RAG response
     try:
         from app.services.rag_service import rag_service
-        # Passa wa_from e doctor_id para gerenciamento de estado
+        # Se wa_to não vier no request, podemos usar o doctor_id para buscar o telefone se necessário,
+        # ou passar None para usar o médico padrão (0)
+        wa_to_effective = request.wa_to
+        
+        # Pipeline RAG: Passa wa_from e wa_to para gerenciamento de estado e contexto do médico
         ai_response = await rag_service.get_rag_response(
-            content, doctor_id=doctor_id, db=db, wa_from=wa_from
+            content, wa_to=wa_to_effective, db=db, wa_from=wa_from, source="app"
         )
         
         bot_message = Message(

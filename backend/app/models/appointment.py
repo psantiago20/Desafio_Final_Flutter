@@ -49,8 +49,8 @@ class Appointment(Base):
     is_recurring = Column(Boolean, default=False)
     recurring_id = Column(Integer)
     
-    canal_notificacao = Column(String(50), default="whatsapp")  # whatsapp, sms, email
-    notificado_em = Column(DateTime, nullable=True)
+    # canal_notificacao = Column(String(50), default="whatsapp")  # whatsapp, sms, email
+    # notificado_em = Column(DateTime, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

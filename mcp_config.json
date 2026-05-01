@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "omniconnect": {
+      "command": "python",
+      "args": [
+        "backend/app/services/mcp_server.py"
+      ],
+      "env": {
+        "DATABASE_URL": "postgresql://postgres:P2706303-2p@localhost:5432/omniconnect",
+        "CHROMA_DIR": "backend/chroma_data"
+      }
+    }
+  }
+}

@@ -1,18 +1,27 @@
+# Forçando reload
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import logging
 
+print("[DEBUG] Importando core.config...")
 from app.core.config import settings
+print("[DEBUG] Importando database...")
 from app.db.database import engine
+print("[DEBUG] Importando models...")
 from app.models import user, patient, appointment, message, service, doctor_profile, medico
+print("[DEBUG] Importando endpoints...")
 from app.api.endpoints import auth, patients, appointments, messages, dashboard, finance, whatsapp, chat, test_notifications, rag, simulator_admin
+print("[DEBUG] Imports concluídos!")
 
 # Configuração de Logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()]
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("backend_debug.log")
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -22,10 +31,36 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Log de Requisições para Debug + Forced CORS + Error Capture
+@app.middleware("http")
+async def log_requests(request, call_next):
+    try:
+        logger.info(f"[DEBUG] Request: {request.method} {request.url}")
+        response = await call_next(request)
+        # Forçar CORS headers em todas as respostas
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+    except Exception as e:
+        import traceback
+        error_msg = traceback.format_exc()
+        logger.error(f"[CRITICAL ERROR] {error_msg}")
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal Server Error", "traceback": error_msg},
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "*",
+                "Access-Control-Allow-Headers": "*"
+            }
+        )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
