@@ -6,14 +6,18 @@ import 'package:frontend/main.dart';
 /// 🧪 Basic App Load Test
 /// Responsabilidade: qa-test-engineer
 void main() {
-  testWidgets('App starts and shows ClientHomeScreen', (WidgetTester tester) async {
+  testWidgets('App starts and shows MainDashboardScreen', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const OmniConnectApp());
 
-    // Verify that the home screen title is rendered
-    expect(find.text('Meus Agendamentos'), findsOneWidget);
+    // Verify that the bottom navigation bar is rendered
+    expect(find.byType(BottomNavigationBar), findsOneWidget);
+
+    // Verify that the Agenda screen is the default one
+    expect(find.text('Minha Agenda'), findsOneWidget);
     
-    // Verify that there is a floating action button
-    expect(find.byType(FloatingActionButton), findsOneWidget);
+    // Verify that tabs Consultas and Exames exist
+    expect(find.text('Consultas'), findsOneWidget);
+    expect(find.text('Exames'), findsOneWidget);
   });
 }
