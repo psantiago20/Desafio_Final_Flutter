@@ -314,61 +314,119 @@ def buscar_horarios(
     nome_medico: str = None
 ) -> str:
     """
-    Busca horários de atendimento e agendamentos do médico.
+    Busca horários de atendimento e calcula slots LIVRES do médico para os próximos 7 dias.
     """
     from app.models.medico import Medico
     from app.models.appointment import Appointment
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, time
 
     # Resolver médico
     try:
         medico = None
         if medico_id:
-            medico = db.query(Medico).filter(Medico.id == medico_id, Medico.ativo == True).first()
-        elif nome_medico:
-            medico = db.query(Medico).filter(
-                Medico.nome_completo.ilike(f"%{nome_medico}%"),
-                Medico.ativo == True
-            ).first()
+            try:
+                m_id = int(str(medico_id).strip())
+                medico = db.query(Medico).filter(Medico.id == m_id, Medico.ativo == True).first()
+            except (ValueError, TypeError):
+                nome_para_busca = str(medico_id)
+                medico = db.query(Medico).filter(Medico.nome_completo.ilike(f"%{nome_para_busca}%"), Medico.ativo == True).first()
+        
+        if not medico and nome_medico:
+            medico = db.query(Medico).filter(Medico.nome_completo.ilike(f"%{nome_medico}%"), Medico.ativo == True).first()
 
         if not medico:
-            return "Médico não encontrado. Verifique o nome ou ID informado."
+            return "Médico não encontrado. Por favor, especifique o nome do profissional (ex: Dra. Isis Silva ou Dr. Thorne Blackwood)."
 
-        # Buscar agendamentos futuros (próximos 30 dias)
-        agora = datetime.utcnow()
-        ate = agora + timedelta(days=30)
+        # Configurações de horário
+        START_HOUR = 8
+        END_HOUR = 18
+        LUNCH_START = 12
+        LUNCH_END = 13
+        SLOT_DURATION = medico.duracao_consulta_min or 30
+
+        # Buscar agendamentos existentes (próximos 7 dias)
+        agora = datetime.now()
+        hoje = agora.date()
+        limite = hoje + timedelta(days=7)
 
         agendamentos = db.query(Appointment).filter(
             Appointment.medico_id == medico.id,
-            Appointment.appointment_date >= agora,
-            Appointment.appointment_date <= ate,
+            Appointment.appointment_date >= hoje,
+            Appointment.appointment_date <= limite,
             Appointment.status.in_(["pending", "confirmed"])
-        ).order_by(Appointment.appointment_date).all()
+        ).all()
+
+        ocupados = [a.appointment_date for a in agendamentos]
+
+        # Gerar slots disponíveis
+        disponibilidade = {}
+        dias_a_gerar = 7
+        
+        for i in range(dias_a_gerar + 1):
+            data_atual = hoje + timedelta(days=i)
+            
+            # Pular finais de semana (5=Sábado, 6=Domingo)
+            if data_atual.weekday() >= 5:
+                continue
+                
+            dia_str = data_atual.strftime("%d/%m (%A)")
+            # Tradução manual simples para PT-BR
+            traducoes = {
+                "Monday": "Segunda", "Tuesday": "Terça", "Wednesday": "Quarta",
+                "Thursday": "Quinta", "Friday": "Sexta"
+            }
+            for eng, pt in traducoes.items():
+                dia_str = dia_str.replace(eng, pt)
+
+            slots_do_dia = []
+            
+            # Gerar slots das 08h às 18h
+            hora_atual = datetime.combine(data_atual, time(START_HOUR, 0))
+            hora_fim = datetime.combine(data_atual, time(END_HOUR, 0))
+            
+            while hora_atual + timedelta(minutes=SLOT_DURATION) <= hora_fim:
+                # Pular horário de almoço
+                if LUNCH_START <= hora_atual.hour < LUNCH_END:
+                    hora_atual += timedelta(minutes=SLOT_DURATION)
+                    continue
+                
+                # Pular horários passados se for hoje
+                if data_atual == hoje and hora_atual < agora:
+                    hora_atual += timedelta(minutes=SLOT_DURATION)
+                    continue
+                
+                # Verificar se o slot está livre
+                is_free = True
+                for ocupado in ocupados:
+                    # Se houver sobreposição de horários
+                    diff = abs((hora_atual - ocupado).total_seconds() / 60)
+                    if diff < SLOT_DURATION:
+                        is_free = False
+                        break
+                
+                if is_free:
+                    slots_do_dia.append(hora_atual.strftime("%H:%M"))
+                
+                hora_atual += timedelta(minutes=SLOT_DURATION)
+            
+            if slots_do_dia:
+                disponibilidade[dia_str] = slots_do_dia[:6] # Limitar a 6 slots por dia para não estourar tokens
+
+        if not disponibilidade:
+            return f"No momento, o(a) {medico.nome_completo} não possui horários disponíveis para os próximos 7 dias."
+
+        # Retornar como texto estruturado claro para a IA
+        resultado = f"Horários disponíveis para {medico.nome_completo} ({medico.especialidade}):\n"
+        for dia, slots in disponibilidade.items():
+            resultado += f"- {dia}: {', '.join(slots)}\n"
+        
+        resultado += "\nInstrução para a IA: Apresente EXATAMENTE estas datas e horários ao paciente. NÃO invente outros dias ou horários."
+        return resultado
+
     except Exception as e:
         db.rollback()
-        logger.error(f"Erro no banco de dados em buscar_horarios: {e}")
-        return "Erro temporário ao acessar os horários. Tente novamente."
-
-    info = {
-        "medico": medico.nome_completo,
-        "especialidade": medico.especialidade,
-        "duracao_consulta": f"{medico.duracao_consulta_min} minutos",
-        "horario_atendimento_padrao": "Segunda a Sexta, das 08:00 às 18:00",
-        "dias_disponiveis": "O médico atende de segunda a sexta-feira. Sábados, domingos e feriados não há atendimento.",
-    }
-
-    if agendamentos:
-        ocupados = []
-        for ag in agendamentos:
-            ocupados.append(
-                ag.appointment_date.strftime("%d/%m/%Y %H:%M")
-            )
-        info["horarios_ocupados_proximos_30_dias"] = ocupados
-        info["total_agendamentos"] = len(agendamentos)
-    else:
-        info["disponibilidade"] = "Sem agendamentos nos próximos 30 dias — agenda livre"
-
-    return json.dumps(info, ensure_ascii=False)
+        logger.error(f"Erro ao calcular horários: {e}")
+        return "Desculpe, tive um erro ao consultar a agenda. Tente novamente em instantes."
 
 
 def buscar_agendamentos(db: Session, cpf: str) -> str:

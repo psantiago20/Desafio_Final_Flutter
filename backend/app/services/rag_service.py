@@ -179,12 +179,14 @@ class RAGService:
         # Nodes
         workflow.add_node("triage", self._triage_node)
         workflow.add_node("agent", self._agent_node)
-        workflow.add_node("tools", self._tools_node) # Nó customizado
+        workflow.add_node("tools", self._tools_node)
+        workflow.add_node("force_search", self._force_search_node)
         workflow.add_node("welcome", self._welcome_node)
         workflow.add_node("cpf_flow", self._cpf_node)
 
         # Edges
         workflow.add_edge(START, "triage")
+        workflow.add_edge("force_search", "agent")
         
         # Triage decide o próximo passo
         workflow.add_conditional_edges(
@@ -194,6 +196,7 @@ class RAGService:
                 "welcome": "welcome",
                 "cpf_flow": "cpf_flow",
                 "agent": "agent",
+                "force_search": "force_search",
                 "menu": END
             }
         )
@@ -251,11 +254,19 @@ class RAGService:
         if query in cortesias:
             return {"next_node": "agent"}
 
+        # 4. FORÇAR BUSCA AUTÔNOMA (Bypass de IA para evitar procrastinação)
+        keywords_busca = ['médico', 'medico', 'doutor', 'dra', 'dr', 'especialista']
+        if any(k in query for k in keywords_busca):
+            logger.info("[Triage] Gatilho de Médicos detectado. Encaminhando para Busca Autônoma.")
+            # Injetar instrução invisível para o Agente formatar o resultado que virá do nó de tools
+            state["messages"].append(SystemMessage(content="O usuário quer a lista de médicos. O sistema já está buscando os dados. Sua tarefa será apenas formatar o resultado que receberá a seguir."))
+            return {"next_node": "force_search", "messages": state["messages"]}
+
         return {"next_node": "agent"}
 
     def _triage_router(self, state: AgentState):
         node = state.get("next_node")
-        if node in ("welcome", "cpf_flow", "agent"):
+        if node in ("welcome", "cpf_flow", "agent", "force_search"):
             return node
         return "menu"
 
@@ -322,22 +333,22 @@ class RAGService:
             )
         else:
             sys_prompt = (
-                "Você é a Isis, assistente virtual da clínica, reconhecida por ser DOCE, PROATIVA e INTELIGENTE. ✨\n\n"
-                "DIRETRIZES SUPREMAS DE CONTEXTO:\n"
-                "1. PRIORIDADE DO MÉDICO ATUAL: Se o paciente já mencionou ou está visualizando informações de um médico (ex: Dr. Thorne), mantenha o foco TOTAL nele. Só mude para o médico de referência [INFO] se o paciente solicitar outro profissional ou se o histórico estiver vazio.\n"
-                "2. FOCO NA RESOLUÇÃO: Se o paciente pedir 'datas', 'horários' ou 'médicos', use as ferramentas IMEDIATAMENTE. Não faça perguntas antes de trazer os dados.\n"
-                "3. VISÃO CONSULTIVA: Sempre que citar um médico, explique sua especialidade e por que ele é uma ótima escolha. Humanize a lista de nomes.\n"
-                "4. RESPOSTA HUMANA: Se o paciente disser 'bem' ou agradecer, responda com carinho antes de prosseguir. NUNCA peça desculpas por erros técnicos ou lentidão, apenas foque no atendimento atual.\n"
-                "5. FOCO NO SERVIÇO: Se o assunto fugir da clínica, diga apenas que não entendeu e pergunte como pode ajudar com a saúde ou agendamentos. NUNCA use frases como 'vamos falar de algo mais interessante'.\n\n"
+                "Você é a Isis, assistente virtual da clínica, reconhecida por ser DOCE, PROATIVA e EXTREMAMENTE PRECISA. ✨\n\n"
+                "DIRETRIZES SUPREMAS (ORDEM DE PRIORIDADE):\n"
+                "1. BANCO DE DADOS COMO ÚNICA FONTE: Você está PROIBIDA de inventar datas, horários, valores ou qualquer informação que não venha diretamente das ferramentas. Se a ferramenta 'buscar_horarios' retornar uma lista de datas, use EXATAMENTE aquelas. Nunca deduza dias da semana ou horários por conta própria.\n"
+                "2. PROTOCOLO DE BUSCA OBRIGATÓRIO: Se o usuário mencionar 'médicos', 'horários' ou 'valores', chame 'buscar_medico' ou 'buscar_horarios' IMEDIATAMENTE. \n"
+                "3. PRIORIDADE DO MÉDICO ATUAL: Se o paciente já estiver visualizando informações de um médico, mantenha o foco nele.\n"
+                "4. PROIBIÇÃO DE LINGUAGEM TÉCNICA: NUNCA use palavras como 'ferramentas' ou 'sistema'.\n"
+                "5. RESPOSTA HUMANA (OBJETIVIDADE): Use uma linguagem natural de WhatsApp, curta e com emojis carinhosos. ✨\n\n"
                 "FERRAMENTAS (INVISÍVEIS):\n"
                 "- buscar_faq: Dúvidas gerais (endereço, convênios).\n"
-                "- buscar_medico: Info sobre médicos (SEMPRE traga a especialidade).\n"
+                "- buscar_medico: Info sobre médicos.\n"
                 "- listar_especialidades: O que a clínica atende.\n"
-                "- buscar_horarios: Datas livres (use na hora se pedirem horários).\n"
+                "- buscar_horarios: Retorna a lista REAL de slots disponíveis. APRESENTE A LISTA EXATA QUE RECEBER.\n"
                 "- buscar_agendamentos: Ver consultas (requer CPF)."
             )
             if doc:
-                sys_prompt += f"\n\n[INFO] Médico de referência do consultório: {doc['nome']} ({doc['especialidade']}). Use como fallback se nenhum médico tiver sido citado ainda."
+                sys_prompt += f"\n\n[INFO] Médico de referência do consultório: {doc['nome']} ({doc['especialidade']})."
 
         # Janela deslizante filtrada: ignora mensagens de erro técnico para evitar apologias da IA
         technical_terms = ["lentidão na conexão", "problema técnico", "tente novamente", "Desculpe pelo erro"]
@@ -387,6 +398,42 @@ class RAGService:
         except Exception as e:
             logger.error(f"[Agent] Erro na LLM: {e}")
             return {"messages": [AIMessage(content="Tive um probleminha técnico rápido. Vamos tentar de novo? 😊")]}
+
+    def _force_search_node(self, state: AgentState, config: RunnableConfig = None):
+        """Força a execução da ferramenta de médicos sem passar pela decisão da LLM."""
+        logger.info("[Force Search] Executando busca de médicos obrigatória.")
+        db = None
+        if config and "configurable" in config:
+            db = config["configurable"].get("db")
+            
+        if not db:
+            return {"messages": [AIMessage(content="Erro técnico: Banco de dados indisponível.")]}
+            
+        # Executar a ferramenta buscar_medico manualmente
+        result = execute_tool("buscar_medico", {}, db)
+        
+        # Criar uma ToolMessage fake e uma AIMessage fake para manter a coerência do histórico
+        import uuid
+        tool_call_id = f"force_{uuid.uuid4().hex[:8]}"
+        
+        # 1. AI Message simulando que ela chamou a tool
+        ai_msg = AIMessage(
+            content="",
+            tool_calls=[{
+                "name": "buscar_medico",
+                "args": {},
+                "id": tool_call_id
+            }]
+        )
+        
+        # 2. Tool Message com o resultado real do banco
+        tool_msg = ToolMessage(
+            tool_call_id=tool_call_id,
+            content=result
+        )
+        
+        # Adicionar ambas ao estado
+        return {"messages": [ai_msg, tool_msg]}
 
     def _tools_node(self, state: AgentState, config: RunnableConfig = None):
         """Executa as ferramentas mapeando-as para o banco de dados."""
