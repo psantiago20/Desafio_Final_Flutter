@@ -234,11 +234,25 @@ def buscar_faq(pergunta: str, medico_id: int = None, chroma_client=None) -> str:
     if not results or not results["documents"] or not results["documents"][0]:
         return "Nenhuma informação encontrada na FAQ para esta pergunta."
 
-    # Formatar resultados
+    # Formatar resultados com FILTRO DE SEGURANÇA RÍGIDO (Anti-Vazamento)
     chunks = []
+    FORBIDDEN_KEYWORDS = ["localhost", "11434", "ollama", "nvidia nim", "aula", "código", "python", "api", "endpoint", "npx", "uvicorn", "flutter run"]
+    FORBIDDEN_SOURCES = ["aula", "code", "internal", "config", "localhost", "main.py", "service.py"]
+
     for i, doc in enumerate(results["documents"][0]):
-        source = results["metadatas"][0][i].get("source", "FAQ") if results["metadatas"] else "FAQ"
-        chunks.append(f"[Fonte: {source}]\n{doc}")
+        source = str(results["metadatas"][0][i].get("source", "FAQ")).lower() if results["metadatas"] else "faq"
+        doc_lower = doc.lower()
+        
+        # Pular se a fonte ou o conteúdo for técnico/interno (Evita vazamento de dados de aula)
+        if any(k in source for k in FORBIDDEN_SOURCES) or any(k in doc_lower for k in FORBIDDEN_KEYWORDS):
+            logger.warning(f"[Security] Vazamento de dado técnico bloqueado! Fonte: {source}")
+            continue
+
+        source_clean = results["metadatas"][0][i].get("source", "FAQ")
+        chunks.append(f"[Fonte: {source_clean}]\n{doc}")
+
+    if not chunks:
+        return "Nenhuma informação clínica disponível para esta pergunta na FAQ."
 
     return "\n\n---\n\n".join(chunks)
 
@@ -297,6 +311,7 @@ def buscar_medico(
         
         info = (
             f"**{m.nome_completo}** ({m.especialidade})\n"
+            f"- ID do Médico: {m.id}\n"
             f"- CRM: {m.crm}/{m.crm_estado}\n"
             f"- Status: Disponível para agendamentos\n"
             f"- Valor Consulta: {val} (Duração: {m.duracao_consulta_min} min)\n"
@@ -335,7 +350,7 @@ def buscar_horarios(
             medico = db.query(Medico).filter(Medico.nome_completo.ilike(f"%{nome_medico}%"), Medico.ativo == True).first()
 
         if not medico:
-            return "Médico não encontrado. Por favor, especifique o nome do profissional (ex: Dra. Isis Silva ou Dr. Thorne Blackwood)."
+            return "Médico não encontrado. Por favor, especifique o nome do profissional (ex: Dra. Marina Costa ou Dr. Thorne Blackwood)."
 
         # Configurações de horário
         START_HOUR = 8
@@ -344,10 +359,12 @@ def buscar_horarios(
         LUNCH_END = 13
         SLOT_DURATION = medico.duracao_consulta_min or 30
 
-        # Buscar agendamentos existentes (próximos 7 dias)
+        # Buscar agendamentos existentes (próximos 5 dias)
         agora = datetime.now()
+        # Buffer de 5 minutos para evitar sugerir horários que estão começando agora
+        agora_com_buffer = agora + timedelta(minutes=5)
         hoje = agora.date()
-        limite = hoje + timedelta(days=7)
+        limite = hoje + timedelta(days=5)
 
         agendamentos = db.query(Appointment).filter(
             Appointment.medico_id == medico.id,
@@ -358,9 +375,9 @@ def buscar_horarios(
 
         ocupados = [a.appointment_date for a in agendamentos]
 
-        # Gerar slots disponíveis
+        # Gerar slots disponíveis (Apenas os próximos 2 dias para economia radical de tokens)
         disponibilidade = {}
-        dias_a_gerar = 7
+        dias_a_gerar = 2
         
         for i in range(dias_a_gerar + 1):
             data_atual = hoje + timedelta(days=i)
@@ -390,8 +407,8 @@ def buscar_horarios(
                     hora_atual += timedelta(minutes=SLOT_DURATION)
                     continue
                 
-                # Pular horários passados se for hoje
-                if data_atual == hoje and hora_atual < agora:
+                # Pular horários passados se for hoje (com buffer)
+                if data_atual == hoje and hora_atual < agora_com_buffer:
                     hora_atual += timedelta(minutes=SLOT_DURATION)
                     continue
                 
@@ -410,18 +427,17 @@ def buscar_horarios(
                 hora_atual += timedelta(minutes=SLOT_DURATION)
             
             if slots_do_dia:
-                disponibilidade[dia_str] = slots_do_dia[:6] # Limitar a 6 slots por dia para não estourar tokens
-
+                disponibilidade[dia_str] = slots_do_dia[:3] # Limitar a 3 slots para economia radical de tokens
+        
         if not disponibilidade:
-            return f"No momento, o(a) {medico.nome_completo} não possui horários disponíveis para os próximos 7 dias."
+            return f"No momento, o(a) {medico.nome_completo} não possui horários disponíveis para os próximos 3 dias."
 
         # Retornar como texto estruturado claro para a IA
         resultado = f"Horários disponíveis para {medico.nome_completo} ({medico.especialidade}):\n"
         for dia, slots in disponibilidade.items():
             resultado += f"- {dia}: {', '.join(slots)}\n"
-        
-        resultado += "\nInstrução para a IA: Apresente EXATAMENTE estas datas e horários ao paciente. NÃO invente outros dias ou horários."
-        return resultado
+            
+        return resultado.strip()
 
     except Exception as e:
         db.rollback()

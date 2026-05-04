@@ -440,6 +440,7 @@ class ChatDirectRequestV2(BaseModel):
     message: str
     wa_to: Optional[str] = None
     doctor_id: Optional[int] = None
+    new_session: bool = False  # True quando o Flutter detecta início de nova sessão (ex: rebuild da tela)
 
 
 @router.post("/chat-direct")
@@ -485,6 +486,14 @@ async def chat_direct(
         # Se wa_to não vier no request, podemos usar o doctor_id para buscar o telefone se necessário,
         # ou passar None para usar o médico padrão (0)
         wa_to_effective = request.wa_to
+
+        # --- RESET DE SESSÃO ---
+        # Quando o Flutter reconstrói a tela (ex: reload), envia new_session=True.
+        # Isso limpa o histórico do LangGraph (MemorySaver) e do ConversationManager,
+        # garantindo que a IA saiba que é uma conversa completamente nova.
+        if request.new_session:
+            rag_service.clear_conversation(wa_from)
+            logger.info(f"[chat-direct] new_session=True: estado de {wa_from} limpo antes de processar.")
         
         # Pipeline RAG: Passa wa_from e wa_to para gerenciamento de estado e contexto do médico
         ai_response = await rag_service.get_rag_response(

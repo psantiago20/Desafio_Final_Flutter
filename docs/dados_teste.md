@@ -7,7 +7,7 @@ Estes são os dados cadastrados no banco de dados para testes do assistente virt
 
 | Nome Completo | CRM | Especialidade | Cidade | Convênios |
 | :--- | :--- | :--- | :--- | :--- |
-| **Dra. Isis Silva** | 123456/SP | Clínica Geral | São Paulo | Unimed, Bradesco, SulAmérica |
+| **Dra. Marina Costa** | 123456/SP | Clínica Geral | São Paulo | Unimed, Bradesco, SulAmérica |
 | **Dr. Thorne Blackwood** | 654321/RJ | Cardiologia | Rio de Janeiro | Particular apenas |
 
 ---
@@ -24,7 +24,7 @@ Estes são os dados cadastrados no banco de dados para testes do assistente virt
 ## 📅 Agendamentos de Teste
 
 - **Paciente:** Pedro Santiago
-- **Médico:** Dra. Isis Silva
+- **Médico:** Dra. Marina Costa
 - **Motivo:** Check-up de rotina
 - **Status:** Confirmado
 

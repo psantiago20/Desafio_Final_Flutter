@@ -26,11 +26,11 @@ def seed():
         # 2. Criar Médicos
         doctors_data = [
             {
-                "nome_completo": "Dra. Isis Silva",
+                "nome_completo": "Dra. Marina Costa",
                 "crm": "123456",
                 "crm_estado": "SP",
                 "especialidade": "Clínica Geral",
-                "email": "isis.silva@suaconsulta.com",
+                "email": "marina.costa@suaconsulta.com",
                 "telefone": "(11) 99999-0001",
                 "cidade": "São Paulo",
                 "endereco": "Av. Paulista, 1000 - Bela Vista",

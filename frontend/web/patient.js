@@ -146,24 +146,63 @@ async function sendChatMessage() {
 function appendMessage(text, role) {
     const container = document.getElementById('chat-messages');
     const div = document.createElement('div');
-    div.className = `chat-bubble-${role}`;
+    div.className = 'timeline-item';
 
-    if (role === 'ai') {
-        const badge = document.createElement('p');
-        badge.className = 'text-[10px] font-bold uppercase tracking-widest text-outline mb-1';
-        badge.textContent = '✦ IA · Sua Consulta';
-        div.appendChild(badge);
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const dayStr = 'HOJE'; // Consistent with dashboard style
+
+    let icon = 'psychology';
+    let title = 'IA · Sua Consulta';
+    let iconBg = '#dae2ff';
+    let iconColor = '#003d9b';
+    let cardClass = '';
+    let contentClass = 'timeline-content';
+    let badges = [];
+
+    if (role === 'user') {
+        icon = 'person';
+        title = 'Você';
+        iconBg = '#f1f5f9';
+        iconColor = '#475569';
+        cardClass = 'user-card';
+        contentClass += ' is-message';
     } else if (role === 'doctor') {
-        const badge = document.createElement('p');
-        badge.className = 'text-[10px] font-bold uppercase tracking-widest text-outline mb-1';
-        badge.textContent = '👨‍⚕️ Dr. Thorne';
-        div.appendChild(badge);
+        icon = 'medical_services';
+        title = 'Dr. Thorne';
+        iconBg = '#eceef0';
+        iconColor = '#475569';
+        badges = ['RETORNO SOLICITADO'];
+    } else {
+        // AI
+        icon = 'auto_awesome';
+        title = 'Assistente IA / Médico';
+        iconBg = '#dae2ff';
+        iconColor = '#003d9b';
+        contentClass += ' is-message';
     }
 
-    const p = document.createElement('p');
-    p.className = 'text-sm leading-relaxed';
-    p.textContent = text;
-    div.appendChild(p);
+    div.innerHTML = `
+        <div class="timeline-icon-container">
+            <div class="timeline-icon" style="background-color: ${iconBg}; color: ${iconColor};">
+                <span class="material-symbols-outlined !text-[16px]">${icon}</span>
+            </div>
+        </div>
+        <div class="timeline-card ${cardClass}">
+            <div class="timeline-header">
+                <span class="timeline-title">${title}</span>
+                <span class="timeline-time">${dayStr}, ${timeStr}</span>
+            </div>
+            <div class="${contentClass}">
+                ${text.replace(/\n/g, '<br>')}
+            </div>
+            ${badges.length > 0 ? `
+                <div class="timeline-badges">
+                    ${badges.map(b => `<span class="timeline-badge badge-success">${b}</span>`).join('')}
+                </div>
+            ` : ''}
+        </div>
+    `;
 
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
@@ -174,10 +213,21 @@ function appendLoadingBubble() {
     const id = `loading-${Date.now()}`;
     const div = document.createElement('div');
     div.id = id;
-    div.className = 'chat-bubble-ai flex items-center gap-2';
+    div.className = 'timeline-item';
     div.innerHTML = `
-        <div class="spinner"></div>
-        <span class="text-sm text-outline">Processando...</span>
+        <div class="timeline-icon-container">
+            <div class="timeline-icon" style="background-color: #dae2ff; color: #003d9b;">
+                <span class="material-symbols-outlined !text-[16px] animate-spin">sync</span>
+            </div>
+        </div>
+        <div class="timeline-card">
+            <div class="timeline-header">
+                <span class="timeline-title">IA · Processando...</span>
+            </div>
+            <div class="timeline-content">
+                <span class="text-xs text-outline italic">Analisando sua solicitação...</span>
+            </div>
+        </div>
     `;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
