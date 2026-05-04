@@ -68,6 +68,8 @@ Thumbs.db
 robocopy_log.txt
 *.log
 backend/backend_logs.txt
+backend_debug.log
+mcp_config.json
 backend/scripts/test_payload.json
 
 # Scratch directory (ignore contents but keep folder)
@@ -88,3 +90,7 @@ backend/scripts/verify_phone.py
 backend/scripts/verify_whatsapp.py
 
 
+# Scratch and local dev
+backend/scratch/
+.env
+.env.*

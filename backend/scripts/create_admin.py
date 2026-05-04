@@ -1,8 +1,13 @@
 import hashlib
+import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = 'postgresql://postgres:P2706303-2p@localhost:5432/omniconnect'
+# Carregar variáveis de ambiente do arquivo .env
+load_dotenv()
+
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/omniconnect')
 engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 session = Session()

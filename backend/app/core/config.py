@@ -34,7 +34,9 @@ class Settings(BaseSettings):
 
     
     class Config:
-        env_file = ".env"
+        # Procura o .env na pasta atual ou na pasta pai (raiz do projeto)
+        env_file = (".env", "../.env")
+        env_file_encoding = 'utf-8'
 
 
 @lru_cache()

@@ -1,8 +1,14 @@
+import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
-from sqlalchemy.pool import StaticPool
+
+load_dotenv()
+
+# Use a URL baseada no postgres para criar o banco omniconnect
+DATABASE_URL = os.getenv('DATABASE_URL_POSTGRES', 'postgresql://postgres:postgres@localhost:5432/postgres')
 
 engine = create_engine(
-    'postgresql://postgres:P2706303-2p@localhost:5432/postgres',
+    DATABASE_URL,
     isolation_level='AUTOCOMMIT'
 )
 with engine.connect() as conn:
