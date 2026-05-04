@@ -6,13 +6,16 @@ class Settings(BaseSettings):
     APP_NAME: str = "OmniConnect"
     DEBUG: bool = True
     
-    DATABASE_URL: str = "postgresql://omniconnect:omniconnect123@localhost:5432/omniconnect"
+    # Usa SQLite como fallback para testes locais (sem Docker/PostgreSQL)
+    # Em produção, definir DATABASE_URL como variável de ambiente para PostgreSQL
+    DATABASE_URL: str = "sqlite:///./omniconnect_test.db"
     
     SECRET_KEY: str = "supersecretkeychangeinproduction"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     NVIDIA_API_KEY: str = ""
+    GROQ_API_KEY: str = ""  # Tier gratuito — console.groq.com (sem cartão)
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama2"
     
@@ -25,8 +28,15 @@ class Settings(BaseSettings):
     
     FCM_SERVER_KEY: str = ""
     
+    LANGSMITH_API_KEY: str = ""
+    LANGSMITH_TRACING: bool = True
+    LANGSMITH_PROJECT: str = "OmniConnect-Evolution"
+
+    
     class Config:
-        env_file = ".env"
+        # Procura o .env na pasta atual ou na pasta pai (raiz do projeto)
+        env_file = (".env", "../.env")
+        env_file_encoding = 'utf-8'
 
 
 @lru_cache()

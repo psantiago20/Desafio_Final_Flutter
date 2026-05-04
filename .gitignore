@@ -68,23 +68,29 @@ Thumbs.db
 robocopy_log.txt
 *.log
 backend/backend_logs.txt
-backend/test_payload.json
+backend_debug.log
+mcp_config.json
+backend/scripts/test_payload.json
 
 # Scratch directory (ignore contents but keep folder)
 scratch/*
 !scratch/.gitkeep
 
 # Development and Debug Utilities
-backend/check_db.py
-backend/check_messages.py
-backend/debug_api.py
-backend/debug_whatsapp.py
-backend/diagnostic.py
-backend/test_notifications.py
-backend/test_rag.py
-backend/test_template.py
-backend/test_wa_direct.py
-backend/verify_phone.py
-backend/verify_whatsapp.py
+backend/scripts/check_db.py
+backend/scripts/check_messages.py
+backend/scripts/debug_api.py
+backend/scripts/debug_whatsapp.py
+backend/scripts/diagnostic.py
+backend/scripts/test_notifications.py
+backend/scripts/test_rag.py
+backend/scripts/test_template.py
+backend/scripts/test_wa_direct.py
+backend/scripts/verify_phone.py
+backend/scripts/verify_whatsapp.py
 
 
+# Scratch and local dev
+backend/scratch/
+.env
+.env.*

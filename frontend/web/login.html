@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Sua Consulta - Login</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <link href="login.css" rel="stylesheet"/>
+    
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="login.js"></script>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased min-h-screen flex items-center justify-center p-4">
+    <main class="w-full max-w-5xl flex flex-col md:flex-row gap-8 items-stretch">
+        <section class="flex-1 flex flex-col justify-center space-y-6 p-4">
+            <header>
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="w-12 h-12 bg-[#003d9b] rounded-xl p-2 flex items-center justify-center">
+                        <img src="icons/Logo-_2_.svg" alt="Logo Sua Consulta" class="w-full h-full object-contain brightness-0 invert" />
+                    </div>
+                    <h1 class="font-headline font-extrabold text-2xl text-primary tracking-tighter">Sua Consulta</h1>
+                </div>
+                <h2 class="font-headline font-bold text-4xl lg:text-5xl text-on-surface leading-tight">
+                    Bem-vindo ao <br/>
+                    <span class="text-primary">Sua Consulta</span>
+                </h2>
+                <p class="mt-4 text-on-surface-variant text-lg max-w-md">
+                    Sua jornada para uma gestão de saúde mais humana e eficiente começa aqui. Escolha como deseja acessar.
+                </p>
+            </header>
+            <div class="hidden md:block mt-8">
+                <img alt="Minimalist abstract digital art showing flowing curves in blue and mint tones representing calm and precision" class="w-full h-48 object-cover rounded-xxl sanctuary-shadow" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8uNyksS1BXQlaSoHMg___o0eJtSQ0OSQ6jqo6Rn-VCOSXIDJKrjZan-T2r5VSm8_zKslumoEKmLu649TWQ7RRAWweeizPX2jfrKYCuHGYkM33kZvgP6XX23omY3UQt49g7oHEXuUPIgssqJ-mC1uySVcK9ZW7OI2a_Vo5hU1E1DKTnqiVgX1-jX_vCExBKQVNltaUqtFSMBbEUj5K1aLK8XFdq_4RTwGaKAVQgCQrAGX1-vFC0V_1_1pquQ-JX_B_KEJcLt5AoSg"/>
+            </div>
+        </section>
+
+        <section class="flex-1 bg-surface-container-lowest rounded-xxl sanctuary-shadow p-8 lg:p-12">
+            <div class="grid grid-cols-2 gap-4 mb-10">
+                <button class="group flex flex-col items-center gap-3 p-4 rounded-xl transition-all duration-200 border-2 border-transparent bg-surface-container-low hover:bg-surface-container-high focus:outline-none focus:border-primary">
+                    <div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center text-primary-container">
+                        <span class="material-symbols-outlined" data-icon="stethoscope">stethoscope</span>
+                    </div>
+                    <span class="font-headline font-bold text-sm">Acesso Médico</span>
+                </button>
+                <button class="group flex flex-col items-center gap-3 p-4 rounded-xl transition-all duration-200 border-2 border-primary bg-primary/5 hover:bg-primary/10 focus:outline-none">
+                    <div class="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
+                        <span class="material-symbols-outlined" data-icon="person">person</span>
+                    </div>
+                    <span class="font-headline font-bold text-sm text-primary">Acesso Paciente</span>
+                </button>
+            </div>
+
+            <form class="space-y-6">
+                <div class="space-y-1.5">
+                    <label class="block font-label text-sm font-medium text-on-surface-variant" for="email">E-mail</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-outline">
+                            <span class="material-symbols-outlined text-xl" data-icon="mail">mail</span>
+                        </div>
+                        <input class="block w-full pl-11 pr-4 py-3.5 bg-surface-container-low border border-outline-variant/20 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 outline-none placeholder:text-outline" id="email" name="email" placeholder="nome@exemplo.com" type="email"/>
+                    </div>
+                </div>
+                <div class="space-y-1.5">
+                    <div class="flex justify-between items-center">
+                        <label class="block font-label text-sm font-medium text-on-surface-variant" for="password">Senha</label>
+                        <a class="text-xs font-semibold text-primary hover:underline" href="#">Esqueci minha senha</a>
+                    </div>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-outline">
+                            <span class="material-symbols-outlined text-xl" data-icon="lock">lock</span>
+                        </div>
+                        <input class="block w-full pl-11 pr-12 py-3.5 bg-surface-container-low border border-outline-variant/20 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 outline-none placeholder:text-outline" id="password" name="password" placeholder="••••••••" type="password"/>
+                        <button class="absolute inset-y-0 right-0 pr-4 flex items-center text-outline hover:text-on-surface" type="button">
+                            <span class="material-symbols-outlined text-xl" data-icon="visibility">visibility</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary" id="remember" type="checkbox"/>
+                    <label class="text-sm text-on-surface-variant" for="remember">Lembrar de mim</label>
+                </div>
+                <button class="w-full bg-medical-gradient text-white font-headline font-bold py-4 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.98] transition-all duration-200" type="submit">
+                    Entrar na Conta
+                </button>
+            </form>
+
+            <footer class="mt-10 pt-8 border-t border-surface-container border-dashed text-center">
+                <p class="text-on-surface-variant text-sm">
+                    Ainda não tem conta? <a class="text-primary font-bold hover:underline ml-1" href="#">Cadastre-se</a>
+                </p>
+            </footer>
+        </section>
+    </main>
+
+    <div class="fixed top-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary-fixed/10 blur-[120px] -z-10 rounded-full"></div>
+    <div class="fixed bottom-[-10%] left-[-10%] w-[30%] h-[30%] bg-primary/5 blur-[100px] -z-10 rounded-full"></div>
+</body>
+</html>

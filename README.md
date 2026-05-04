@@ -33,13 +33,16 @@ Este projeto consiste em uma plataforma de gestão de pacientes e consultas com 
 2. Crie e ative um ambiente virtual:
    ```bash
    python -m venv .venv
-   .\.venv\Scripts\activate
+   source .venv/bin/activate  # Linux/Mac
+   .\.venv\Scripts\activate   # Windows
    ```
 3. Instale as dependências:
    ```bash
    pip install -r requirements.txt
    ```
-4. Configure o arquivo `.env` com suas chaves (NVIDIA_API_KEY e WhatsApp Tokens).
+4. Configure o arquivo `.env` na raiz do projeto:
+   - Copie o arquivo `.env.example` para `.env`
+   - Preencha com suas chaves (NVIDIA, Groq, WhatsApp, etc.)
 5. Inicie o servidor:
    ```bash
    uvicorn app.main:app --reload

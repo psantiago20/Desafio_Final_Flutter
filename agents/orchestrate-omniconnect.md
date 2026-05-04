@@ -320,4 +320,41 @@ dispatch_format:
   dependencies_resolved:
     - string
 
-  validation_criteria: string
+---
+
+# 13. Regras de Sessão e Anti-Alucinação (Modo Teste)
+
+session_rules:
+
+  problema:
+    - Durante testes, ao atualizar a página no Flutter, o histórico local (chatHistory) é resetado
+    - Mas o backend (LangGraph MemorySaver + ConversationManager) ainda mantém o estado anterior
+    - Isso faz a IA receber mensagens como 'bem' com histórico sujo e alucinar respostas fora de contexto
+
+  protocolo_new_session:
+    - O Flutter envia new_session: true na PRIMEIRA mensagem após cada rebuild/reload da tela
+    - O backend ao receber new_session=true chama rag_service.clear_conversation(wa_from) ANTES de processar
+    - clear_conversation limpa o MemorySaver do LangGraph E o ConversationState (boas_vindas, CPF, etc.)
+    - Após o clear, a mensagem é processada normalmente como uma nova interação de primeira vez
+
+  gatilhos_de_nova_sessao_reconhecidos:
+    - Widget rebuild (navegação entre abas ou reload da página)
+    - Abertura do dialog de Chat Direto no Dashboard
+    - Botão 'Nova Sessão' no dialog de teste (reseta chatHistory + isFirstMessage=true)
+
+  regra_para_ia:
+    - Se history estiver vazio E a mensagem for saudacao/cortesia (bem, ok, tudo bem):
+      OBRIGATORIO: tratar como inicio de conversa, nao como continuacao
+    - NUNCA assumir contexto de mensagens anteriores se o historico LangGraph estiver vazio
+    - Em caso de ambiguidade no primeiro turno: enviar mensagem de boas-vindas padrao
+
+  fasttrack_saudacoes_no_app:
+    - Se source='app' E query for saudacao (oi, ola, bom dia, etc.):
+      - clear_conversation() automatico
+      - retorna resposta fixa sem chamar a LLM (zero latencia de alucinacao)
+    - Implementado em: rag_service.get_rag_response() linhas 521-526
+
+  endpoints_de_teste:
+    - POST /api/webhooks/chat-direct { new_session: true } -> reset + nova conversa
+    - POST /api/webhooks/clear-conversation?wa_from=X   -> reset manual para testes externos
+    - GET  /api/webhooks/conversation-state?wa_from=X   -> inspecionar estado atual

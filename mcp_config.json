@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "omniconnect": {
+      "command": "python",
+      "args": [
+        "backend/app/services/mcp_server.py"
+      ],
+      "env": {
+        "CHROMA_DIR": "backend/chroma_data"
+      }
+    }
+  }
+}
