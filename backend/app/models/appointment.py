@@ -29,6 +29,7 @@ class Appointment(Base):
     
     patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
     doctor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    medico_id = Column(Integer, ForeignKey("medicos.id"), nullable=True)  # FK para novo model Medico
     
     appointment_date = Column(DateTime, nullable=False)
     duration_minutes = Column(Integer, default=30)
@@ -48,8 +49,12 @@ class Appointment(Base):
     is_recurring = Column(Boolean, default=False)
     recurring_id = Column(Integer)
     
+    canal_notificacao = Column(String(50), default="whatsapp")  # whatsapp, sms, email
+    notificado_em = Column(DateTime, nullable=True)
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     patient = relationship("Patient", back_populates="appointments")
     doctor = relationship("User", back_populates="appointments")
+    medico = relationship("Medico", back_populates="agendamentos", foreign_keys=[medico_id])
