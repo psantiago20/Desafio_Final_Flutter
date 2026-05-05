@@ -86,5 +86,7 @@ backend/test_template.py
 backend/test_wa_direct.py
 backend/verify_phone.py
 backend/verify_whatsapp.py
+!frontend/lib/
 
-
+# Ignorar templates visuais
+docs/templates-sua-consulta/
