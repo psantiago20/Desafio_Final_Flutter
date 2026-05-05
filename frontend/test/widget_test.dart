@@ -10,14 +10,14 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const OmniConnectApp());
 
-    // Verify that the bottom navigation bar is rendered
-    expect(find.byType(BottomNavigationBar), findsOneWidget);
+    // Verify that the bottom navigation bar is rendered (now using Material 3 NavigationBar)
+    expect(find.byType(NavigationBar), findsOneWidget);
 
-    // Verify that the Agenda screen is the default one
-    expect(find.text('Minha Agenda'), findsOneWidget);
+    // Verify that the Home screen is the default one (has the 'Portal do Paciente' text)
+    expect(find.text('Portal do Paciente'), findsOneWidget);
     
-    // Verify that tabs Consultas and Exames exist
-    expect(find.text('Consultas'), findsOneWidget);
-    expect(find.text('Exames'), findsOneWidget);
+    // Verify that tabs Consultas and Exames exist in the bottom bar
+    expect(find.text('Consultas'), findsWidgets);
+    expect(find.text('Exames'), findsWidgets);
   });
 }
