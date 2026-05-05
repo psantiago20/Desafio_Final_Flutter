@@ -7,10 +7,12 @@ e indexa no ChromaDB para busca semântica posterior.
 
 import os
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 
 import chromadb
 from chromadb.config import Settings as ChromaSettings
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +21,11 @@ FAQ_BASE_DIR = os.environ.get("FAQ_DIR", os.path.join(os.path.dirname(os.path.di
 CHROMA_PERSIST_DIR = os.environ.get("CHROMA_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "chroma_data"))
 
 # Extensões suportadas
-SUPPORTED_EXTENSIONS = {".md", ".txt"}
+SUPPORTED_EXTENSIONS = {".md", ".txt", ".pdf"}
 
 # Configuração de chunking
-CHUNK_SIZE = 500       # caracteres por chunk
-CHUNK_OVERLAP = 50     # sobreposição entre chunks
+CHUNK_SIZE = 1000       # caracteres por chunk (aumentado para melhor contexto em PDFs)
+CHUNK_OVERLAP = 100     # sobreposição entre chunks
 
 
 def _get_chroma_client() -> chromadb.ClientAPI:
@@ -39,7 +41,7 @@ def _get_collection_name(doctor_id: Optional[int]) -> str:
 
 
 def _read_file(filepath: str) -> str:
-    """Lê o conteúdo de um arquivo."""
+    """Lê o conteúdo de um arquivo (txt ou md)."""
     try:
         with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
             return f.read()
@@ -47,49 +49,33 @@ def _read_file(filepath: str) -> str:
         logger.error(f"Erro ao ler arquivo {filepath}: {e}")
         return ""
 
+def _load_pdf(filepath: str) -> List[str]:
+    """Carrega conteúdo de um PDF e retorna lista de chunks."""
+    try:
+        loader = PyPDFLoader(filepath)
+        docs = loader.load()
+        # Retornar o conteúdo de cada página
+        return [doc.page_content for doc in docs]
+    except Exception as e:
+        logger.error(f"Erro ao carregar PDF {filepath}: {e}")
+        return []
+
 
 def _chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> List[str]:
     """
-    Divide o texto em chunks com sobreposição.
-    Tenta quebrar em limites de parágrafo/linha quando possível.
+    Divide o texto em chunks utilizando o RecursiveCharacterTextSplitter do LangChain.
     """
-    if not text or len(text) <= chunk_size:
-        return [text] if text.strip() else []
-
-    chunks = []
-    start = 0
-    text_len = len(text)
-
-    while start < text_len:
-        end = min(start + chunk_size, text_len)
-
-        # Tentar quebrar no final de um parágrafo ou linha
-        if end < text_len:
-            # Procurar quebra de parágrafo
-            para_break = text.rfind("\n\n", start, end)
-            if para_break > start + chunk_size // 2:
-                end = para_break + 2
-            else:
-                # Procurar quebra de linha
-                line_break = text.rfind("\n", start, end)
-                if line_break > start + chunk_size // 2:
-                    end = line_break + 1
-
-        chunk = text[start:end].strip()
-        if chunk:
-            chunks.append(chunk)
-
-        start = end - overlap if end < text_len else text_len
-
-    return chunks
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=overlap,
+        separators=["\n\n", "\n", " ", ""]
+    )
+    return splitter.split_text(text)
 
 
-def _scan_faq_directory(directory: str) -> List[Dict[str, str]]:
+def _scan_faq_directory(directory: str) -> List[Dict[str, Any]]:
     """
     Escaneia um diretório de FAQ e retorna lista de documentos.
-    
-    Returns:
-        Lista de dicts com 'filepath', 'filename', 'content'
     """
     documents = []
     
@@ -104,31 +90,37 @@ def _scan_faq_directory(directory: str) -> List[Dict[str, str]]:
             continue
             
         _, ext = os.path.splitext(filename)
-        if ext.lower() not in SUPPORTED_EXTENSIONS:
+        ext = ext.lower()
+        if ext not in SUPPORTED_EXTENSIONS:
             continue
 
-        content = _read_file(filepath)
-        if content.strip():
-            documents.append({
-                "filepath": filepath,
-                "filename": filename,
-                "content": content
-            })
-            logger.info(f"  Arquivo carregado: {filename} ({len(content)} chars)")
+        if ext == ".pdf":
+            pages = _load_pdf(filepath)
+            if pages:
+                documents.append({
+                    "filepath": filepath,
+                    "filename": filename,
+                    "is_pdf": True,
+                    "pages": pages
+                })
+                logger.info(f"  PDF carregado: {filename} ({len(pages)} páginas)")
+        else:
+            content = _read_file(filepath)
+            if content.strip():
+                documents.append({
+                    "filepath": filepath,
+                    "filename": filename,
+                    "is_pdf": False,
+                    "content": content
+                })
+                logger.info(f"  Arquivo texto carregado: {filename} ({len(content)} chars)")
 
     return documents
 
 
-def ingest_doctor_faq(doctor_id: int) -> Dict[str, int]:
+def ingest_doctor_faq(doctor_id: int, extra_dirs: List[str] = None) -> Dict[str, int]:
     """
     Indexa os documentos FAQ de um médico específico no ChromaDB.
-    Inclui tanto os documentos globais (_global/) quanto os específicos (doctor_{id}/).
-    
-    Args:
-        doctor_id: ID do médico (corresponde ao DoctorProfile.id)
-        
-    Returns:
-        Dict com estatísticas da ingestão
     """
     client = _get_chroma_client()
     collection_name = _get_collection_name(doctor_id)
@@ -136,7 +128,6 @@ def ingest_doctor_faq(doctor_id: int) -> Dict[str, int]:
     # Deletar collection existente para re-indexar
     try:
         client.delete_collection(collection_name)
-        logger.info(f"Collection '{collection_name}' deletada para re-indexação")
     except Exception:
         pass
 
@@ -150,45 +141,49 @@ def ingest_doctor_faq(doctor_id: int) -> Dict[str, int]:
     all_ids = []
     chunk_counter = 0
 
-    # 1. Carregar documentos globais
-    global_dir = os.path.join(FAQ_BASE_DIR, "_global")
-    global_docs = _scan_faq_directory(global_dir)
-    logger.info(f"Carregados {len(global_docs)} documentos globais")
+    # Diretorios para escanear
+    scan_dirs = [
+        (os.path.join(FAQ_BASE_DIR, "_global"), "global"),
+        (os.path.join(FAQ_BASE_DIR, f"doctor_{doctor_id}"), "doctor")
+    ]
+    
+    if extra_dirs:
+        for d in extra_dirs:
+            if os.path.exists(d):
+                scan_dirs.append((d, "extra"))
 
-    for doc in global_docs:
-        chunks = _chunk_text(doc["content"])
-        for chunk in chunks:
-            all_chunks.append(chunk)
-            all_metadatas.append({
-                "source": doc["filename"],
-                "scope": "global",
-                "doctor_id": str(doctor_id),
-                "filepath": doc["filepath"]
-            })
-            all_ids.append(f"global_{doc['filename']}_{chunk_counter}")
-            chunk_counter += 1
+    for directory, scope in scan_dirs:
+        docs = _scan_faq_directory(directory)
+        for doc in docs:
+            if doc.get("is_pdf"):
+                for p_idx, page_content in enumerate(doc["pages"]):
+                    chunks = _chunk_text(page_content)
+                    for chunk in chunks:
+                        all_chunks.append(chunk)
+                        all_metadatas.append({
+                            "source": doc["filename"],
+                            "page": p_idx + 1,
+                            "scope": scope,
+                            "doctor_id": str(doctor_id),
+                            "filepath": doc["filepath"]
+                        })
+                        all_ids.append(f"{scope}_{doc['filename']}_p{p_idx}_{chunk_counter}")
+                        chunk_counter += 1
+            else:
+                chunks = _chunk_text(doc["content"])
+                for chunk in chunks:
+                    all_chunks.append(chunk)
+                    all_metadatas.append({
+                        "source": doc["filename"],
+                        "scope": scope,
+                        "doctor_id": str(doctor_id),
+                        "filepath": doc["filepath"]
+                    })
+                    all_ids.append(f"{scope}_{doc['filename']}_{chunk_counter}")
+                    chunk_counter += 1
 
-    # 2. Carregar documentos específicos do médico
-    doctor_dir = os.path.join(FAQ_BASE_DIR, f"doctor_{doctor_id}")
-    doctor_docs = _scan_faq_directory(doctor_dir)
-    logger.info(f"Carregados {len(doctor_docs)} documentos do médico {doctor_id}")
-
-    for doc in doctor_docs:
-        chunks = _chunk_text(doc["content"])
-        for chunk in chunks:
-            all_chunks.append(chunk)
-            all_metadatas.append({
-                "source": doc["filename"],
-                "scope": "doctor",
-                "doctor_id": str(doctor_id),
-                "filepath": doc["filepath"]
-            })
-            all_ids.append(f"doctor_{doctor_id}_{doc['filename']}_{chunk_counter}")
-            chunk_counter += 1
-
-    # 3. Inserir no ChromaDB
+    # Inserir no ChromaDB
     if all_chunks:
-        # ChromaDB tem limite de batch, inserir em lotes de 100
         batch_size = 100
         for i in range(0, len(all_chunks), batch_size):
             batch_end = min(i + batch_size, len(all_chunks))
@@ -197,46 +192,35 @@ def ingest_doctor_faq(doctor_id: int) -> Dict[str, int]:
                 metadatas=all_metadatas[i:batch_end],
                 ids=all_ids[i:batch_end]
             )
-        logger.info(f"Indexados {len(all_chunks)} chunks para doctor_id={doctor_id}")
 
-    stats = {
+    return {
         "doctor_id": doctor_id,
-        "collection_name": collection_name,
-        "global_documents": len(global_docs),
-        "doctor_documents": len(doctor_docs),
         "total_chunks": len(all_chunks)
     }
-    logger.info(f"Ingestão concluída: {stats}")
-    return stats
 
 
-def ingest_all_doctors() -> List[Dict[str, int]]:
+def ingest_all_doctors(extra_dirs: List[str] = None) -> List[Dict[str, int]]:
     """
-    Indexa as FAQs de todos os médicos que possuem pasta em faq/.
-    
-    Returns:
-        Lista com estatísticas de cada médico processado
+    Indexa as FAQs de todos os médicos + diretórios extras.
     """
     results = []
 
     if not os.path.exists(FAQ_BASE_DIR):
-        logger.error(f"Diretório base de FAQ não encontrado: {FAQ_BASE_DIR}")
         return results
 
+    processed_doctors = False
     for entry in sorted(os.listdir(FAQ_BASE_DIR)):
         if entry.startswith("doctor_") and os.path.isdir(os.path.join(FAQ_BASE_DIR, entry)):
             try:
                 doctor_id = int(entry.replace("doctor_", ""))
-                stats = ingest_doctor_faq(doctor_id)
+                stats = ingest_doctor_faq(doctor_id, extra_dirs)
                 results.append(stats)
+                processed_doctors = True
             except ValueError:
-                logger.warning(f"Nome de pasta inválido (esperado doctor_N): {entry}")
                 continue
 
-    # Se não achou nenhum doctor_, pelo menos indexar o global como doctor_id=0
-    if not results:
-        logger.info("Nenhuma pasta doctor_N encontrada. Indexando apenas FAQ global como doctor_id=0")
-        stats = ingest_doctor_faq(0)
+    if not processed_doctors:
+        stats = ingest_doctor_faq(0, extra_dirs)
         results.append(stats)
 
     return results
@@ -249,8 +233,6 @@ def get_collection_stats() -> Dict:
 
     stats = {
         "total_collections": len(collections),
-        "chroma_dir": CHROMA_PERSIST_DIR,
-        "faq_dir": FAQ_BASE_DIR,
         "collections": []
     }
 
@@ -262,3 +244,4 @@ def get_collection_stats() -> Dict:
         })
 
     return stats
+

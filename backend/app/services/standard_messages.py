@@ -28,14 +28,8 @@ def get_welcome_message(nome_medico: str, cidade: str = None) -> str:
     cidade_text = f", em *{cidade}*" if cidade else ""
     
     return (
-        f"Olá! 👋 Sou a assistente virtual da agenda do *{nome_medico}*{cidade_text}.\n\n"
-        f"Estou aqui para te ajudar! Como posso ajudá-lo?\n\n"
-        f"1️⃣ Tirar uma dúvida\n"
-        f"2️⃣ Fazer um agendamento\n"
-        f"3️⃣ Ver seus agendamentos\n"
-        f"4️⃣ Cancelar uma consulta\n"
-        f"5️⃣ Saber o preparo de um exame\n\n"
-        f"Você pode escolher uma opção ou simplesmente digitar sua pergunta! 😊"
+        f"Oi! Tudo bem? ✨ Sou a Isis, sua assistente virtual da agenda do {nome_medico}{cidade_text}.\n\n"
+        f"Estou aqui para cuidar de você e facilitar seu atendimento. Como posso te ajudar hoje? 😊"
     )
 
 
@@ -44,14 +38,8 @@ def get_welcome_message_without_doctor() -> str:
     Mensagem de boas-vindas genérica (quando o médico não é identificado).
     """
     return (
-        "Olá! 👋 Sou a assistente virtual do *OmniConnect*.\n\n"
-        "Estou aqui para te ajudar! Como posso ajudá-lo?\n\n"
-        "1️⃣ Tirar uma dúvida\n"
-        "2️⃣ Fazer um agendamento\n"
-        "3️⃣ Ver seus agendamentos\n"
-        "4️⃣ Cancelar uma consulta\n"
-        "5️⃣ Saber o preparo de um exame\n\n"
-        "Você pode escolher uma opção ou simplesmente digitar sua pergunta! 😊"
+        "Oi! Tudo bem? ✨ Sou a Isis, sua assistente virtual aqui no Sua Consulta.\n\n"
+        "Estou aqui para cuidar de você e facilitar seu atendimento. Como posso te ajudar hoje? 😊"
     )
 
 
@@ -72,8 +60,8 @@ def get_cpf_request_message(operacao: str) -> str:
     label = operacao_labels.get(operacao, "prosseguir com sua solicitação")
     
     return (
-        f"Para {label}, preciso confirmar sua identidade. 🔐\n\n"
-        f"Por favor, informe seu *CPF* (formato: 000.000.000-00 ou apenas os números):"
+        f"Com todo prazer! Para {label}, eu só preciso confirmar rapidinho quem você é. 🔐\n\n"
+        f"Poderia me informar seu *CPF*? (Pode ser no formato 000.000.000-00 ou apenas os números):"
     )
 
 
@@ -97,8 +85,8 @@ def get_cpf_confirmed_message(nome_paciente: str, operacao: str) -> str:
         operacao: Tipo de operação que será executada
     """
     return (
-        f"✅ CPF confirmado! Olá, *{nome_paciente}*!\n\n"
-        f"Agora vou processar sua solicitação..."
+        f"✅ Prontinho, CPF confirmado! Que bom falar com você, *{nome_paciente}*!\n\n"
+        f"Só um instantinho que já estou preparando tudo para sua solicitação... ✨"
     )
 
 
@@ -113,15 +101,11 @@ def get_cpf_not_found_message() -> str:
 
 
 def get_menu_message() -> str:
-    """Menu principal de opções."""
+    """Menu principal de opções (Humanizado)."""
     return (
-        "Como posso te ajudar? Escolha uma opção:\n\n"
-        "1️⃣ Tirar uma dúvida\n"
-        "2️⃣ Fazer um agendamento\n"
-        "3️⃣ Ver seus agendamentos\n"
-        "4️⃣ Cancelar uma consulta\n"
-        "5️⃣ Saber o preparo de um exame\n\n"
-        "Ou simplesmente digite sua pergunta! 😊"
+        "Com todo prazer! Eu posso te ajudar a marcar consultas, ver seus horários, "
+        "cancelar agendamentos ou tirar dúvidas sobre preparo de exames e convênios.\n\n"
+        "O que você gostaria de fazer agora? 😊"
     )
 
 
@@ -151,8 +135,8 @@ def get_help_exames_message() -> str:
 
 
 def get_footer_message() -> str:
-    """Rodapé padrão anexado ao final de respostas do assistente."""
-    return "\n\n0️⃣ Voltar ao menu principal | ❌ Finalizar atendimento"
+    """Rodapé removido para ser mais humanizado."""
+    return ""
 
 
 def detect_cpf_required_intent(message: str) -> Optional[str]:
@@ -166,16 +150,17 @@ def detect_cpf_required_intent(message: str) -> Optional[str]:
     
     # Agendamento
     agendamento_keywords = [
-        "agendar", "agendamento", "marcar consulta", "marcar exame",
-        "quero consulta", "quero agendar", "fazer agendamento",
-        "agendar consulta", "agendar exame", "reservar horário",
+        "quero agendar", "fazer agendamento", "quero marcar", "preciso agendar",
+        "preciso marcar", "gostaria de agendar", "gostaria de marcar",
+        "vamos agendar", "pode agendar", "agende para", "marcar um horário",
+        "agendar um horário",
         "2"  # Opção 2 do menu
     ]
     
     # Cancelamento
     cancelamento_keywords = [
-        "cancelar", "cancelamento", "desmarcar", "quero cancelar",
-        "cancelar consulta", "cancelar agendamento", "desmarcar consulta",
+        "quero cancelar", "preciso cancelar", "gostaria de cancelar", 
+        "pode cancelar", "cancele minha", "desmarque minha", "quero desmarcar",
         "4"  # Opção 4 do menu
     ]
     

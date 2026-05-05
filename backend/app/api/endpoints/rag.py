@@ -57,6 +57,7 @@ class RAGQueryRequest(BaseModel):
     wa_to: Optional[str] = None
     top_k: int = 5
     wa_from: Optional[str] = None  # Número WhatsApp (para tracking de estado)
+    source: str = "app"  # Origem (app ou whatsapp)
 
 
 class RAGQueryResponse(BaseModel):
@@ -158,7 +159,8 @@ async def query_rag(
             wa_to=request.wa_to,
             db=db,
             top_k=request.top_k,
-            wa_from=request.wa_from
+            wa_from=request.wa_from,
+            source=request.source
         )
 
         return RAGQueryResponse(

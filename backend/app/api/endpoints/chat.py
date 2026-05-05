@@ -2,80 +2,26 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
+import logging
 
 from app.db.database import get_db
 from app.models.patient import Patient
 from app.models.message import Message
 from app.api.endpoints.auth import get_current_user
 from app.models.user import User
+from app.services.rag_service import rag_service
 
 router = APIRouter()
-
+logger = logging.getLogger(__name__)
 
 class ChatMessage(BaseModel):
     message: str
     patient_id: Optional[int] = None
 
-
 class ChatResponse(BaseModel):
     response: str
     patient_id: Optional[int] = None
     suggested_action: Optional[str] = None
-
-
-class AIChatService:
-    def __init__(self, db: Session):
-        self.db = db
-    
-    async def process_message(self, user_message: str, patient_id: Optional[int] = None) -> ChatResponse:
-        response_text = "Mensagem recebida. Como posso ajudar?"
-        suggested_action = None
-        
-        user_lower = user_message.lower()
-        
-        if any(word in user_lower for word in ["agendar", "consulta", "horário", "marcar"]):
-            response_text = "Para agendar uma consulta, preciso de algumas informações:\n1. Seu nome completo\n2. CPF\n3. Convênio (se tiver)\n4. Preferência de dia e horário"
-            suggested_action = "schedule_appointment"
-        
-        elif any(word in user_lower for word in ["retorno", "revisar", "rever"]):
-            response_text = "Para agendar retorno, me informe o CPF usedo na última consulta."
-            suggested_action = "schedule_return"
-        
-        elif any(word in user_lower for word in ["exame", "resultado"]):
-            response_text = "Posso ajudar com resultados de exames. Pode me informar seu CPF para consultar?"
-            suggested_action = "check_exams"
-        
-        elif any(word in user_lower for word in ["cancelar", "desmarcar", "remarcar"]):
-            response_text = "Para cancelar ou remarcar, preciso do CPF do paciente e motivo."
-            suggested_action = "reschedule"
-        
-        elif any(word in user_lower for word in ["endereço", "local", "onde"]):
-            response_text = "Estamos localizados na Rua example, 123 - Centro. Estacionamento gratuito disponível."
-            suggested_action = "location"
-        
-        elif any(word in user_lower for word in ["contato", "telefone", "whatsapp", "ligar"]):
-            response_text = "Nosso telefone é (11) 99999-9999. WhatsApp: (11) 99999-9999"
-            suggested_action = "contact"
-        
-        if patient_id:
-            patient = db.query(Patient).filter(Patient.id == patient_id).first()
-            if patient:
-                db_message = Message(
-                    patient_id=patient_id,
-                    content=user_message,
-                    message_type="text",
-                    source="whatsapp",
-                    is_delivered=True
-                )
-                self.db.add(db_message)
-                self.db.commit()
-        
-        return ChatResponse(
-            response=response_text,
-            patient_id=patient_id,
-            suggested_action=suggested_action
-        )
-
 
 @router.post("/ia", response_model=ChatResponse)
 async def chat_with_ia(
@@ -83,9 +29,50 @@ async def chat_with_ia(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    ai_service = AIChatService(db)
-    return await ai_service.process_message(chat_message.message, chat_message.patient_id)
+    """
+    Endpoint de chat principal do App que agora utiliza o RAGService.
+    Integra busca semântica em FAQs e dados do médico.
+    """
+    try:
+        # Tentar identificar o número do WhatsApp do paciente se o patient_id for fornecido
+        wa_from = None
+        if chat_message.patient_id:
+            patient = db.query(Patient).filter(Patient.id == chat_message.patient_id).first()
+            if patient:
+                wa_from = patient.whatsapp
+        
+        # Se não houver patient_id ou whatsapp, usar o ID do usuário logado como fallback para estado
+        if not wa_from:
+            wa_from = f"user_{current_user.id}"
 
+        # Obter resposta do RAG
+        response_text = await rag_service.get_rag_response(
+            query=chat_message.message,
+            wa_to=None, # Aqui poderíamos identificar o médico do usuário se necessário
+            db=db,
+            wa_from=wa_from
+        )
+
+        # Salvar mensagem no histórico se houver paciente
+        if chat_message.patient_id:
+            db_message = Message(
+                patient_id=chat_message.patient_id,
+                content=chat_message.message,
+                message_type="text",
+                source="app",
+                is_delivered=True
+            )
+            db.add(db_message)
+            db.commit()
+
+        return ChatResponse(
+            response=response_text,
+            patient_id=chat_message.patient_id,
+            suggested_action=None # O RAGService agora gerencia a intenção
+        )
+    except Exception as e:
+        logger.error(f"Erro no chat com IA: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao processar sua mensagem pelo assistente IA.")
 
 @router.post("/whatsapp", response_model=ChatResponse)
 async def chat_whatsapp_ia(
@@ -93,6 +80,9 @@ async def chat_whatsapp_ia(
     wa_from: str,
     db: Session = Depends(get_db)
 ):
+    """
+    Endpoint legado ou de integração direta para simulação WhatsApp.
+    """
     patient = db.query(Patient).filter(Patient.whatsapp == wa_from).first()
     
     if not patient:
@@ -105,8 +95,12 @@ async def chat_whatsapp_ia(
         db.commit()
         db.refresh(patient)
     
-    ai_service = AIChatService(db)
-    response = await ai_service.process_message(message, patient.id)
+    response_text = await rag_service.get_rag_response(
+        query=message,
+        wa_to=None,
+        db=db,
+        wa_from=wa_from
+    )
     
     db_message = Message(
         patient_id=patient.id,
@@ -119,4 +113,7 @@ async def chat_whatsapp_ia(
     db.add(db_message)
     db.commit()
     
-    return response
+    return ChatResponse(
+        response=response_text,
+        patient_id=patient.id
+    )

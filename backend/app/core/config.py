@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     NVIDIA_API_KEY: str = ""
+    GROQ_API_KEY: str = ""  # Tier gratuito — console.groq.com (sem cartão)
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama2"
     
@@ -27,8 +28,15 @@ class Settings(BaseSettings):
     
     FCM_SERVER_KEY: str = ""
     
+    LANGSMITH_API_KEY: str = ""
+    LANGSMITH_TRACING: bool = True
+    LANGSMITH_PROJECT: str = "OmniConnect-Evolution"
+
+    
     class Config:
-        env_file = ".env"
+        # Procura o .env na pasta atual ou na pasta pai (raiz do projeto)
+        env_file = (".env", "../.env")
+        env_file_encoding = 'utf-8'
 
 
 @lru_cache()
