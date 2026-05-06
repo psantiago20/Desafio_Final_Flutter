@@ -2,12 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 
 class AuthHeader extends StatelessWidget {
-  final String title;
-
-  const AuthHeader({
-    super.key,
-    required this.title,
-  });
+  const AuthHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -25,26 +20,11 @@ class AuthHeader extends StatelessWidget {
         ),
       ),
       child: SafeArea(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-
-            Image.asset(
-              'assets/images/test.png',
-              height: 60,
-            ),
-
-            const SizedBox(height: 12),
-
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+        child: Center(
+          child: Image.asset(
+            'assets/images/test.png',
+            height: 100,
+          ),
         ),
       ),
     );
