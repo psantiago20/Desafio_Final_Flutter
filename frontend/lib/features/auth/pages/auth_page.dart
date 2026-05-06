@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/features/auth/widgets/auth_header.dart';
 import 'package:frontend/features/auth/widgets/login_form.dart';
 import 'package:frontend/features/auth/widgets/register_form.dart';
@@ -40,7 +41,9 @@ class _AuthPageState extends State<AuthPage> {
               children: [
                 Text(
                   isLogin ? "Entrar" : "Criar conta",
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith (
+                    color: AppTheme.primaryBlue,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
