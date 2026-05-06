@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 
-class LoginForm extends StatelessWidget {
+class LoginForm extends StatefulWidget {
   final VoidCallback onToggle;
   final VoidCallback onLogin;
 
@@ -12,50 +12,103 @@ class LoginForm extends StatelessWidget {
   });
 
   @override
+  State<LoginForm> createState() => _LoginFormState();
+}
+
+class _LoginFormState extends State<LoginForm> {
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+
+  bool showPassword = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Padding(
-      key: key,
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          const SizedBox(height: 120),
+          const SizedBox(height: 40),
 
-          const SizedBox(height: 30),
+          _input(
+            "Email",
+            controller: emailController,
+            hint: "exemplo@email.com",
+          ),
 
-          _input("Email"),
           const SizedBox(height: 15),
-          _input("Senha", obscure: true),
+
+          _input(
+            "Senha",
+            controller: passwordController,
+            hint: "••••••••",
+            obscure: !showPassword,
+            suffix: IconButton(
+              icon: Icon(
+                showPassword
+                    ? Icons.visibility_off
+                    : Icons.visibility,
+              ),
+              onPressed: () {
+                setState(() => showPassword = !showPassword);
+              },
+            ),
+          ),
 
           const SizedBox(height: 25),
 
-          _button("Entrar", onLogin),
+          _button("Entrar", widget.onLogin),
 
           const SizedBox(height: 15),
 
           TextButton(
-            onPressed: onToggle,
-            child: const Text("Não tem conta? Cadastre-se"),
+            onPressed: widget.onToggle,
+            child: const Text("Não tem conta? Cadastrar"),
           ),
         ],
       ),
     );
   }
 
-  Widget _input(String hint, {bool obscure = false}) {
-    return TextField(
-      obscureText: obscure,
-      decoration: InputDecoration(
-        hintText: hint,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.borderGray),
+  Widget _input(
+    String label, {
+    required TextEditingController controller,
+    bool obscure = false,
+    String? hint,
+    Widget? suffix,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: AppTheme.textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.primaryBlue),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          obscureText: obscure,
+          decoration: InputDecoration(
+            hintText: hint,
+            suffixIcon: suffix,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  BorderSide(color: AppTheme.borderGray),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  BorderSide(color: AppTheme.primaryBlue),
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -65,7 +118,7 @@ class LoginForm extends StatelessWidget {
       child: Container(
         height: 50,
         decoration: BoxDecoration(
-          color: AppTheme.primaryBlue, 
+          color: AppTheme.primaryBlue,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Center(
