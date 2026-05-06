@@ -1,85 +1,55 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/core/theme/app_theme.dart';
-import '../widgets/auth_header.dart';
+import 'package:frontend/features/auth/widgets/auth_header.dart';
+import 'package:frontend/features/auth/widgets/otp_input.dart';
 
-class OtpPage extends StatefulWidget {
+class OtpPage extends StatelessWidget {
   const OtpPage({super.key});
-
-  @override
-  State<OtpPage> createState() => _OtpPageState();
-}
-
-class _OtpPageState extends State<OtpPage> {
-  final List<TextEditingController> controllers =
-      List.generate(5, (_) => TextEditingController());
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const AuthHeader(),
 
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Confirmar código",
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Digite o código enviado para seu telefone",
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  const SizedBox(height: 40),
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
 
-                  Text(
-                    "Digite o código enviado",
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                const OtpInput(),
 
-                  const SizedBox(height: 30),
+                const SizedBox(height: 30),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: List.generate(5, (index) {
-                      return SizedBox(
-                        width: 50,
-                        child: TextField(
-                          controller: controllers[index],
-                          textAlign: TextAlign.center,
-                          keyboardType: TextInputType.number,
-                          maxLength: 1,
-                          decoration: InputDecoration(
-                            counterText: "",
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: AppTheme.borderGray,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: AppTheme.primaryBlue,
-                              ),
-                            ),
-                          ),
-
-                          onChanged: (value) {
-                            if (value.isNotEmpty && index < 4) {
-                              FocusScope.of(context).nextFocus();
-                            }
-                          },
-                        ),
-                      );
-                    }),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  GestureDetector(
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: GestureDetector(
                     onTap: () {
-                      print("Código confirmado");
+                      // validar OTP
                     },
                     child: Container(
                       height: 50,
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue,
+                        color: Colors.blue,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Center(
@@ -93,17 +63,8 @@ class _OtpPageState extends State<OtpPage> {
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 20),
-
-                  TextButton(
-                    onPressed: () {
-                      print("Reenviar código");
-                    },
-                    child: const Text("Reenviar código"),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

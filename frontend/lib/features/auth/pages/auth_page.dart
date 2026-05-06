@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/auth_themes.dart';
-import '../widgets/auth_header.dart';
-import '../widgets/login_form.dart';
-import '../widgets/register_form.dart';
+import 'package:frontend/features/auth/widgets/auth_header.dart';
+import 'package:frontend/features/auth/widgets/login_form.dart';
+import 'package:frontend/features/auth/widgets/register_form.dart';
+import 'package:frontend/features/auth/pages/otp_page.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -18,55 +18,60 @@ class _AuthPageState extends State<AuthPage> {
     setState(() => isLogin = !isLogin);
   }
 
+  void goToOtp() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const OtpPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: isLogin ? AuthThemes.login : AuthThemes.register,
-      child: Scaffold(
-        body: Column(
-          children: [
-            const AuthHeader(),
+    return Scaffold(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AuthHeader(),
 
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
-                transitionBuilder: (child, animation) {
-                  final slide = Tween<Offset>(
-                    begin: const Offset(0.3, 0),
-                    end: Offset.zero,
-                  ).animate(animation);
-
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(position: slide, child: child),
-                  );
-                },
-
-                child: isLogin
-                    ? LoginForm(
-                        key: const ValueKey('login'),
-                        onToggle: toggle,
-                        onLogin: () {
-                          print("Login clicado");
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Login realizado")),
-                          );
-                        },
-                      )
-                    : RegisterForm(
-                        key: const ValueKey('register'),
-                        onToggle: toggle,
-                        onRegister: () {
-                          print("Cadastro clicado");
-
-                          Navigator.pushNamed(context, '/otp');
-                        },
-                      ),
-              ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isLogin ? "Entrar" : "Criar conta",
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isLogin
+                      ? "Acesse sua conta"
+                      : "Preencha os dados para começar",
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: isLogin
+                  ? LoginForm(
+                      key: const ValueKey('login'),
+                      onToggle: toggle,
+                      onLogin: () {
+                        // ação login
+                      },
+                    )
+                  : RegisterForm(
+                      key: const ValueKey('register'),
+                      onToggle: toggle,
+                      onRegister: goToOtp,
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }
