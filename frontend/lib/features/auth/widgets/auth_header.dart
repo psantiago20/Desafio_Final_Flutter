@@ -21,9 +21,12 @@ class AuthHeader extends StatelessWidget {
       ),
       child: SafeArea(
         child: Center(
-          child: Image.asset(
-            'assets/images/test.png',
-            height: 100,
+          child: Hero(
+            tag: 'app_logo',
+            child: Image.asset(
+              'assets/images/test.png',
+              height: 100,
+            ),
           ),
         ),
       ),

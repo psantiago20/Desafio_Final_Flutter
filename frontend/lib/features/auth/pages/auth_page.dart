@@ -41,9 +41,9 @@ class _AuthPageState extends State<AuthPage> {
               children: [
                 Text(
                   isLogin ? "Entrar" : "Criar conta",
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith (
-                    color: AppTheme.primaryBlue,
-                  ),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: AppTheme.primaryBlue,
+                      ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -59,12 +59,14 @@ class _AuthPageState extends State<AuthPage> {
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
               child: isLogin
                   ? LoginForm(
                       key: const ValueKey('login'),
                       onToggle: toggle,
                       onLogin: () {
-                        // ação login
+                        // TODO: lógica login
                       },
                     )
                   : RegisterForm(
