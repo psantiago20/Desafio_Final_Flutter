@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/features/auth/widgets/auth_header.dart';
 import 'package:frontend/features/auth/widgets/otp_input.dart';
 
@@ -20,12 +21,16 @@ class OtpPage extends StatelessWidget {
               children: [
                 Text(
                   "Confirmar código",
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: AppTheme.primaryBlue,
+                      ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   "Digite o código enviado para seu telefone",
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
                 ),
               ],
             ),
@@ -44,12 +49,11 @@ class OtpPage extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: GestureDetector(
                     onTap: () {
-                      // validar OTP
                     },
                     child: Container(
                       height: 50,
                       decoration: BoxDecoration(
-                        color: Colors.blue,
+                        color: AppTheme.primaryBlue,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Center(
@@ -63,6 +67,14 @@ class OtpPage extends StatelessWidget {
                       ),
                     ),
                   ),
+                ),
+
+                const SizedBox(height: 20),
+
+                TextButton(
+                  onPressed: () {
+                  },
+                  child: const Text("Reenviar código"),
                 ),
               ],
             ),
