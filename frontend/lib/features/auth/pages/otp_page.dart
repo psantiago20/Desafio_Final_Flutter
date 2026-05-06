@@ -18,7 +18,7 @@ class _OtpPageState extends State<OtpPage> {
     return Scaffold(
       body: Column(
         children: [
-          const AuthHeader(title: "Confirmar código"),
+          const AuthHeader(),
 
           Expanded(
             child: Padding(

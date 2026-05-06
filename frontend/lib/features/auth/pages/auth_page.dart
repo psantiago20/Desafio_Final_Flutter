@@ -25,7 +25,7 @@ class _AuthPageState extends State<AuthPage> {
       child: Scaffold(
         body: Column(
           children: [
-            AuthHeader(title: isLogin ? "Entrar" : "Cadastrar"),
+            const AuthHeader(),
 
             Expanded(
               child: AnimatedSwitcher(
