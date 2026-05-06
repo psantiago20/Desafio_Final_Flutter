@@ -1,33 +1,51 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
+import 'package:frontend/core/theme/app_theme.dart';
 
 class AuthHeader extends StatelessWidget {
   final String title;
 
-  const AuthHeader({super.key, required this.title});
+  const AuthHeader({
+    super.key,
+    required this.title,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(top: 80, bottom: 30),
+      height: 180,
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppTheme.primaryBlue, AppTheme.secondaryBlue],
+          colors: [
+            AppTheme.primaryBlue,
+            AppTheme.secondaryBlue,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
       ),
-      child: Column(
-        children: [
-          const Icon(Icons.layers, size: 80, color: Colors.white),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            style: Theme.of(context)
-                .textTheme
-                .headlineMedium
-                ?.copyWith(color: Colors.white),
-          ),
-        ],
+      child: SafeArea(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+
+            Image.asset(
+              'assets/images/test.png',
+              height: 60,
+            ),
+
+            const SizedBox(height: 12),
+
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
