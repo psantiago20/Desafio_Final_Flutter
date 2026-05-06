@@ -59,10 +59,10 @@ class _RegisterFormState extends State<RegisterForm> {
       padding: const EdgeInsets.all(20),
       child: Form(
         key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction, // 🔥 tempo real
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
           children: [
-            const SizedBox(height: 100),
+            const SizedBox(height: 40),
 
             _input(
               "Nome",
@@ -192,8 +192,14 @@ class _RegisterFormState extends State<RegisterForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Data de nascimento",
-            style: TextStyle(fontWeight: FontWeight.w500)),
+        Text(
+          "Data de nascimento",
+          style: TextStyle(
+            fontSize: 13,
+            color: AppTheme.textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         const SizedBox(height: 6),
         TextFormField(
           controller: birthController,
@@ -222,8 +228,14 @@ class _RegisterFormState extends State<RegisterForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: AppTheme.textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
