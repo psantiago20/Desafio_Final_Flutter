@@ -1,23 +1,37 @@
 import 'package:flutter/material.dart';
-import 'theme/app_theme.dart';
-import 'screens/client/main_dashboard_screen.dart';
 
-/// 🚀 Entrypoint for OmniConnect Frontend
-/// Responsabilidade: flutter-frontend-agent
+// Tema global
+import 'core/theme/app_theme.dart';
+
+// Páginas
+import 'features/auth/pages/splash_page.dart';
+import 'features/auth/pages/auth_page.dart';
+import 'features/auth/pages/otp_page.dart';
+
 void main() {
-  runApp(const OmniConnectApp());
+  runApp(const MyApp());
 }
 
-class OmniConnectApp extends StatelessWidget {
-  const OmniConnectApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Sua Consulta',
       debugShowCheckedModeBanner: false,
+
+      // Tema principal do app
       theme: AppTheme.lightTheme,
-      home: const MainDashboardScreen(), // Inicializando com o Dashboard do Cliente
+
+      // Tela inicial
+      initialRoute: '/',
+
+      // Rotas
+      routes: {
+        '/': (_) => const SplashPage(),
+        '/auth': (_) => const AuthPage(),
+        '/otp': (_) => const OtpPage(),
+      },
     );
   }
 }
