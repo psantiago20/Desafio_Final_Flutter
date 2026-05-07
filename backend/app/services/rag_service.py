@@ -159,7 +159,8 @@ class RAGService:
 
         # Prompt da Isis (Persona Estrita da Clínica)
         sys_prompt = (
-            "Você é a Isis, assistente virtual doce e prestativa da clínica. ✨\n"
+            "Você é a Isis, assistente virtual doce, prestativa e organizada da clínica. ✨\n"
+            "Sempre comece a conversa se identificando: 'Oi! Sou a Isis, assistente virtual da clínica.' se for a primeira mensagem.\n"
             "REGRA DE OURO: Você SÓ fala sobre assuntos da clínica (médicos, horários, exames, convênios e saúde).\n"
             "Se o usuário perguntar sobre QUALQUER outro assunto (esportes, política, notícias, etc), negue educadamente e diga que você está aqui apenas para ajudar com os atendimentos da clínica.\n"
             "Responda sempre baseada nos dados das ferramentas. Se não houver dados, peça para falar com a recepção. ✨"
@@ -257,6 +258,19 @@ class RAGService:
             self.clear_conversation(wa_from)
             return "Sessão reiniciada! ✨"
         
+        # Fasttrack para saudações no app (zero latência e sem alucinação)
+        saudacoes = ["oi", "olá", "ola", "bom dia", "boa tarde", "boa noite", "tudo bem", "ok", "bem", "oie"]
+        import re
+        query_clean = re.sub(r'[^\w\s]', '', query.lower()).strip()
+        
+        # Log de debug para o fasttrack
+        logger.info(f"[FastTrack] Source: {source}, Query: '{query_clean}'")
+        
+        if (source == "app" or source == "whatsapp") and query_clean in saudacoes:
+            self.clear_conversation(wa_from)
+            from app.services.standard_messages import get_welcome_message_without_doctor
+            return get_welcome_message_without_doctor()
+            
         conversation_manager.update_activity(wa_from)
         config = {"configurable": {"thread_id": wa_from, "db": db}, "recursion_limit": 5}
         inputs = {"messages": [HumanMessage(content=query)], "wa_from": wa_from}
@@ -271,5 +285,41 @@ class RAGService:
         conversation_manager.clear_state(wa_from)
         try: self.memory.delete_thread(wa_from)
         except: pass
+
+    def get_conversation_state(self, wa_from: str) -> dict:
+        return conversation_manager.get_state(wa_from)
+
+    def search_only(self, query: str, doctor_id: Optional[int] = None, top_k: int = 5) -> List[Dict[str, Any]]:
+        from app.services.agent_tools import _get_chroma_client
+        chroma_client = _get_chroma_client()
+        collection_name = f"faq_doctor_{doctor_id}" if doctor_id else "faq_doctor_0"
+        
+        try:
+            collection = chroma_client.get_collection(collection_name)
+        except Exception:
+            try:
+                collection = chroma_client.get_collection("faq_doctor_0")
+            except Exception:
+                return []
+                
+        if collection.count() == 0:
+            return []
+            
+        results = collection.query(
+            query_texts=[query],
+            n_results=min(top_k, collection.count())
+        )
+        
+        formatted = []
+        if results and results.get("documents") and results["documents"][0]:
+            for i, doc in enumerate(results["documents"][0]):
+                source = results["metadatas"][0][i].get("source", "FAQ") if results.get("metadatas") else "FAQ"
+                formatted.append({
+                    "content": doc,
+                    "source": source,
+                    "scope": collection_name,
+                    "distance": results["distances"][0][i] if "distances" in results and results["distances"] else None
+                })
+        return formatted
 
 rag_service = RAGService()

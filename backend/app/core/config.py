@@ -1,5 +1,10 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from pathlib import Path
+
+
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = BACKEND_DIR.parent
 
 
 class Settings(BaseSettings):
@@ -22,6 +27,7 @@ class Settings(BaseSettings):
     WHATSAPP_VERIFY_TOKEN: str = "desafio-ciclo"
     WHATSAPP_WEBHOOK_SECRET: str = "desafio-ciclo"
     WHATSAPP_PHONE_NUMBER_ID: str = ""
+    WHATSAPP_PHONE_NUMBER: str = ""
     WHATSAPP_ACCESS_TOKEN: str = ""
     WHATSAPP_CALLBACK_URL: str = ""
     WHATSAPP_BUSINESS_ACCOUNT_ID: str = ""
@@ -34,8 +40,9 @@ class Settings(BaseSettings):
 
     
     class Config:
-        # Procura o .env na pasta atual ou na pasta pai (raiz do projeto)
-        env_file = (".env", "../.env")
+        # Procura o .env pelos caminhos absolutos do projeto, independente
+        # do diretório usado para iniciar o uvicorn.
+        env_file = (PROJECT_ROOT / ".env", BACKEND_DIR / ".env", ".env", "../.env")
         env_file_encoding = 'utf-8'
 
 

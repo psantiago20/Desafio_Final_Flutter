@@ -158,7 +158,6 @@ async def query_rag(
             query=request.query,
             wa_to=request.wa_to,
             db=db,
-            top_k=request.top_k,
             wa_from=request.wa_from,
             source=request.source
         )
