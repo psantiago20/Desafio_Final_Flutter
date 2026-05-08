@@ -3,7 +3,8 @@ import 'package:frontend/core/theme/app_theme.dart';
 
 class LoginForm extends StatefulWidget {
   final VoidCallback onToggle;
-  final VoidCallback onLogin;
+  final void Function(String, String) onLogin;
+
 
   const LoginForm({
     super.key,
@@ -56,7 +57,10 @@ class _LoginFormState extends State<LoginForm> {
 
           const SizedBox(height: 25),
 
-          _button("Entrar", widget.onLogin),
+          _button("Entrar", () {
+            widget.onLogin(emailController.text.trim(), passwordController.text);
+          }),
+
 
           const SizedBox(height: 15),
 

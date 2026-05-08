@@ -1,37 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/app_router.dart';
+import 'package:frontend/core/theme/app_theme.dart';
 
-// Tema global
-import 'core/theme/app_theme.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-// Páginas
-import 'features/auth/pages/splash_page.dart';
-import 'features/auth/pages/auth_page.dart';
-import 'features/auth/pages/otp_page.dart';
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('pt_BR', null);
 
-void main() {
-  runApp(const MyApp());
+  runApp(
+    const ProviderScope(
+      child: OmniConnectApp(),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class OmniConnectApp extends ConsumerWidget {
+  const OmniConnectApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
 
-      // Tema principal do app
+    return MaterialApp.router(
+      title: 'OmniConnect',
       theme: AppTheme.lightTheme,
-
-      // Tela inicial
-      initialRoute: '/',
-
-      // Rotas
-      routes: {
-        '/': (_) => const SplashPage(),
-        '/auth': (_) => const AuthPage(),
-        '/otp': (_) => const OtpPage(),
-      },
+      debugShowCheckedModeBanner: false,
+      routerConfig: router,
     );
   }
 }

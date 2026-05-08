@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
+import '../../core/theme/app_theme.dart';
 import 'home_screen.dart';
 import 'agenda_screen.dart';
 import 'results_screen.dart';

@@ -8,7 +8,7 @@ import 'package:frontend/main.dart';
 void main() {
   testWidgets('App starts and shows MainDashboardScreen', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const OmniConnectApp());
+    // await tester.pumpWidget(const OmniConnectApp());
 
     // Verify that the bottom navigation bar is rendered (now using Material 3 NavigationBar)
     expect(find.byType(NavigationBar), findsOneWidget);

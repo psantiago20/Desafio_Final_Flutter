@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../../core/theme/app_theme.dart';
+import 'package:frontend/features/auth/providers/auth_provider.dart';
+import 'package:frontend/core/theme/app_theme.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});

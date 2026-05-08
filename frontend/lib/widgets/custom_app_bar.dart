@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../screens/client/profile_screen.dart';
-import '../theme/app_theme.dart';
+import '../core/theme/app_theme.dart';
 
 /// 🎀 Custom AppBar
 /// Responsabilidade: ui-ux-designer-agent / flutter-frontend-agent

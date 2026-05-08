@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../providers/dashboard_provider.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../shared/models/appointment_model.dart';
-import '../../../shared/models/dashboard_stats_model.dart';
+import 'package:frontend/features/auth/providers/auth_provider.dart';
+import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/shared/models/appointment_model.dart';
+import 'package:frontend/shared/models/dashboard_stats_model.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});

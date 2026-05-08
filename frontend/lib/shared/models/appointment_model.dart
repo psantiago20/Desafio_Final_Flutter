@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:frontend/core/theme/app_theme.dart';
+
 class AppointmentModel {
   final int id;
   final int patientId;
@@ -87,5 +90,47 @@ class AppointmentModel {
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
+  }
+}
+Color statusColor(String status) {
+  switch (status) {
+    case 'pending':
+      return AppColors.pending;
+    case 'confirmed':
+      return AppColors.confirmed;
+    case 'completed':
+      return AppColors.completed;
+    case 'cancelled':
+      return AppColors.cancelled;
+    default:
+      return AppColors.textSecondary;
+  }
+}
+
+String typeLabel(String type) {
+  switch (type) {
+    case 'consultation':
+      return 'Consulta';
+    case 'exam':
+      return 'Exame';
+    case 'return':
+      return 'Retorno';
+    default:
+      return type;
+  }
+}
+
+String statusLabel(String status) {
+  switch (status) {
+    case 'pending':
+      return 'Pendente';
+    case 'confirmed':
+      return 'Confirmado';
+    case 'completed':
+      return 'Concluído';
+    case 'cancelled':
+      return 'Cancelado';
+    default:
+      return status;
   }
 }

@@ -60,6 +60,18 @@ class ApiClient {
     }
   }
 
+  static Future<dynamic> postForm(String path, Map<String, String> body) async {
+    try {
+      final response = await http.post(
+        _uri(path),
+        body: body, // http package automatically sets content-type to application/x-www-form-urlencoded when body is a Map<String, String>
+      );
+      return _handleResponse(response);
+    } on SocketException {
+      throw ApiException(
+          statusCode: 0, message: 'Sem conexão com o servidor.');
+    }
+  }
   static Future<dynamic> put(String path, Map<String, dynamic> body) async {
     try {
       final response = await http.put(

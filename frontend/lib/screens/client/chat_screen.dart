@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../../theme/app_theme.dart';
+import 'package:intl/intl.dart';
+import '../../core/theme/app_theme.dart';
 import '../../widgets/custom_app_bar.dart';
 
 class ChatMessage {

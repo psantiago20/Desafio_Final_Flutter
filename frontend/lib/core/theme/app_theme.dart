@@ -96,3 +96,19 @@ class AppTheme {
     );
   }
 }
+class AppColors {
+  static const Color primary = AppTheme.primaryBlue;
+  static const Color primaryLight = AppTheme.primaryBlueLight;
+  static const Color background = AppTheme.backgroundGray;
+  static const Color surface = AppTheme.surfaceWhite;
+  static const Color surfaceVariant = AppTheme.backgroundGray;
+  static const Color textPrimary = AppTheme.textPrimary;
+  static const Color textSecondary = AppTheme.textSecondary;
+  static const Color textHint = AppTheme.textTertiary;
+  static const Color border = AppTheme.borderGray;
+  static const Color cancelled = AppTheme.alertRed;
+  static const Color confirmed = AppTheme.primaryBlue;
+  static const Color completed = AppTheme.successGreen;
+  static const Color pending = AppTheme.warningOrange;
+  static const Color inProgress = AppTheme.secondaryBlue;
+}
