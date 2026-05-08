@@ -1,11 +1,6 @@
 class AppConstants {
   // Troque pelo IP da sua máquina quando rodar no emulador/dispositivo físico
-<<<<<<< HEAD
   static const String baseUrl = 'http://localhost:8000'; // Alterado para localhost pois está rodando no Chrome
-
-=======
-  static const String baseUrl = 'http://10.0.2.2:8000';
->>>>>>> origin/development
 
   // Auth
   static const String loginEndpoint = '/api/auth/login';
