@@ -89,8 +89,10 @@ backend/scripts/test_wa_direct.py
 backend/scripts/verify_phone.py
 backend/scripts/verify_whatsapp.py
 
+!frontend/lib/
+
+# Ignorar templates visuais
+docs/templates-sua-consulta/
 
 # Scratch and local dev
 backend/scratch/
-.env
-.env.*

@@ -4,8 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../providers/appointments_provider.dart';
+<<<<<<< HEAD
 import 'package:frontend/features/auth/providers/auth_provider.dart';
 import 'package:frontend/core/theme/app_theme.dart';
+=======
+import '../../auth/providers/auth_provider.dart';
+import '../../../core/theme/app_theme.dart';
+>>>>>>> origin/development
 
 class NewAppointmentScreen extends ConsumerStatefulWidget {
   const NewAppointmentScreen({super.key});

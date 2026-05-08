@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:frontend/core/constants/app_constants.dart';
 import 'package:frontend/core/network/api_client.dart';
 import 'package:frontend/core/utils/token_storage.dart';
@@ -6,6 +7,18 @@ import 'package:frontend/shared/models/user_model.dart';
 class AuthRepository {
   Future<UserModel> login(String username, String password) async {
     final data = await ApiClient.postForm(AppConstants.loginEndpoint, {
+=======
+import '../../core/constants/app_constants.dart';
+import '../../core/network/api_client.dart';
+import '../../core/utils/token_storage.dart';
+import '../../shared/models/user_model.dart';
+
+class AuthRepository {
+  Future<UserModel> login(String username, String password) async {
+    // O backend usa OAuth2PasswordRequestForm, então precisa de form-data
+    // Mas como o endpoint aceita JSON no LoginRequest também, enviamos JSON
+    final data = await ApiClient.post(AppConstants.loginEndpoint, {
+>>>>>>> origin/development
       'username': username,
       'password': password,
     });

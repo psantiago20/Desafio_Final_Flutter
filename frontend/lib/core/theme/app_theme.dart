@@ -96,7 +96,6 @@ class AppTheme {
     );
   }
 }
-
 class AppColors {
   static const Color primary = AppTheme.primaryBlue;
   static const Color primaryLight = AppTheme.primaryBlueLight;

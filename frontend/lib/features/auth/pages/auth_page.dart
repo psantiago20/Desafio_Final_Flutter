@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+=======
+>>>>>>> origin/development
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/features/auth/widgets/auth_header.dart';
 import 'package:frontend/features/auth/widgets/login_form.dart';
 import 'package:frontend/features/auth/widgets/register_form.dart';
 import 'package:frontend/features/auth/pages/otp_page.dart';
+<<<<<<< HEAD
 import 'package:frontend/features/auth/providers/auth_provider.dart';
 
 class AuthPage extends ConsumerStatefulWidget {
@@ -16,6 +20,17 @@ class AuthPage extends ConsumerStatefulWidget {
 }
 
 class _AuthPageState extends ConsumerState<AuthPage> {
+=======
+
+class AuthPage extends StatefulWidget {
+  const AuthPage({super.key});
+
+  @override
+  State<AuthPage> createState() => _AuthPageState();
+}
+
+class _AuthPageState extends State<AuthPage> {
+>>>>>>> origin/development
   bool isLogin = true;
 
   void toggle() {
@@ -29,6 +44,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     );
   }
 
+<<<<<<< HEAD
   Future<void> _handleLogin(String username, String password) async {
     if (username.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -51,6 +67,10 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
 
+=======
+  @override
+  Widget build(BuildContext context) {
+>>>>>>> origin/development
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,6 +99,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
             ),
           ),
 
+<<<<<<< HEAD
           if (auth.error != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -88,6 +109,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
               ),
             ),
 
+=======
+>>>>>>> origin/development
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
@@ -97,7 +120,13 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                   ? LoginForm(
                       key: const ValueKey('login'),
                       onToggle: toggle,
+<<<<<<< HEAD
                       onLogin: _handleLogin,
+=======
+                      onLogin: () {
+                        // TODO: lógica login
+                      },
+>>>>>>> origin/development
                     )
                   : RegisterForm(
                       key: const ValueKey('register'),

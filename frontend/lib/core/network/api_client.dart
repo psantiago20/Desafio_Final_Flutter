@@ -60,6 +60,7 @@ class ApiClient {
     }
   }
 
+<<<<<<< HEAD
   static Future<dynamic> postForm(String path, Map<String, String> body) async {
     try {
       final response = await http.post(
@@ -73,6 +74,8 @@ class ApiClient {
     }
   }
 
+=======
+>>>>>>> origin/development
   static Future<dynamic> put(String path, Map<String, dynamic> body) async {
     try {
       final response = await http.put(

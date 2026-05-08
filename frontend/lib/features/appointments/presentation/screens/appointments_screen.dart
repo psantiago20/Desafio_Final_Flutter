@@ -4,8 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../providers/appointments_provider.dart';
+<<<<<<< HEAD
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
+=======
+import '../../../core/theme/app_theme.dart';
+import '../../../shared/models/appointment_model.dart';
+>>>>>>> origin/development
 
 class AppointmentsScreen extends ConsumerWidget {
   const AppointmentsScreen({super.key});
