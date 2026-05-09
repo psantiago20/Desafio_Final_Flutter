@@ -49,6 +49,7 @@ def delete_exam(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    print(f"[DEBUG] Tentativa de deletar exame {exam_id} por usuário {current_user.email} (role: {current_user.role})")
     exam = db.query(Exam).filter(Exam.id == exam_id).first()
     if not exam:
         raise HTTPException(status_code=404, detail="Exam not found")
@@ -63,5 +64,6 @@ def delete_exam(
             
     db.delete(exam)
     db.commit()
+    print(f"[DEBUG] Exame {exam_id} deletado com sucesso")
     return {"message": "Exam deleted successfully"}
 

@@ -41,9 +41,17 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       // Filtra exames que não possuem URL válida ou que falharam na identificação
       final validExams = allExams.where((exam) {
         final url = exam['exam_url'] as String?;
+        final title = exam['title'] as String? ?? '';
         
         // Se a URL for nula, vazia ou 'none', não mostra o card conforme solicitado
-        if (url == null || url.isEmpty || url.toLowerCase() == 'none') return false;
+        if (url == null || url.trim().isEmpty || url.toLowerCase() == 'none' || url.toLowerCase() == 'null') {
+          return false;
+        }
+
+        // Se o título indicar que falhou o upload ou é um erro (opcional, dependendo do backend)
+        if (title.toLowerCase().contains('erro') || title.toLowerCase().contains('falha')) {
+          // Aqui poderíamos decidir ocultar ou não. Por enquanto vamos manter o filtro na URL.
+        }
 
         return true;
       }).toList();
