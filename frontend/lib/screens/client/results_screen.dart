@@ -1,18 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../../core/theme/app_theme.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../core/network/api_client.dart';
+import '../../core/constants/app_constants.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 /// 📊 Results Screen (Exams)
 /// Responsabilidade: flutter-frontend-agent
 /// Exibe lista de exames com status, resultados e alertas.
-class ResultsScreen extends StatefulWidget {
+class ResultsScreen extends ConsumerStatefulWidget {
   const ResultsScreen({super.key});
 
   @override
-  State<ResultsScreen> createState() => _ResultsScreenState();
+  ConsumerState<ResultsScreen> createState() => _ResultsScreenState();
 }
 
-class _ResultsScreenState extends State<ResultsScreen> {
+class _ResultsScreenState extends ConsumerState<ResultsScreen> {
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _exams = [];
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchExams();
+  }
+
+  Future<void> _fetchExams() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final data = await ApiClient.get(AppConstants.examsEndpoint);
+      final list = (data as Map<String, dynamic>)['exams'] as List;
+      final allExams = list.cast<Map<String, dynamic>>();
+
+      setState(() {
+        _exams = allExams;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Erro ao buscar exames: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
 
   final List<Map<String, dynamic>> _mockExams = [
     {
@@ -46,17 +83,22 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredExams = _mockExams;
+    final filteredExams = _exams;
 
     return Scaffold(
-      appBar: const CustomAppBar(
+      appBar: kIsWeb ? null : CustomAppBar(
         subtitle: 'Exames Enviados',
       ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: AppTheme.backgroundGradient,
         ),
-        child: Column(
+        child: _isLoading 
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+            ? Center(child: Text(_error!))
+            : Column(
+
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
@@ -112,205 +154,111 @@ class _ResultsScreenState extends State<ResultsScreen> {
         ],
       ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _fetchExams,
+        child: const Icon(Icons.refresh),
+      ),
     );
+
   }
 
   Widget _buildExamCard(Map<String, dynamic> exam) {
-    final bool isAvailable = exam['status'] == 'available';
-    final bool isPending = exam['status'] == 'pending';
-    final bool hasAbnormalities = exam['hasAbnormalities'];
+    final examUrl = exam['exam_url'] as String?;
+    final summary = exam['summary'] as String?;
+    const isCompleted = true; 
+    final hasSummary = summary != null && summary.isNotEmpty;
+    final hasFile = examUrl != null && examUrl.isNotEmpty;
 
-    Color borderColor = AppTheme.borderGray;
-    Color bgColor = AppTheme.surfaceWhite;
-
-    if (hasAbnormalities) {
-      borderColor = AppTheme.warningOrangeLight;
-      bgColor = AppTheme.warningOrangeLight.withValues(alpha: 0.3);
-    } else if (isAvailable) {
-      borderColor = AppTheme.successGreenLight;
-    }
+    DateTime? date;
+    try {
+      date = DateTime.parse(exam['created_at'] as String);
+    } catch (_) {}
+    final dateStr =
+        date != null ? DateFormat('dd/MM/yyyy HH:mm').format(date) : '—';
+    final title = exam['title'] as String? ?? 'Exame';
 
     return Card(
-      color: bgColor,
-      margin: const EdgeInsets.only(bottom: 12.0),
+      color: hasSummary ? AppTheme.surfaceWhite : AppTheme.backgroundGray,
+      margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-        side: BorderSide(color: borderColor, width: 1),
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: hasSummary ? AppTheme.successGreen.withValues(alpha: 0.3) : AppTheme.borderGray,
+          width: 1,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Icon Block
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: isAvailable ? AppTheme.successGreenLight : AppTheme.warningOrangeLight,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.description,
-                color: isAvailable ? AppTheme.successGreen : AppTheme.warningOrange,
-              ),
-            ),
-            const SizedBox(width: 16),
-            
-            // Info Block
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: hasSummary ? AppTheme.successGreenLight : AppTheme.backgroundGray,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.assignment,
+                    color: hasSummary ? AppTheme.successGreen : AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              exam['name'],
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: AppTheme.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              exam['type'],
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Status Tag
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isAvailable ? AppTheme.successGreenLight : AppTheme.warningOrangeLight,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (isAvailable) ...[
-                              const Icon(Icons.check_circle, size: 12, color: AppTheme.successGreen),
-                              const SizedBox(width: 4),
-                            ],
-                            Text(
-                              isAvailable ? 'Disponível' : 'Em análise',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: isAvailable ? AppTheme.successGreen : AppTheme.warningOrange,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  if (hasAbnormalities && isAvailable) ...[
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.warningOrangeLight.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline, size: 16, color: AppTheme.warningOrange),
-                          const SizedBox(width: 8),
-                          const Expanded(
-                            child: Text(
-                              'Atenção: Valores fora do padrão detectados',
-                              style: TextStyle(fontSize: 12, color: AppTheme.warningOrange),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_today, size: 14, color: AppTheme.textTertiary),
-                      const SizedBox(width: 4),
                       Text(
-                        exam['date'],
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary),
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      const Text('•', style: TextStyle(color: AppTheme.textTertiary)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          exam['doctor'],
-                          style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      Text(
+                        dateStr,
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
                         ),
                       ),
                     ],
                   ),
-
-                  // Actions
-                  if (isAvailable) ...[
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton.icon(
-                            onPressed: () {},
-                            icon: const Icon(Icons.visibility, size: 18),
-                            label: const Text('Visualizar'),
-                            style: TextButton.styleFrom(
-                              backgroundColor: AppTheme.successGreen,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        TextButton(
-                          onPressed: () {},
-                          style: TextButton.styleFrom(
-                            backgroundColor: AppTheme.backgroundGray,
-                            foregroundColor: AppTheme.textSecondary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              side: const BorderSide(color: AppTheme.borderGray),
-                            ),
-                          ),
-                          child: const Icon(Icons.download, size: 20),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (isPending) ...[
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Resultado em processamento. Você será notificado quando estiver disponível.',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                    ),
-                  ],
-                ],
-              ),
+                ),
+              ],
             ),
+            if (hasSummary) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'Análise da IA:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: AppTheme.primaryBlueDark,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                summary!,
+                style: const TextStyle(fontSize: 14),
+              ),
+            ],
+            if (hasFile) ...[
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () {
+                  // TODO: Abrir URL do exame
+                },
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Ver Arquivo Original'),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+
 }

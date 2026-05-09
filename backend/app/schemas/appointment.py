@@ -39,6 +39,8 @@ class AppointmentResponse(AppointmentBase):
     symptoms: Optional[str] = None
     diagnosis: Optional[str] = None
     prescription: Optional[str] = None
+    exam_url: Optional[str] = None
+    exam_summary: Optional[str] = None
     paid: bool
     payment_method: Optional[str] = None
     created_at: datetime

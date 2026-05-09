@@ -42,3 +42,4 @@ class Patient(Base):
 
     appointments = relationship("Appointment", back_populates="patient")
     messages = relationship("Message", back_populates="patient")
+    exams = relationship("Exam", back_populates="patient")

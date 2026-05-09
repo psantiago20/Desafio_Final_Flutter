@@ -41,6 +41,8 @@ class Appointment(Base):
     symptoms = Column(Text)
     diagnosis = Column(Text)
     prescription = Column(Text)
+    exam_url = Column(String(255), nullable=True)
+    exam_summary = Column(Text, nullable=True)
     
     price = Column(Float, default=0.0)
     paid = Column(Boolean, default=False)

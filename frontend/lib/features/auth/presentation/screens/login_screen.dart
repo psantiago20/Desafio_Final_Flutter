@@ -72,7 +72,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Acesse sua conta OmniConnect',
+                  'Acesse sua conta Sua Consulta',
                   style: GoogleFonts.dmSans(
                     fontSize: 15,
                     color: AppColors.textSecondary,

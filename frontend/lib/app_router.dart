@@ -14,29 +14,39 @@ import 'features/profile/presentation/screens/profile_screen.dart';
 import 'shared/models/appointment_model.dart';
 import 'shared/widgets/main_shell.dart';
 import 'screens/client/main_dashboard_screen.dart' as client_screens;
+import 'screens/landing_page.dart';
 
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
 
   return GoRouter(
-    initialLocation: authState.isAuthenticated 
-        ? (authState.user?.role == 'doctor' ? '/dashboard' : '/client') 
-        : '/login',
+    initialLocation: '/', // Inicia na Home (Landing Page)
 
     redirect: (context, state) {
       final isAuthenticated = authState.isAuthenticated;
       final isAuthRoute = state.matchedLocation == '/login' ||
           state.matchedLocation == '/register';
+      final isHomeRoute = state.matchedLocation == '/';
 
-      if (!isAuthenticated && !isAuthRoute) return '/login';
+      // Se não estiver logado:
+      // - Permite ficar na Home (/) ou nas rotas de Auth
+      // - Redireciona para / se tentar acessar rotas protegidas sem estar logado
+      if (!isAuthenticated) {
+        if (isHomeRoute || isAuthRoute) return null;
+        return '/';
+      }
+      
+      // Se estiver logado:
+      // - Se tentar ir para Login/Register ou Home (/), redireciona para o painel apropriado
       if (isAuthenticated) {
         final isDoctor = authState.user?.role == 'doctor';
         
-        if (isAuthRoute) {
+        if (isAuthRoute || isHomeRoute) {
           return isDoctor ? '/dashboard' : '/client';
         }
         
+        // Proteção extra para o painel do médico
         if (!isDoctor && state.matchedLocation == '/dashboard') {
           return '/client';
         }
@@ -45,6 +55,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      // Home / Landing Page
+      GoRoute(path: '/', builder: (_, __) => const LandingPage()),
+
       // Auth
       GoRoute(path: '/login', builder: (_, __) => const AuthPage()),
 

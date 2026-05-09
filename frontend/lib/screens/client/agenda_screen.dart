@@ -1,56 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../features/appointments/providers/appointments_provider.dart';
+import '../../shared/models/appointment_model.dart';
 
-/// 📅 Agenda Screen (Appointments)
-/// Responsabilidade: flutter-frontend-agent
-/// Interface de gerenciamento de consultas.
-class AgendaScreen extends StatefulWidget {
+class AgendaScreen extends ConsumerWidget {
   const AgendaScreen({super.key});
 
   @override
-  State<AgendaScreen> createState() => _AgendaScreenState();
-}
-
-class _AgendaScreenState extends State<AgendaScreen> {
-  String _currentFilter = 'upcoming'; // upcoming, completed, all
-
-  final List<Map<String, dynamic>> _mockAppointments = [
-    {
-      'id': 1,
-      'type': 'consultation',
-      'specialty': 'Cardiologia',
-      'doctor': 'Dr. João Santos',
-      'dateStr': '2026-05-08',
-      'day': '08',
-      'month': 'MAI',
-      'time': '14:30',
-      'location': 'Clínica CardioSaúde',
-      'status': 'upcoming',
-    },
-    {
-      'id': 3,
-      'type': 'consultation',
-      'specialty': 'Dermatologia',
-      'doctor': 'Dra. Ana Costa',
-      'dateStr': '2026-04-28',
-      'day': '28',
-      'month': 'ABR',
-      'time': '10:00',
-      'location': 'Clínica DermaSaúde',
-      'status': 'completed',
-    },
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final filteredAppointments = _mockAppointments.where((apt) {
-      if (_currentFilter == 'all') return true;
-      return apt['status'] == _currentFilter;
-    }).toList();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final appointmentsAsync = ref.watch(appointmentsListProvider);
+    final filters = ref.watch(appointmentFiltersProvider);
 
     return Scaffold(
-      appBar: CustomAppBar(
+      appBar: kIsWeb ? null : CustomAppBar(
         subtitle: 'Minhas Consultas',
         actions: [
           IconButton(
@@ -58,7 +24,6 @@ class _AgendaScreenState extends State<AgendaScreen> {
             color: AppTheme.primaryBlue,
             iconSize: 32,
             onPressed: () {
-              // TODO: Abrir modal de nova consulta
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Abrir formulário de agendamento')),
               );
@@ -73,48 +38,55 @@ class _AgendaScreenState extends State<AgendaScreen> {
         ),
         child: Column(
           children: [
-          // Filtros
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Row(
-              children: [
-                _buildFilterChip('Próximas', 'upcoming'),
-                const SizedBox(width: 8),
-                _buildFilterChip('Realizadas', 'completed'),
-                const SizedBox(width: 8),
-                _buildFilterChip('Todas', 'all'),
-              ],
+            // Filtros
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  _buildFilterChip(ref, 'Próximas', 'confirmed', filters.statusFilter == 'confirmed'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(ref, 'Realizadas', 'completed', filters.statusFilter == 'completed'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(ref, 'Todas', null, filters.statusFilter == null),
+                ],
+              ),
             ),
-          ),
-          
-          // Lista de Consultas
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: filteredAppointments.length,
-              itemBuilder: (context, index) {
-                final apt = filteredAppointments[index];
-                return _buildAppointmentCard(apt);
-              },
+            
+            // Lista de Consultas
+            Expanded(
+              child: appointmentsAsync.when(
+                data: (appointments) {
+                  if (appointments.isEmpty) {
+                    return const Center(child: Text('Nenhuma consulta encontrada.'));
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16.0),
+                    itemCount: appointments.length,
+                    itemBuilder: (context, index) {
+                      return _buildAppointmentCard(context, appointments[index]);
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => Center(child: Text('Erro ao carregar consultas: $err')),
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildFilterChip(String label, String value) {
-    final isSelected = _currentFilter == value;
+  Widget _buildFilterChip(WidgetRef ref, String label, String? value, bool isSelected) {
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (selected) {
         if (selected) {
-          setState(() {
-            _currentFilter = value;
-          });
+          ref.read(appointmentFiltersProvider.notifier).update(
+            (state) => state.copyWith(statusFilter: value, clearStatus: value == null),
+          );
         }
       },
       selectedColor: AppTheme.primaryBlue,
@@ -133,8 +105,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
     );
   }
 
-  Widget _buildAppointmentCard(Map<String, dynamic> apt) {
-    final isUpcoming = apt['status'] == 'upcoming';
+  Widget _buildAppointmentCard(BuildContext context, AppointmentModel apt) {
+    final isUpcoming = apt.status == 'confirmed' || apt.status == 'pending';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12.0),
@@ -162,7 +134,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    apt['month'],
+                    DateFormat('MMM', 'pt_BR').format(apt.appointmentDate).toUpperCase(),
                     style: const TextStyle(
                       color: AppTheme.primaryBlue,
                       fontSize: 10,
@@ -170,7 +142,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     ),
                   ),
                   Text(
-                    apt['day'],
+                    DateFormat('dd').format(apt.appointmentDate),
                     style: const TextStyle(
                       color: AppTheme.primaryBlue,
                       fontSize: 18,
@@ -192,10 +164,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          apt['specialty'],
+                          apt.type.toUpperCase(),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontSize: 14,
                             color: AppTheme.textPrimary,
                           ),
                           maxLines: 1,
@@ -209,7 +181,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          isUpcoming ? 'Confirmada' : 'Realizada',
+                          apt.status == 'confirmed' ? 'Confirmada' : (apt.status == 'completed' ? 'Realizada' : apt.status),
                           style: TextStyle(
                             fontSize: 10,
                             color: isUpcoming ? AppTheme.primaryBlueDark : AppTheme.textSecondary,
@@ -221,10 +193,11 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    apt['doctor'],
+                    apt.doctorName,
                     style: const TextStyle(
-                      fontSize: 14,
-                      color: AppTheme.textSecondary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -233,20 +206,20 @@ class _AgendaScreenState extends State<AgendaScreen> {
                       const Icon(Icons.access_time, size: 14, color: AppTheme.textTertiary),
                       const SizedBox(width: 4),
                       Text(
-                        apt['time'],
+                        DateFormat('HH:mm').format(apt.appointmentDate),
                         style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Row(
+                  const Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 14, color: AppTheme.textTertiary),
-                      const SizedBox(width: 4),
+                      Icon(Icons.location_on_outlined, size: 14, color: AppTheme.textTertiary),
+                      SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          apt['location'],
-                          style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary),
+                          'Unidade Principal',
+                          style: TextStyle(fontSize: 12, color: AppTheme.textTertiary),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import 'home_screen.dart';
 import 'agenda_screen.dart';
 import 'results_screen.dart';
 import 'chat_screen.dart';
+import 'profile_screen.dart';
 
-/// 📱 Main Dashboard
-/// Responsabilidade: flutter-frontend-agent
-/// Casca principal que controla a navegação entre Home, Agenda, Resultados, Mensagens e Perfil.
 class MainDashboardScreen extends StatefulWidget {
   const MainDashboardScreen({super.key});
 
@@ -29,11 +29,113 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     const AgendaScreen(),
     const ChatScreen(),
     const ResultsScreen(),
-    const Scaffold(body: Center(child: Text('Alertas e Notificações'))), // Placeholder para Alertas
+    const Scaffold(body: Center(child: Text('Alertas e Notificações'))),
+    const ProfileScreen(), // 5: Perfil
   ];
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return _buildWebShell(context);
+    }
+    return _buildMobileShell(context);
+  }
+
+  Widget _buildWebShell(BuildContext context) {
+    const Color surfaceColor = Color(0xFFF7F9FB);
+    const Color primaryContainer = Color(0xFF0052CC);
+    const Color onSurfaceVariant = Color(0xFF434654);
+
+    return Scaffold(
+      backgroundColor: surfaceColor,
+      body: Column(
+        children: [
+          // Global Header for Web
+          Container(
+            height: 70,
+            padding: const EdgeInsets.symmetric(horizontal: 48),
+            decoration: BoxDecoration(
+              color: surfaceColor.withOpacity(0.8),
+              border: Border(bottom: BorderSide(color: Colors.black.withOpacity(0.05))),
+            ),
+            child: Row(
+              children: [
+                InkWell(
+                  onTap: () => _navigate(0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: primaryContainer,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Text('MS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        'Sua Consulta',
+                        style: GoogleFonts.manrope(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: primaryContainer,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                _buildWebNavLink('Dashboard', isActive: _currentIndex == 0, onTap: () => _navigate(0)),
+                _buildWebNavLink('Consultas', isActive: _currentIndex == 1, onTap: () => _navigate(1)),
+                _buildWebNavLink('Exames', isActive: _currentIndex == 3, onTap: () => _navigate(3)),
+                _buildWebNavLink('Mensagens', isActive: _currentIndex == 2, onTap: () => _navigate(2)),
+                const SizedBox(width: 24),
+                IconButton(icon: const Icon(Icons.notifications_none, color: onSurfaceVariant), onPressed: () => _navigate(4)),
+                IconButton(icon: Icon(Icons.settings_outlined, color: _currentIndex == 5 ? primaryContainer : onSurfaceVariant), onPressed: () => _navigate(5)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _screens[_currentIndex],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWebNavLink(String label, {bool isActive = false, VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.manrope(
+                fontSize: 15,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                color: isActive ? const Color(0xFF0052CC) : const Color(0xFF434654),
+              ),
+            ),
+            if (isActive)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                width: 20,
+                height: 2,
+                color: const Color(0xFF0052CC),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileShell(BuildContext context) {
     return Scaffold(
       body: _screens[_currentIndex],
       bottomNavigationBar: NavigationBar(
@@ -72,4 +174,3 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     );
   }
 }
-

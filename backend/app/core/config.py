@@ -44,6 +44,7 @@ class Settings(BaseSettings):
         # do diretório usado para iniciar o uvicorn.
         env_file = (PROJECT_ROOT / ".env", BACKEND_DIR / ".env", ".env", "../.env")
         env_file_encoding = 'utf-8'
+        extra = "ignore"
 
 
 @lru_cache()

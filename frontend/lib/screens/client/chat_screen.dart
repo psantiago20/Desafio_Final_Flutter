@@ -1,8 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/app_constants.dart';
+import '../../features/auth/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/network/api_client.dart';
 import '../../widgets/custom_app_bar.dart';
 
 class ChatMessage {
@@ -12,19 +18,20 @@ class ChatMessage {
   ChatMessage({required this.text, required this.isMe});
 }
 
-class ChatScreen extends StatefulWidget {
+class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ImagePicker _picker = ImagePicker();
   final List<ChatMessage> _messages = [
     ChatMessage(
-      text: 'Olá! Eu sou a inteligência artificial do aplicativo Sua Consulta. Como posso te ajudar hoje?',
+      text: 'Olá! Sou o assistente virtual do Sua Consulta. Como posso ajudar com sua saúde hoje?',
       isMe: false,
     ),
   ];
@@ -42,29 +49,65 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
 
     try {
-      final url = Uri.parse('http://localhost:8000/api/rag/query');
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'query': text,
-          'wa_from': '5511999999999', // Simula um ID do cliente para a IA lembrar o contexto da conversa
-        }),
-      );
+      final authState = ref.read(authProvider);
+      final waFrom = authState.user?.email ?? '5511999999999';
+
+      final response = await ApiClient.post('/api/rag/query', {
+        'query': text,
+        'wa_from': waFrom, 
+      });
+
+      setState(() {
+        _messages.add(ChatMessage(text: response['response'], isMe: false));
+      });
+    } catch (e) {
+      setState(() {
+        _messages.add(ChatMessage(text: 'Erro de conexão: Não foi possível contatar o assistente virtual.', isMe: false));
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+      _scrollToBottom();
+    }
+  }
+
+  Future<void> _pickAndUploadExam() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image == null) return;
+
+      setState(() {
+        _messages.add(ChatMessage(text: 'Enviando exame (${image.name})...', isMe: true));
+        _isLoading = true;
+      });
+      _scrollToBottom();
+
+      final authState = ref.read(authProvider);
+      final waFrom = authState.user?.email ?? '5511999999999';
+
+      final url = Uri.parse('${AppConstants.baseUrl}/api/rag/upload-exam');
+      var request = http.MultipartRequest('POST', url);
+      request.fields['wa_from'] = waFrom;
+      final bytes = await image.readAsBytes();
+      request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: image.name));
+
+      var response = await request.send();
+      var responseBody = await response.stream.bytesToString();
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        final data = jsonDecode(responseBody);
         setState(() {
-          _messages.add(ChatMessage(text: data['response'], isMe: false));
+          _messages.add(ChatMessage(text: data['message'] ?? 'Exame processado com sucesso!', isMe: false));
         });
       } else {
         setState(() {
-          _messages.add(ChatMessage(text: 'Erro ao comunicar com a IA. Código: ${response.statusCode}', isMe: false));
+          _messages.add(ChatMessage(text: 'Erro ao enviar o exame. Tente novamente.', isMe: false));
         });
       }
     } catch (e) {
       setState(() {
-        _messages.add(ChatMessage(text: 'Erro de conexão: O servidor da IA parece estar offline.', isMe: false));
+        _messages.add(ChatMessage(text: 'Erro ao selecionar ou enviar a imagem: $e', isMe: false));
       });
     } finally {
       setState(() {
@@ -89,8 +132,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(
-        subtitle: 'Atendimento por IA',
+      appBar: kIsWeb ? null : CustomAppBar(
+        subtitle: 'Atendimento Sua Consulta',
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -164,7 +207,7 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           IconButton(
             icon: const Icon(Icons.attach_file, color: AppTheme.textSecondary),
-            onPressed: () {},
+            onPressed: _pickAndUploadExam,
           ),
           Expanded(
             child: TextField(

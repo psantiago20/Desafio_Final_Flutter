@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../features/auth/presentation/providers/auth_provider.dart';
 
-/// 👤 Profile Screen
-/// Responsabilidade: flutter-frontend-agent
-/// Visualização de perfil, configurações e dados de saúde.
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
+
     return Scaffold(
-      appBar: const CustomAppBar(
+      appBar: kIsWeb ? null : const CustomAppBar(
         subtitle: 'Meu Perfil',
         showProfileButton: false,
       ),
@@ -62,9 +66,9 @@ class ProfileScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Maria Silva',
-                            style: TextStyle(
+                          Text(
+                            user?.fullName ?? 'Usuário',
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -72,7 +76,7 @@ class ProfileScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Paciente desde 2024',
+                            user?.role == 'doctor' ? 'Médico' : 'Paciente',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.9),
                               fontSize: 14,
@@ -109,48 +113,52 @@ class ProfileScreen extends StatelessWidget {
             margin: EdgeInsets.zero,
             child: Column(
               children: [
-                _buildInfoTile(Icons.mail_outline, 'E-mail', 'maria.silva@email.com'),
+                _buildInfoTile(Icons.mail_outline, 'E-mail', user?.email ?? '-'),
+                const Divider(),
+                _buildInfoTile(Icons.person_outline, 'Usuário', user?.username ?? '-'),
                 const Divider(),
                 _buildInfoTile(Icons.phone_outlined, 'Telefone', '(11) 98765-4321'),
                 const Divider(),
                 _buildInfoTile(Icons.calendar_today_outlined, 'Data de Nascimento', '15/03/1985'),
-                const Divider(),
-                _buildInfoTile(Icons.location_on_outlined, 'Endereço', 'São Paulo, SP'),
               ],
             ),
           ),
           const SizedBox(height: 24),
 
           // Informações de Saúde
-          _buildSectionTitle('Informações de Saúde'),
-          Card(
-            margin: EdgeInsets.zero,
-            child: Column(
+          if (user?.role == 'patient' || user?.role == 'receptionist') ...[
+            _buildSectionTitle('Informações de Saúde'),
+            Card(
+              margin: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  _buildInfoTile(Icons.favorite_border, 'Tipo Sanguíneo', 'O+', iconColor: AppTheme.alertRed),
+                  const Divider(),
+                  _buildInfoTile(Icons.description_outlined, 'Alergias', 'Penicilina, Pólen'),
+                  const Divider(),
+                  _buildInfoTile(Icons.medical_information_outlined, 'Condições Crônicas', 'Hipertensão'),
+                  const Divider(),
+                  _buildInfoTile(Icons.medication_outlined, 'Medicamentos em Uso', 'Losartana 50mg'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          // Estatísticas (se for paciente)
+          if (user?.role == 'patient') ...[
+            _buildSectionTitle('Estatísticas'),
+            Row(
               children: [
-                _buildInfoTile(Icons.favorite_border, 'Tipo Sanguíneo', 'O+', iconColor: AppTheme.alertRed),
-                const Divider(),
-                _buildInfoTile(Icons.description_outlined, 'Alergias', 'Penicilina, Pólen'),
-                const Divider(),
-                _buildInfoTile(Icons.medical_information_outlined, 'Condições Crônicas', 'Hipertensão'),
-                const Divider(),
-                _buildInfoTile(Icons.medication_outlined, 'Medicamentos em Uso', 'Losartana 50mg'),
+                Expanded(child: _buildStatCard('12', 'Consultas', AppTheme.primaryBlue)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildStatCard('24', 'Exames', AppTheme.successGreen)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildStatCard('8', 'Médicos', const Color(0xFF9333EA))),
               ],
             ),
-          ),
-          const SizedBox(height: 24),
-
-          // Estatísticas
-          _buildSectionTitle('Estatísticas'),
-          Row(
-            children: [
-              Expanded(child: _buildStatCard('12', 'Consultas', AppTheme.primaryBlue)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('24', 'Exames', AppTheme.successGreen)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('8', 'Médicos', const Color(0xFF9333EA))),
-            ],
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
+          ],
 
           // Configurações
           _buildSectionTitle('Configurações e Suporte'),
@@ -173,8 +181,11 @@ class ProfileScreen extends StatelessWidget {
             width: double.infinity,
             child: TextButton.icon(
               onPressed: () {
+                // Logout Real
+                ref.read(authProvider.notifier).logout();
+                context.go('/'); // Volta para a Home (Landing Page)
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Saindo do app...')),
+                  const SnackBar(content: Text('Sessão encerrada com sucesso.')),
                 );
               },
               icon: const Icon(Icons.logout),
@@ -244,7 +255,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String value, String label, Color color) {
+  static Widget _buildStatCard(String value, String label, Color color) {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
