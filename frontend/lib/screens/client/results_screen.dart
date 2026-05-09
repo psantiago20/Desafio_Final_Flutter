@@ -83,12 +83,16 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return _buildWeb();
+    }
+    return _buildMobile();
+  }
+
+  Widget _buildWeb() {
     final filteredExams = _exams;
 
     return Scaffold(
-      appBar: kIsWeb ? null : CustomAppBar(
-        subtitle: 'Exames Enviados',
-      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: AppTheme.backgroundGradient,
@@ -98,74 +102,164 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
           : _error != null
             ? Center(child: Text(_error!))
             : Column(
-
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryBlueLight.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.3)),
-              ),
-              child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.auto_awesome, color: AppTheme.primaryBlueDark, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Resumo da IA',
-                        style: TextStyle(
-                          color: AppTheme.primaryBlueDark,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryBlueLight.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.3)),
                       ),
-                    ],
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.auto_awesome, color: AppTheme.primaryBlueDark, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Resumo da IA',
+                                style: TextStyle(
+                                  color: AppTheme.primaryBlueDark,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Seus exames de sangue recentes estão dentro da normalidade. Não se esqueça de realizar o Raio-X de Tórax agendado.',
+                            style: TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Seus exames de sangue recentes estão dentro da normalidade. Não se esqueça de realizar o Raio-X de Tórax agendado.',
-                    style: TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontSize: 14,
+                  const SizedBox(height: 16),
+                  
+                  // Lista de Exames
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16.0),
+                      itemCount: filteredExams.length,
+                      itemBuilder: (context, index) {
+                        return _buildExamCard(filteredExams[index]);
+                      },
                     ),
                   ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Lista de Exames
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: filteredExams.length,
-              itemBuilder: (context, index) {
-                return _buildExamCard(filteredExams[index]);
-              },
-            ),
-          ),
-        ],
-      ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _fetchExams,
         child: const Icon(Icons.refresh),
       ),
     );
+  }
 
+  Widget _buildMobile() {
+    return Scaffold(
+      appBar: const CustomAppBar(
+        subtitle: 'Seus Resultados',
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppTheme.backgroundGradient,
+        ),
+        child: _isLoading 
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+            ? Center(child: Text(_error!))
+            : ListView.builder(
+                padding: const EdgeInsets.all(16.0),
+                itemCount: _exams.length,
+                itemBuilder: (context, index) {
+                  final exam = _exams[index];
+                  const isAvailable = true; // No novo backend, se veio na lista, está disponível ou processando
+                  
+                  // Formatação de data
+                  DateTime? date;
+                  try {
+                    date = DateTime.parse(exam['created_at'] as String);
+                  } catch (_) {}
+                  final dateStr = date != null ? DateFormat('dd/MM/yyyy').format(date) : '—';
+                  final title = exam['title'] as String? ?? 'Exame';
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.successGreenLight,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.check_circle,
+                                  color: AppTheme.successGreen,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      title,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    ),
+                                    Text(
+                                      dateStr,
+                                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Resultado Liberado', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                              TextButton.icon(
+                                onPressed: () {
+                                  // TODO: Abrir URL do exame
+                                },
+                                icon: const Icon(Icons.visibility, size: 18),
+                                label: const Text('Ver Resultado'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _fetchExams,
+        child: const Icon(Icons.refresh),
+      ),
+    );
   }
 
   Widget _buildExamCard(Map<String, dynamic> exam) {
     final examUrl = exam['exam_url'] as String?;
     final summary = exam['summary'] as String?;
-    const isCompleted = true; 
     final hasSummary = summary != null && summary.isNotEmpty;
     final hasFile = examUrl != null && examUrl.isNotEmpty;
 

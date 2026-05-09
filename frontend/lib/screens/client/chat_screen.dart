@@ -131,10 +131,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return _buildWeb();
+    }
+    return _buildMobile();
+  }
+
+  Widget _buildWeb() {
     return Scaffold(
-      appBar: kIsWeb ? null : CustomAppBar(
-        subtitle: 'Atendimento Sua Consulta',
-      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: AppTheme.backgroundGradient,
@@ -162,6 +166,80 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ),
             _buildMessageInput(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobile() {
+    return Scaffold(
+      appBar: const CustomAppBar(
+        subtitle: 'Atendimento por IA',
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppTheme.backgroundGradient,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16.0),
+                itemCount: _messages.length + (_isLoading ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == _messages.length && _isLoading) {
+                    return const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+                  final msg = _messages[index];
+                  return _buildMessageBubble(msg.text, msg.isMe);
+                },
+              ),
+            ),
+            // Input simplificado (original atualizado com anexo)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: AppTheme.surfaceWhite,
+                border: Border(top: BorderSide(color: AppTheme.borderGray)),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.attach_file, color: AppTheme.textSecondary),
+                    onPressed: _pickAndUploadExam,
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      onSubmitted: (_) => _sendMessage(),
+                      decoration: InputDecoration(
+                        hintText: 'Digite sua mensagem...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: AppTheme.backgroundGray,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.send, color: AppTheme.primaryBlueDark),
+                    onPressed: _sendMessage,
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

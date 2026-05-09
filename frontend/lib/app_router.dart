@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'features/auth/pages/auth_page.dart';
 
@@ -21,7 +22,11 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
 
   return GoRouter(
-    initialLocation: '/', // Inicia na Home (Landing Page)
+    initialLocation: kIsWeb 
+        ? '/' 
+        : (authState.isAuthenticated 
+            ? (authState.user?.role == 'doctor' ? '/dashboard' : '/client') 
+            : '/login'),
 
     redirect: (context, state) {
       final isAuthenticated = authState.isAuthenticated;
@@ -29,33 +34,39 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == '/register';
       final isHomeRoute = state.matchedLocation == '/';
 
-      // Se não estiver logado:
-      // - Permite ficar na Home (/) ou nas rotas de Auth
-      // - Redireciona para / se tentar acessar rotas protegidas sem estar logado
-      if (!isAuthenticated) {
-        if (isHomeRoute || isAuthRoute) return null;
-        return '/';
-      }
-      
-      // Se estiver logado:
-      // - Se tentar ir para Login/Register ou Home (/), redireciona para o painel apropriado
-      if (isAuthenticated) {
-        final isDoctor = authState.user?.role == 'doctor';
-        
-        if (isAuthRoute || isHomeRoute) {
-          return isDoctor ? '/dashboard' : '/client';
+      if (kIsWeb) {
+        // Lógica Web: Permite Landing Page (/)
+        if (!isAuthenticated) {
+          if (isHomeRoute || isAuthRoute) return null;
+          return '/';
         }
         
-        // Proteção extra para o painel do médico
-        if (!isDoctor && state.matchedLocation == '/dashboard') {
-          return '/client';
+        if (isAuthenticated) {
+          final isDoctor = authState.user?.role == 'doctor';
+          if (isAuthRoute || isHomeRoute) {
+            return isDoctor ? '/dashboard' : '/client';
+          }
+        }
+      } else {
+        // Lógica Mobile: Mantém o comportamento original (vai direto para login se não autenticado)
+        if (!isAuthenticated && !isAuthRoute) return '/login';
+        
+        if (isAuthenticated) {
+          final isDoctor = authState.user?.role == 'doctor';
+          if (isAuthRoute || isHomeRoute) {
+            return isDoctor ? '/dashboard' : '/client';
+          }
+          
+          if (!isDoctor && state.matchedLocation == '/dashboard') {
+            return '/client';
+          }
         }
       }
 
       return null;
     },
     routes: [
-      // Home / Landing Page
+      // Home / Landing Page (Apenas Web ou acessível via /)
       GoRoute(path: '/', builder: (_, __) => const LandingPage()),
 
       // Auth

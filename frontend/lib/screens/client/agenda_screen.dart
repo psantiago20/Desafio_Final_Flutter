@@ -12,26 +12,17 @@ class AgendaScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (kIsWeb) {
+      return _buildWeb(ref);
+    }
+    return _buildMobile(context, ref);
+  }
+
+  Widget _buildWeb(WidgetRef ref) {
     final appointmentsAsync = ref.watch(appointmentsListProvider);
     final filters = ref.watch(appointmentFiltersProvider);
 
     return Scaffold(
-      appBar: kIsWeb ? null : CustomAppBar(
-        subtitle: 'Minhas Consultas',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle),
-            color: AppTheme.primaryBlue,
-            iconSize: 32,
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Abrir formulário de agendamento')),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: AppTheme.backgroundGradient,
@@ -73,6 +64,90 @@ class AgendaScreen extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobile(BuildContext context, WidgetRef ref) {
+    final appointmentsAsync = ref.watch(appointmentsListProvider);
+
+    return Scaffold(
+      appBar: const CustomAppBar(
+        subtitle: 'Minhas Consultas',
+        actions: [
+          Icon(Icons.add_circle, color: AppTheme.primaryBlue, size: 32),
+          SizedBox(width: 16),
+        ],
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppTheme.backgroundGradient,
+        ),
+        child: appointmentsAsync.when(
+          data: (appointments) {
+            if (appointments.isEmpty) {
+              return const Center(child: Text('Nenhuma consulta encontrada.'));
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.all(16.0),
+              itemCount: appointments.length,
+              itemBuilder: (context, index) {
+                final apt = appointments[index];
+                final isUpcoming = apt.status == 'confirmed' || apt.status == 'pending';
+                
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 50, height: 50,
+                          decoration: BoxDecoration(color: AppTheme.primaryBlueLight, borderRadius: BorderRadius.circular(12)),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                DateFormat('MMM', 'pt_BR').format(apt.appointmentDate).toUpperCase(), 
+                                style: const TextStyle(color: AppTheme.primaryBlue, fontSize: 10, fontWeight: FontWeight.bold)
+                              ),
+                              Text(
+                                DateFormat('dd').format(apt.appointmentDate), 
+                                style: const TextStyle(color: AppTheme.primaryBlue, fontSize: 18, fontWeight: FontWeight.bold)
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(apt.type.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                              Text(apt.doctorName, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.access_time, size: 14, color: AppTheme.textTertiary),
+                                  const SizedBox(width: 4),
+                                  Text(DateFormat('HH:mm').format(apt.appointmentDate), style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary)),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isUpcoming)
+                          const Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('Erro ao carregar consultas: $err')),
         ),
       ),
     );
