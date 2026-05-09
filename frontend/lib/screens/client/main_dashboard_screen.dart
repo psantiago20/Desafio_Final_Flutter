@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
+import '../../features/auth/presentation/providers/auth_provider.dart';
 import 'home_screen.dart';
 import 'agenda_screen.dart';
 import 'results_screen.dart';
 import 'chat_screen.dart';
 import 'profile_screen.dart';
 
-class MainDashboardScreen extends StatefulWidget {
+class MainDashboardScreen extends ConsumerStatefulWidget {
   const MainDashboardScreen({super.key});
 
   @override
-  State<MainDashboardScreen> createState() => _MainDashboardScreenState();
+  ConsumerState<MainDashboardScreen> createState() => _MainDashboardScreenState();
 }
 
-class _MainDashboardScreenState extends State<MainDashboardScreen> {
+class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
   int _currentIndex = 0;
 
   void _navigate(int index) {
@@ -46,6 +48,22 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     const Color primaryContainer = Color(0xFF0052CC);
     const Color onSurfaceVariant = Color(0xFF434654);
 
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
+    
+    // Calcular iniciais
+    String initials = 'SC';
+    if (user != null && user.fullName != null && user.fullName!.isNotEmpty) {
+      final names = user.fullName!.split(' ');
+      if (names.length >= 2) {
+        initials = '${names[0][0]}${names[1][0]}'.toUpperCase();
+      } else if (names.isNotEmpty) {
+        initials = names[0][0].toUpperCase();
+      }
+    } else if (user != null) {
+      initials = user.username.substring(0, 1).toUpperCase();
+    }
+
     return Scaffold(
       backgroundColor: surfaceColor,
       body: Column(
@@ -71,8 +89,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                           color: primaryContainer,
                           shape: BoxShape.circle,
                         ),
-                        child: const Center(
-                          child: Text('MS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        child: Center(
+                          child: Text(
+                            initials, 
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
+                          ),
                         ),
                       ),
                       const SizedBox(width: 16),
