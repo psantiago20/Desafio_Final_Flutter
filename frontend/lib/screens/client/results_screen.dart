@@ -161,44 +161,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Container(
-                      padding: const EdgeInsets.all(16.0),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlueLight.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.3)),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.auto_awesome, color: AppTheme.primaryBlueDark, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                'Resumo da IA',
-                                style: TextStyle(
-                                  color: AppTheme.primaryBlueDark,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Seus exames de sangue recentes estão dentro da normalidade. Não se esqueça de realizar o Raio-X de Tórax agendado.',
-                            style: TextStyle(
-                              color: AppTheme.textPrimary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 16),
                   
                   // Lista de Exames
@@ -322,7 +284,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   Widget _buildExamCard(Map<String, dynamic> exam) {
     final examUrl = exam['exam_url'] as String?;
     final summary = exam['summary'] as String?;
-    final hasSummary = summary != null && summary.isNotEmpty;
     final hasFile = examUrl != null && examUrl.isNotEmpty;
 
     DateTime? date;
@@ -334,12 +295,12 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     final title = exam['title'] as String? ?? 'Exame';
 
     return Card(
-      color: hasSummary ? AppTheme.surfaceWhite : AppTheme.backgroundGray,
+      color: AppTheme.surfaceWhite,
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: hasSummary ? AppTheme.successGreen.withValues(alpha: 0.3) : AppTheme.borderGray,
+          color: AppTheme.borderGray,
           width: 1,
         ),
       ),
@@ -353,12 +314,12 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: hasSummary ? AppTheme.successGreenLight : AppTheme.backgroundGray,
+                    color: AppTheme.backgroundGray,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.assignment,
-                    color: hasSummary ? AppTheme.successGreen : AppTheme.textSecondary,
+                    color: AppTheme.textSecondary,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -390,22 +351,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                 ),
               ],
             ),
-            if (hasSummary) ...[
-              const SizedBox(height: 16),
-              const Text(
-                'Análise da IA:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: AppTheme.primaryBlueDark,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                summary!,
-                style: const TextStyle(fontSize: 14),
-              ),
-            ],
             if (hasFile) ...[
               const SizedBox(height: 16),
               OutlinedButton.icon(
