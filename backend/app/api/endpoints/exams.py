@@ -42,3 +42,26 @@ def get_exam(
             raise HTTPException(status_code=403, detail="Not authorized")
             
     return exam
+
+@router.delete("/{exam_id}")
+def delete_exam(
+    exam_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    exam = db.query(Exam).filter(Exam.id == exam_id).first()
+    if not exam:
+        raise HTTPException(status_code=404, detail="Exam not found")
+        
+    # Verificação de permissão
+    if current_user.role == "patient":
+        patient = db.query(Patient).filter(Patient.email == current_user.email).first()
+        if not patient or exam.patient_id != patient.id:
+            raise HTTPException(status_code=403, detail="Not authorized")
+    elif current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+            
+    db.delete(exam)
+    db.commit()
+    return {"message": "Exam deleted successfully"}
+

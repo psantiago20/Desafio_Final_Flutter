@@ -38,8 +38,18 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       final list = (data as Map<String, dynamic>)['exams'] as List;
       final allExams = list.cast<Map<String, dynamic>>();
 
+      // Filtra exames que não possuem URL válida ou que falharam na identificação
+      final validExams = allExams.where((exam) {
+        final url = exam['exam_url'] as String?;
+        
+        // Se a URL for nula, vazia ou 'none', não mostra o card conforme solicitado
+        if (url == null || url.isEmpty || url.toLowerCase() == 'none') return false;
+
+        return true;
+      }).toList();
+
       setState(() {
-        _exams = allExams;
+        _exams = validExams;
         _isLoading = false;
       });
     } catch (e) {
@@ -47,6 +57,45 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
         _error = 'Erro ao buscar exames: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _deleteExam(int examId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir Exame'),
+        content: const Text('Tem certeza que deseja remover este exame? Esta ação não pode ser desfeita.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.alertRed),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await ApiClient.delete('${AppConstants.examsEndpoint}/$examId');
+      _fetchExams();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Exame removido com sucesso')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao remover exame: $e')),
+        );
+      }
     }
   }
 
@@ -227,6 +276,11 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                                   ],
                                 ),
                               ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: AppTheme.alertRed, size: 20),
+                                onPressed: () => _deleteExam(exam['id'] as int),
+                                tooltip: 'Remover exame',
+                              ),
                             ],
                           ),
                           const Divider(height: 24),
@@ -320,6 +374,11 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: AppTheme.alertRed),
+                  onPressed: () => _deleteExam(exam['id'] as int),
+                  tooltip: 'Remover exame',
                 ),
               ],
             ),
