@@ -21,6 +21,7 @@ class ApiClient {
 
   static Map<String, String> get _headers => {
         'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true', // Bypass ngrok interstitial page
         if (_token != null) 'Authorization': 'Bearer $_token',
       };
 
@@ -43,6 +44,9 @@ class ApiClient {
     } on SocketException {
       throw ApiException(
           statusCode: 0, message: 'Sem conexão com o servidor.');
+    } on http.ClientException catch (e) {
+      throw ApiException(
+          statusCode: 0, message: 'Falha de conexão: ${e.message}');
     }
   }
 
@@ -57,19 +61,31 @@ class ApiClient {
     } on SocketException {
       throw ApiException(
           statusCode: 0, message: 'Sem conexão com o servidor.');
+    } on http.ClientException catch (e) {
+      throw ApiException(
+          statusCode: 0, message: 'Falha de conexão: ${e.message}');
     }
   }
 
   static Future<dynamic> postForm(String path, Map<String, String> body) async {
     try {
+      // For form posts we need to merge ngrok header manually (body is Map<String,String>)
+      final formHeaders = {
+        'ngrok-skip-browser-warning': 'true',
+        if (_token != null) 'Authorization': 'Bearer $_token',
+      };
       final response = await http.post(
         _uri(path),
-        body: body, // http package automatically sets content-type to application/x-www-form-urlencoded when body is a Map<String, String>
+        headers: formHeaders,
+        body: body, // http package automatically sets content-type to application/x-www-form-urlencoded
       );
       return _handleResponse(response);
     } on SocketException {
       throw ApiException(
           statusCode: 0, message: 'Sem conexão com o servidor.');
+    } on http.ClientException catch (e) {
+      throw ApiException(
+          statusCode: 0, message: 'Falha de conexão: ${e.message}');
     }
   }
   static Future<dynamic> put(String path, Map<String, dynamic> body) async {
@@ -83,6 +99,9 @@ class ApiClient {
     } on SocketException {
       throw ApiException(
           statusCode: 0, message: 'Sem conexão com o servidor.');
+    } on http.ClientException catch (e) {
+      throw ApiException(
+          statusCode: 0, message: 'Falha de conexão: ${e.message}');
     }
   }
 
@@ -97,6 +116,9 @@ class ApiClient {
     } on SocketException {
       throw ApiException(
           statusCode: 0, message: 'Sem conexão com o servidor.');
+    } on http.ClientException catch (e) {
+      throw ApiException(
+          statusCode: 0, message: 'Falha de conexão: ${e.message}');
     }
   }
 
@@ -110,6 +132,9 @@ class ApiClient {
     } on SocketException {
       throw ApiException(
           statusCode: 0, message: 'Sem conexão com o servidor.');
+    } on http.ClientException catch (e) {
+      throw ApiException(
+          statusCode: 0, message: 'Falha de conexão: ${e.message}');
     }
   }
 

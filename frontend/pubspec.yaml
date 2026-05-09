@@ -20,6 +20,8 @@ dependencies:
   url_launcher: ^6.3.0
   flutter_svg: ^2.2.4
   mask_text_input_formatter: ^2.9.0
+  flutter_dotenv: ^6.0.1
+  image_picker: ^1.2.2
 
 dev_dependencies:
   flutter_test:
@@ -33,6 +35,7 @@ flutter:
   assets:
     - assets/images/
     - web/icons/
+    - assets/.env
 
 flutter_native_splash:
   color: "#1565C0"

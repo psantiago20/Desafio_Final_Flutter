@@ -37,6 +37,43 @@ def get_dashboard_stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Se for paciente, as estatísticas são personalizadas
+    if current_user.role == "patient":
+        # Encontrar o registro de paciente vinculado ao usuário (pelo email)
+        patient = db.query(Patient).filter(Patient.email == current_user.email).first()
+        
+        if not patient:
+            return {
+                "total_patients": 0, "total_appointments": 0, "pending_appointments": 0,
+                "completed_appointments": 0, "cancelled_appointments": 0,
+                "unread_messages": 0, "total_services": 0, "revenue_today": 0,
+                "revenue_week": 0, "revenue_month": 0, "no_show_rate": 0,
+                "appointment_type_breakdown": {}
+            }
+        
+        total_appointments = db.query(Appointment).filter(Appointment.patient_id == patient.id).count()
+        pending_appointments = db.query(Appointment).filter(Appointment.patient_id == patient.id, Appointment.status == "pending").count()
+        completed_appointments = db.query(Appointment).filter(Appointment.patient_id == patient.id, Appointment.status == "completed").count()
+        cancelled_appointments = db.query(Appointment).filter(Appointment.patient_id == patient.id, Appointment.status == "cancelled").count()
+        
+        unread_messages = db.query(Message).filter(Message.patient_id == patient.id, Message.is_read == False).count()
+        
+        return {
+            "total_patients": 1,
+            "total_appointments": total_appointments,
+            "pending_appointments": pending_appointments,
+            "completed_appointments": completed_appointments,
+            "cancelled_appointments": cancelled_appointments,
+            "unread_messages": unread_messages,
+            "total_services": 0,
+            "revenue_today": 0,
+            "revenue_week": 0,
+            "revenue_month": 0,
+            "no_show_rate": 0,
+            "appointment_type_breakdown": {}
+        }
+
+    # Caso contrário (Admin/Médico), retorna estatísticas globais
     total_patients = db.query(Patient).filter(Patient.is_active == True).count()
     
     total_appointments = db.query(Appointment).count()

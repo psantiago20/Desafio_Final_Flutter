@@ -14,6 +14,8 @@ class AppointmentModel {
   final String? symptoms;
   final String? diagnosis;
   final String? prescription;
+  final String? examUrl;
+  final String? examSummary;
   final double price;
   final bool paid;
   final String? paymentMethod;
@@ -33,6 +35,8 @@ class AppointmentModel {
     this.symptoms,
     this.diagnosis,
     this.prescription,
+    this.examUrl,
+    this.examSummary,
     required this.price,
     required this.paid,
     this.paymentMethod,
@@ -54,6 +58,8 @@ class AppointmentModel {
       symptoms: json['symptoms'] as String?,
       diagnosis: json['diagnosis'] as String?,
       prescription: json['prescription'] as String?,
+      examUrl: json['exam_url'] as String?,
+      examSummary: json['exam_summary'] as String?,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       paid: json['paid'] as bool? ?? false,
       paymentMethod: json['payment_method'] as String?,
@@ -68,6 +74,8 @@ class AppointmentModel {
     String? symptoms,
     String? diagnosis,
     String? prescription,
+    String? examUrl,
+    String? examSummary,
     bool? paid,
     String? paymentMethod,
   }) {
@@ -84,6 +92,8 @@ class AppointmentModel {
       symptoms: symptoms ?? this.symptoms,
       diagnosis: diagnosis ?? this.diagnosis,
       prescription: prescription ?? this.prescription,
+      examUrl: examUrl ?? this.examUrl,
+      examSummary: examSummary ?? this.examSummary,
       price: price,
       paid: paid ?? this.paid,
       paymentMethod: paymentMethod ?? this.paymentMethod,
@@ -91,6 +101,9 @@ class AppointmentModel {
       updatedAt: updatedAt,
     );
   }
+
+  // Temporary getter to fix UI compilation until the backend provides the doctor's name
+  String get doctorName => 'Médico $doctorId';
 }
 Color statusColor(String status) {
   switch (status) {

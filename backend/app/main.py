@@ -9,9 +9,9 @@ from app.core.config import settings
 print("[DEBUG] Importando database...")
 from app.db.database import engine
 print("[DEBUG] Importando models...")
-from app.models import user, patient, appointment, message, service, doctor_profile, medico
+from app.models import user, patient, appointment, message, service, doctor_profile, medico, exam
 print("[DEBUG] Importando endpoints...")
-from app.api.endpoints import auth, patients, appointments, messages, dashboard, finance, whatsapp, chat, test_notifications, rag, simulator_admin
+from app.api.endpoints import auth, patients, appointments, messages, dashboard, finance, whatsapp, chat, test_notifications, rag, simulator_admin, medicos, exams
 print("[DEBUG] Imports concluídos!")
 
 # Configuração de Logging
@@ -77,6 +77,8 @@ app.include_router(whatsapp.router, prefix="/webhook", tags=["whatsapp-webhook"]
 app.include_router(test_notifications.router, prefix="/api/test", tags=["test"])
 app.include_router(rag.router, prefix="/api/rag", tags=["rag"])
 app.include_router(simulator_admin.router, prefix="/api/simulator", tags=["simulator"])
+app.include_router(medicos.router, prefix="/api/medicos", tags=["medicos"])
+app.include_router(exams.router, prefix="/api/exams", tags=["exams"])
 
 
 @app.get("/")

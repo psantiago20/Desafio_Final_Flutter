@@ -1,6 +1,8 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class AppConstants {
   // Troque pelo IP da sua máquina quando rodar no emulador/dispositivo físico
-  static const String baseUrl = 'http://localhost:8000'; // Alterado para localhost pois está rodando no Chrome
+  static String get baseUrl => dotenv.env['API_URL'] ?? 'http://localhost:8000';
 
   // Auth
   static const String loginEndpoint = '/api/auth/login';
@@ -9,6 +11,7 @@ class AppConstants {
 
   // Appointments
   static const String appointmentsEndpoint = '/api/appointments';
+  static const String examsEndpoint = '/api/exams';
 
   // Dashboard
   static const String dashboardStatsEndpoint = '/api/dashboard/stats';

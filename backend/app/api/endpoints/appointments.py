@@ -30,6 +30,15 @@ def list_appointments(
 ):
     query = db.query(Appointment)
     
+    # Se for paciente, filtra apenas os seus agendamentos
+    if current_user.role == "patient":
+        patient = db.query(Patient).filter(Patient.email == current_user.email).first()
+        if patient:
+            query = query.filter(Appointment.patient_id == patient.id)
+        else:
+            # Se não encontrar o registro de paciente, retorna lista vazia
+            return {"total": 0, "appointments": []}
+    
     if patient_id:
         query = query.filter(Appointment.patient_id == patient_id)
     if doctor_id:
