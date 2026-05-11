@@ -34,6 +34,7 @@ def seed_users(db: Session):
     print("Semeando usuários...")
     
     users_data = [
+        # Admin
         {
             "email": "admin@omniconnect.com",
             "username": "admin",
@@ -41,6 +42,7 @@ def seed_users(db: Session):
             "role": UserRole.ADMIN.value,
             "password": "admin123"
         },
+        # 4 Médicos
         {
             "email": "dr.carlos@omniconnect.com",
             "username": "dr.carlos",
@@ -56,9 +58,45 @@ def seed_users(db: Session):
             "password": "senha123"
         },
         {
+            "email": "dr.roberto@omniconnect.com",
+            "username": "dr.roberto",
+            "full_name": "Dr. Roberto Santos",
+            "role": UserRole.DOCTOR.value,
+            "password": "senha123"
+        },
+        {
+            "email": "dra.julia@omniconnect.com",
+            "username": "dra.julia",
+            "full_name": "Dra. Julia Costa",
+            "role": UserRole.DOCTOR.value,
+            "password": "senha123"
+        },
+        # 4 Pacientes
+        {
             "email": "joao.silva@email.com",
             "username": "joao.silva",
             "full_name": "João Silva",
+            "role": UserRole.PATIENT.value,
+            "password": "senha123"
+        },
+        {
+            "email": "ana.souza@email.com",
+            "username": "ana.souza",
+            "full_name": "Ana Souza",
+            "role": UserRole.PATIENT.value,
+            "password": "senha123"
+        },
+        {
+            "email": "pedro.santiago@email.com",
+            "username": "pedro.santiago",
+            "full_name": "Pedro Santiago",
+            "role": UserRole.PATIENT.value,
+            "password": "senha123"
+        },
+        {
+            "email": "carla.ferreira@email.com",
+            "username": "carla.ferreira",
+            "full_name": "Carla Ferreira",
             "role": UserRole.PATIENT.value,
             "password": "senha123"
         }
@@ -91,34 +129,59 @@ def seed_medicos(db: Session, users: dict):
             "crm": "12345",
             "crm_estado": "SP",
             "cidade": "São Paulo",
-            "endereco": "Av. Paulista, 1000 - Conj 42",
+            "endereco": "Av. Paulista, 1000",
             "especialidade": "Cardiologia",
             "email": "dr.carlos@omniconnect.com",
-            "telefone": "5511912345678",
-            "whatsapp": "5511912345678",
-            "whatsapp_phone_number_id": "WA_ID_CARLOS",
-            "bio_resumida": "Cardiologista com 15 anos de experiência. Especialista em ecocardiografia e arritmias cardíacas.",
-            "valor_consulta": 280.00,
+            "telefone": "5511911111111",
+            "whatsapp": "5511911111111",
+            "valor_consulta": 300.00,
             "aceita_convenio": True,
-            "convenios": json.dumps(["Unimed", "Bradesco Saúde", "SulAmérica"]),
+            "convenios": json.dumps(["Unimed", "Bradesco"]),
             "username": "dr.carlos"
         },
         {
             "nome_completo": "Dra. Maria Oliveira",
             "crm": "54321",
             "crm_estado": "SP",
-            "cidade": "Campinas",
-            "endereco": "Av. Brasil, 500 - Sala 10",
+            "cidade": "São Paulo",
+            "endereco": "Rua Augusta, 500",
             "especialidade": "Dermatologia",
             "email": "dra.maria@omniconnect.com",
-            "telefone": "5511922223333",
-            "whatsapp": "5511922223333",
-            "whatsapp_phone_number_id": "WA_ID_MARIA",
-            "bio_resumida": "Dermatologista com foco em estética e saúde da pele. Especialista em tratamentos a laser.",
+            "telefone": "5511922222222",
+            "whatsapp": "5511922222222",
             "valor_consulta": 350.00,
             "aceita_convenio": True,
-            "convenios": json.dumps(["Unimed", "Amil"]),
+            "convenios": json.dumps(["Amil", "SulAmérica"]),
             "username": "dra.maria"
+        },
+        {
+            "nome_completo": "Dr. Roberto Santos",
+            "crm": "98765",
+            "crm_estado": "RJ",
+            "cidade": "Rio de Janeiro",
+            "endereco": "Av. Atlântica, 200",
+            "especialidade": "Ortopedia",
+            "email": "dr.roberto@omniconnect.com",
+            "telefone": "5521933333333",
+            "whatsapp": "5521933333333",
+            "valor_consulta": 250.00,
+            "aceita_convenio": False,
+            "username": "dr.roberto"
+        },
+        {
+            "nome_completo": "Dra. Julia Costa",
+            "crm": "65432",
+            "crm_estado": "MG",
+            "cidade": "Belo Horizonte",
+            "endereco": "Praça da Liberdade, 10",
+            "especialidade": "Pediatria",
+            "email": "dra.julia@omniconnect.com",
+            "telefone": "5531944444444",
+            "whatsapp": "5531944444444",
+            "valor_consulta": 280.00,
+            "aceita_convenio": True,
+            "convenios": json.dumps(["Unimed", "Allianz"]),
+            "username": "dra.julia"
         }
     ]
     
@@ -129,7 +192,7 @@ def seed_medicos(db: Session, users: dict):
         db.add(medico)
         db.flush()
         medicos[medico.nome_completo] = medico
-        print(f"Perfil médico {medico.nome_completo} criado.")
+        print(f"Médico {medico.nome_completo} criado.")
         
     db.commit()
     return medicos
@@ -148,29 +211,42 @@ def seed_patients(db: Session):
             "cpf": "123.456.789-00",
             "city": "São Paulo",
             "state": "SP",
-            "insurance": "Unimed",
-            "notes": "Histórico de asma na infância."
+            "insurance": "Unimed"
         },
         {
-            "name": "Maria Silva",
-            "email": "maria.silva@email.com",
-            "phone": "5511988887777",
-            "whatsapp": "5511988887777",
+            "name": "Ana Souza",
+            "email": "ana.souza@email.com",
+            "phone": "5511999998888",
+            "whatsapp": "5511999998888",
+            "date_of_birth": datetime(1985, 8, 20),
             "gender": Gender.FEMALE.value,
-            "date_of_birth": datetime(1985, 3, 15),
-            "cpf": "555.555.555-55",
-            "city": "São Paulo",
-            "state": "SP",
-            "notes": "Alergia a Penicilina."
-        },
-        {
-            "name": "Pedro Santiago",
-            "cpf": "123.456.789-11",
-            "phone": "5511988888888",
-            "whatsapp": "5511988888888",
+            "cpf": "222.222.222-22",
             "city": "São Paulo",
             "state": "SP",
             "insurance": "Bradesco"
+        },
+        {
+            "name": "Pedro Santiago",
+            "email": "pedro.santiago@email.com",
+            "phone": "5511977776666",
+            "whatsapp": "5511977776666",
+            "date_of_birth": datetime(1995, 12, 10),
+            "gender": Gender.MALE.value,
+            "cpf": "333.333.333-33",
+            "city": "São Paulo",
+            "state": "SP"
+        },
+        {
+            "name": "Carla Ferreira",
+            "email": "carla.ferreira@email.com",
+            "phone": "5511966665555",
+            "whatsapp": "5511966665555",
+            "date_of_birth": datetime(1982, 2, 28),
+            "gender": Gender.FEMALE.value,
+            "cpf": "444.444.444-44",
+            "city": "São Paulo",
+            "state": "SP",
+            "insurance": "SulAmérica"
         }
     ]
     
@@ -185,128 +261,70 @@ def seed_patients(db: Session):
     db.commit()
     return patients
 
-def seed_appointments(db: Session, medicos: dict, patients: list, users: dict):
-    print("Semeando agendamentos...")
-    
-    # 1. João com Dr. Carlos (Passado)
-    apt1 = Appointment(
-        patient_id=patients[0].id,
-        doctor_id=users["dr.carlos"].id,
-        medico_id=medicos["Dr. Carlos Mendes"].id,
-        appointment_date=datetime.utcnow() - timedelta(days=5, hours=2),
-        duration_minutes=40,
-        type=AppointmentType.CONSULTATION.value,
-        status=AppointmentStatus.COMPLETED.value,
-        reason="Check-up cardiológico",
-        price=280.00,
-        paid=True,
-        payment_method="PIX"
-    )
-    db.add(apt1)
-    
-    # 2. João com Dr. Carlos (Futuro)
-    apt2 = Appointment(
-        patient_id=patients[0].id,
-        doctor_id=users["dr.carlos"].id,
-        medico_id=medicos["Dr. Carlos Mendes"].id,
-        appointment_date=datetime.utcnow() + timedelta(days=3, hours=4),
-        duration_minutes=40,
-        type=AppointmentType.RETURN.value,
-        status=AppointmentStatus.CONFIRMED.value,
-        reason="Retorno para ver exames",
-        price=0.0,
-        paid=True
-    )
-    db.add(apt2)
-    
-    # 3. Maria com Dra. Maria (Futuro)
-    apt3 = Appointment(
-        patient_id=patients[1].id,
-        doctor_id=users["dra.maria"].id,
-        medico_id=medicos["Dra. Maria Oliveira"].id,
-        appointment_date=datetime.utcnow() + timedelta(days=1, hours=1),
-        duration_minutes=30,
-        type=AppointmentType.CONSULTATION.value,
-        status=AppointmentStatus.CONFIRMED.value,
-        reason="Avaliação de manchas na pele",
-        price=350.00,
-        paid=False
-    )
-    db.add(apt3)
-    
-    db.commit()
-    return [apt1, apt2, apt3]
-
-def seed_services(db: Session, patients: list, appointments: list):
-    print("Semeando serviços...")
-    
-    services_data = [
-        {
-            "patient_id": patients[0].id,
-            "appointment_id": appointments[0].id,
-            "name": "Exame de Sangue Completo",
-            "description": "Hemograma, Glicemia, Colesterol",
-            "category": "Laboratorial",
-            "status": ServiceStatus.COMPLETED.value,
-            "priority": "normal",
-            "price": 120.00,
-            "cost": 50.00,
-            "ai_suggestion": "Sugerido pelo assistente após queixa de cansaço."
-        },
-        {
-            "patient_id": patients[0].id,
-            "appointment_id": appointments[1].id,
-            "name": "Eletrocardiograma",
-            "description": "ECG de repouso",
-            "category": "Cardíaco",
-            "status": ServiceStatus.PENDING.value,
-            "priority": "alta",
-            "price": 80.00,
-            "cost": 30.00
-        },
-        {
-            "patient_id": patients[1].id,
-            "appointment_id": appointments[2].id,
-            "name": "Biópsia de Pele",
-            "description": "Retirada de pequena amostra para análise",
-            "category": "Procedimento",
-            "status": ServiceStatus.PENDING.value,
-            "priority": "normal",
-            "price": 450.00,
-            "cost": 150.00
-        }
-    ]
-    
-    for s_data in services_data:
-        service = Service(**s_data)
-        db.add(service)
-        print(f"Serviço {service.name} criado.")
-        
-    db.commit()
+import shutil
 
 def seed_exams(db: Session, patients: list):
-    print("Semeando exames...")
+    print("Semeando exames reais...")
     
-    exams_data = [
-        {
-            "patient_id": patients[0].id,
-            "title": "Hemograma Completo",
-            "exam_url": "https://exemplo.com/exames/hemograma_joao.pdf",
-            "summary": "Resultados dentro da normalidade, leve anemia detectada."
-        },
-        {
-            "patient_id": patients[0].id,
-            "title": "Eletrocardiograma",
-            "exam_url": "https://exemplo.com/exames/ecg_joao.pdf",
-            "summary": "Ritmo sinusal normal."
-        }
-    ]
+    # Pasta de origem
+    exams_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "exames-teste")
     
-    for e_data in exams_data:
-        exam = Exam(**e_data)
-        db.add(exam)
-        print(f"Exame {exam.title} criado.")
+    # Pasta de destino (onde o servidor serve arquivos estáticos)
+    static_exams_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "exams")
+    
+    # Criar a pasta de destino se não existir
+    if not os.path.exists(static_exams_dir):
+        os.makedirs(static_exams_dir)
+        print(f"Pasta de destino criada: {static_exams_dir}")
+    
+    if not os.path.exists(exams_dir):
+        os.makedirs(exams_dir)
+        print(f"Aviso: Pasta de origem {exams_dir} não existia e foi criada vazia.")
+    
+    exam_files = [f for f in os.listdir(exams_dir) if os.path.isfile(os.path.join(exams_dir, f))]
+    
+    if not exam_files:
+        print("Nenhum arquivo encontrado em exames-teste. Semeando registros de exemplo.")
+        for i, patient in enumerate(patients):
+            exam = Exam(
+                patient_id=patient.id,
+                title=f"Check-up Anual - {patient.name}",
+                exam_url="https://exemplo.com/exam_padrao.pdf",
+                summary="Exame de rotina (Arquivo não encontrado na pasta de origem)."
+            )
+            db.add(exam)
+    else:
+        # Nomes de exames realistas para deixar o app bonito
+        nomes_exames = [
+            "Hemograma Completo", "Eletrocardiograma (ECG)", "Raio-X de Tórax", 
+            "Exame de Urina tipo I", "Glicemia de Jejum", "Perfil Lipídico", 
+            "Ultrassom Abdominal", "Ressonância Magnética", "Tomografia Computadorizada",
+            "Exame de Fezes", "TSH e T4 Livre", "Creatinina e Ureia",
+            "Vitamina D", "Ferritina", "Ácido Úrico"
+        ]
         
+        # Distribuir os arquivos encontrados entre os pacientes e COPIAR
+        for i, file_name in enumerate(exam_files):
+            patient = patients[i % len(patients)]
+            nome_exame = nomes_exames[i % len(nomes_exames)] # Escolhe um nome da lista
+            
+            src_path = os.path.join(exams_dir, file_name)
+            dst_path = os.path.join(static_exams_dir, file_name)
+            
+            try:
+                shutil.copy2(src_path, dst_path)
+                
+                exam = Exam(
+                    patient_id=patient.id,
+                    title=nome_exame, # Agora usa o nome real em vez do nome do arquivo
+                    exam_url=f"/static/exams/{file_name}",
+                    summary=f"Exame de {nome_exame.lower()} importado para o sistema."
+                )
+                db.add(exam)
+                print(f"Exame '{nome_exame}' atribuído a {patient.name}.")
+            except Exception as e:
+                print(f"Erro ao copiar arquivo {file_name}: {e}")
+    
     db.commit()
 
 def seed():
@@ -316,18 +334,28 @@ def seed():
         users = seed_users(db)
         medicos = seed_medicos(db, users)
         patients = seed_patients(db)
-        appointments = seed_appointments(db, medicos, patients, users)
-        seed_services(db, patients, appointments)
         seed_exams(db, patients)
         
+        # Adicionar alguns agendamentos para não ficar vazio
+        print("Semeando agendamentos de teste...")
+        for i, p in enumerate(patients):
+            m_list = list(medicos.values())
+            m = m_list[i % len(m_list)]
+            apt = Appointment(
+                patient_id=p.id,
+                doctor_id=m.user_id,
+                medico_id=m.id,
+                appointment_date=datetime.now() + timedelta(days=i+1, hours=10),
+                duration_minutes=30,
+                status=AppointmentStatus.CONFIRMED.value,
+                type=AppointmentType.CONSULTATION.value,
+                reason="Consulta de rotina",
+                price=m.valor_consulta
+            )
+            db.add(apt)
+        
+        db.commit()
         print("\nSemeação concluída com sucesso!")
-        print("-" * 30)
-        print("Logins disponíveis:")
-        print("ADMIN: admin / admin123")
-        print("MÉDICO 1: dr.carlos / senha123")
-        print("MÉDICO 2: dra.maria / senha123")
-        print("PACIENTE: joao.silva / senha123")
-        print("-" * 30)
         
     except Exception as e:
         print(f"Erro ao semear: {e}")

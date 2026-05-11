@@ -30,15 +30,22 @@ docker compose exec backend sh -c "export PYTHONPATH=$PYTHONPATH:/app && python 
 docker compose exec backend sh -c "export PYTHONPATH=$PYTHONPATH:/app && python scripts/seed_test_users.py"
 ```
 
-**Usuários Criados:**
+**Usuários Criados pela Seed:**
 
-- **Paciente:** `paciente@teste.com` / `senha123`
-- **Médico:** `medico@teste.com` / `senha123`
-  `Logins disponíveis:`
-  `ADMIN: admin / admin123`
-  `MÉDICO 1: dr.carlos / senha123`
-  `MÉDICO 2: dra.maria / senha123`
-  `PACIENTE: joao.silva / senha123`
+- **ADMINISTRADOR:**
+  - Login: `admin` | Senha: `admin123`
+
+- **MÉDICOS (Todos com senha: `senha123`):**
+  - `dr.carlos` (Cardiologia)
+  - `dra.maria` (Dermatologia)
+  - `dr.roberto` (Ortopedia)
+  - `dra.julia` (Pediatria)
+
+- **PACIENTES (Todos com senha: `senha123`):**
+  - `joao.silva`
+  - `ana.souza`
+  - `pedro.santiago`
+  - `carla.ferreira`
 
 ---
 
