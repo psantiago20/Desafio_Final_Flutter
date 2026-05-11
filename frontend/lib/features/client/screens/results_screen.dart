@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:frontend/core/constants/app_constants.dart';
 import 'package:frontend/core/network/api_client.dart';
-import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/shared/widgets/app_card.dart';
 import 'package:frontend/shared/widgets/main_shell.dart';
 import 'package:frontend/shared/utils/responsive_helper.dart';
