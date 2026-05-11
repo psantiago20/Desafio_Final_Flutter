@@ -14,8 +14,8 @@ class AppointmentsRepository {
     final params = <String, dynamic>{
       'skip': skip,
       'limit': limit,
-      'doctor_id': ?doctorId,
-      'status_filter': ?statusFilter,
+      if (doctorId != null) 'doctor_id': doctorId,
+      if (statusFilter != null) 'status_filter': statusFilter,
       if (dateFrom != null) 'date_from': dateFrom.toIso8601String(),
       if (dateTo != null) 'date_to': dateTo.toIso8601String(),
     };
@@ -50,7 +50,7 @@ class AppointmentsRepository {
       'appointment_date': date.toIso8601String(),
       'duration_minutes': durationMinutes,
       'type': type,
-      'reason': ?reason,
+      if (reason != null) 'reason': reason,
       'price': price,
     });
     return AppointmentModel.fromJson(data as Map<String, dynamic>);
