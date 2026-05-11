@@ -11,6 +11,13 @@ class DashboardStats {
   final double revenueMonth;
   final double noShowRate;
   final Map<String, int> appointmentTypeBreakdown;
+  
+  // Patient specific fields
+  final String? heartRate;
+  final String? bloodPressure;
+  final String? glucose;
+  final String? lastExamDate;
+  final String? lastPrescriptionDate;
 
   const DashboardStats({
     required this.totalPatients,
@@ -25,6 +32,11 @@ class DashboardStats {
     required this.revenueMonth,
     required this.noShowRate,
     required this.appointmentTypeBreakdown,
+    this.heartRate,
+    this.bloodPressure,
+    this.glucose,
+    this.lastExamDate,
+    this.lastPrescriptionDate,
   });
 
   factory DashboardStats.fromJson(Map<String, dynamic> json) {
@@ -44,6 +56,11 @@ class DashboardStats {
       appointmentTypeBreakdown: breakdown.map(
         (k, v) => MapEntry(k, (v as num).toInt()),
       ),
+      heartRate: json['heart_rate'] as String?,
+      bloodPressure: json['blood_pressure'] as String?,
+      glucose: json['glucose'] as String?,
+      lastExamDate: json['last_exam_date'] as String?,
+      lastPrescriptionDate: json['last_prescription_date'] as String?,
     );
   }
 }

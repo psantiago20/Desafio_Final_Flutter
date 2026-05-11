@@ -42,18 +42,55 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400, detail="Username already taken")
     
+    # Normalizar o telefone: remover caracteres não numéricos e garantir o prefixo 55
+    phone_clean = "".join(filter(str.isdigit, user.phone))
+    if not phone_clean.startswith("55") and len(phone_clean) >= 10:
+        phone_clean = "55" + phone_clean
+
     hashed_password = get_password_hash(user.password)
     db_user = User(
         email=user.email,
         username=user.username,
         full_name=user.full_name,
+        phone=phone_clean,
         role=user.role,
         hashed_password=hashed_password
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+
+    # Se for médico, cria perfil de médico
+    if user.role == "doctor":
+        from app.models.medico import Medico
+        db_medico = Medico(
+            nome_completo=user.full_name or user.username,
+            crm=user.crm or "PENDENTE",
+            crm_estado="SP", # Default para SP ou extrair do CRM se formatado
+            especialidade=user.specialty or "Clínica Geral",
+            email=user.email,
+            telefone=phone_clean,
+            whatsapp=phone_clean,
+            user_id=db_user.id
+        )
+        db.add(db_medico)
+        db.commit()
+    
+    # Se for paciente, cria perfil de paciente
+    elif user.role == "patient":
+        from app.models.patient import Patient
+        db_patient = Patient(
+            user_id=db_user.id,
+            name=user.full_name or user.username,
+            email=user.email,
+            phone=phone_clean,
+            whatsapp=phone_clean, # O número do celular será o WhatsApp
+        )
+        db.add(db_patient)
+        db.commit()
+
     return db_user
+
 
 
 @router.post("/login", response_model=Token)

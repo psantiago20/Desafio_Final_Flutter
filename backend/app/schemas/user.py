@@ -7,17 +7,23 @@ class UserBase(BaseModel):
     email: EmailStr
     username: str
     full_name: Optional[str] = None
+    phone: Optional[str] = None
     role: str = "receptionist"
 
 
 class UserCreate(UserBase):
     password: str
+    phone: str # Mandatory during registration
+    crm: Optional[str] = None
+    specialty: Optional[str] = None
+
 
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     username: Optional[str] = None
     full_name: Optional[str] = None
+    phone: Optional[str] = None
     role: Optional[str] = None
     is_active: Optional[bool] = None
 

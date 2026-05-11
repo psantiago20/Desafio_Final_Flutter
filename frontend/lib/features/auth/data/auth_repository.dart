@@ -22,15 +22,21 @@ class AuthRepository {
     required String email,
     required String username,
     required String password,
+    required String phone,
     String? fullName,
     String role = 'doctor',
+    String? crm,
+    String? specialty,
   }) async {
     final data = await ApiClient.post(AppConstants.registerEndpoint, {
       'email': email,
       'username': username,
       'password': password,
+      'phone': phone,
       if (fullName != null) 'full_name': fullName,
       'role': role,
+      if (crm != null) 'crm': crm,
+      if (specialty != null) 'specialty': specialty,
     });
 
     return UserModel.fromJson(data as Map<String, dynamic>);

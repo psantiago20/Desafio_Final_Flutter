@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../features/auth/presentation/providers/auth_provider.dart';
 import '../core/theme/app_theme.dart';
 
@@ -31,11 +33,22 @@ class _LandingPageState extends ConsumerState<LandingPage> {
   }
 
   void _showLoginModal() {
+    ref.read(authProvider.notifier).clearError();
     showDialog(
       context: context,
-      builder: (context) => const LoginModal(),
+      builder: (context) => LoginModal(onShowRegister: _showRegisterModal),
     );
   }
+
+
+  void _showRegisterModal() {
+    ref.read(authProvider.notifier).clearError();
+    showDialog(
+      context: context,
+      builder: (context) => const RegisterModal(),
+    );
+  }
+
 
   @override
   void dispose() {
@@ -613,7 +626,8 @@ class _LandingPageState extends ConsumerState<LandingPage> {
 }
 
 class LoginModal extends ConsumerStatefulWidget {
-  const LoginModal({super.key});
+  final VoidCallback? onShowRegister;
+  const LoginModal({super.key, this.onShowRegister});
 
   @override
   ConsumerState<LoginModal> createState() => _LoginModalState();
@@ -772,9 +786,29 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                         
                         if (auth.error != null) ...[
                           const SizedBox(height: 16),
-                          Text(
-                            auth.error!,
-                            style: const TextStyle(color: Colors.red, fontSize: 13),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFEBEE),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFFFCDD2)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline, color: Color(0xFFD32F2F), size: 18),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    auth.error!,
+                                    style: GoogleFonts.inter(
+                                      color: const Color(0xFFC62828),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                         
@@ -801,7 +835,9 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                           child: TextButton(
                             onPressed: () {
                               Navigator.pop(context);
-                              context.push('/register');
+                              if (widget.onShowRegister != null) {
+                                widget.onShowRegister!();
+                              }
                             },
                             child: const Text('Não tem conta? Cadastre-se aqui'),
                           ),
@@ -814,6 +850,418 @@ class _LoginModalState extends ConsumerState<LoginModal> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+class RegisterModal extends ConsumerStatefulWidget {
+  const RegisterModal({super.key});
+
+  @override
+  ConsumerState<RegisterModal> createState() => _RegisterModalState();
+}
+
+class _RegisterModalState extends ConsumerState<RegisterModal> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _usernameCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
+  
+  // Doctor specific
+  final _crmCtrl = TextEditingController();
+  final _specialtyCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  
+  final _phoneFormatter = MaskTextInputFormatter(
+    mask: '(##) #####-####',
+    filter: { "#": RegExp(r'[0-9]') },
+    type: MaskAutoCompletionType.lazy,
+  );
+
+  String _userRole = 'patient'; // 'patient' or 'doctor'
+  bool _obscurePassword = true;
+  bool _showSuccess = false;
+
+  void _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    // Actual registration with CRM and Specialty for doctors
+    final success = await ref.read(authProvider.notifier).register(
+      email: _emailCtrl.text.trim(),
+      username: _usernameCtrl.text.trim(),
+      password: _passwordCtrl.text,
+      phone: _phoneFormatter.getUnmaskedText(), // Send only numbers
+      role: _userRole,
+      fullName: _nameCtrl.text.trim(),
+      crm: _userRole == 'doctor' ? _crmCtrl.text.trim() : null,
+      specialty: _userRole == 'doctor' ? _specialtyCtrl.text.trim() : null,
+    );
+
+    if (success && mounted) {
+      setState(() => _showSuccess = true);
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          Navigator.pop(context);
+          _showLoginModal();
+        }
+      });
+    }
+  }
+
+  void _showLoginModal() {
+    showDialog(
+      context: context,
+      builder: (context) => LoginModal(onShowRegister: _showRegisterModal),
+    );
+  }
+
+  void _showRegisterModal() {
+    // Already in RegisterModal, but this is used if we want to "reset" or reopen
+    showDialog(
+      context: context,
+      builder: (context) => const RegisterModal(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = ref.watch(authProvider);
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    const Color primaryColor = Color(0xFF003D9B);
+
+    if (_showSuccess) {
+      return Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+        child: Container(
+          padding: const EdgeInsets.all(48),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(32),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.check_circle_outline, color: Color(0xFF006C4D), size: 80),
+              const SizedBox(height: 24),
+              Text(
+                'Conta criada!',
+                style: GoogleFonts.manrope(fontSize: 28, fontWeight: FontWeight.bold, color: primaryColor),
+              ),
+              const SizedBox(height: 12),
+              const Text('Sua conta foi criada com sucesso. Redirecionando...', textAlign: TextAlign.center),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Container(
+        constraints: BoxConstraints(maxWidth: 600, maxHeight: MediaQuery.of(context).size.height * 0.9),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 40, offset: const Offset(0, 20)),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 40),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF003D9B), Color(0xFF0052CC)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Criar nova conta',
+                      style: GoogleFonts.manrope(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Selecione o tipo de conta e preencha os dados',
+                      style: GoogleFonts.inter(fontSize: 14, color: Colors.white.withOpacity(0.8)),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Role Selection
+              Padding(
+                padding: const EdgeInsets.fromLTRB(40, 32, 40, 8),
+                child: Row(
+                  children: [
+                    _buildRoleCard(
+                      'Paciente',
+                      Icons.person_outline,
+                      _userRole == 'patient',
+                      () => setState(() => _userRole = 'patient'),
+                    ),
+                    const SizedBox(width: 16),
+                    _buildRoleCard(
+                      'Médico',
+                      Icons.medical_services_outlined,
+                      _userRole == 'doctor',
+                      () => setState(() => _userRole = 'doctor'),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Form
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(40),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildFieldLabel('NOME COMPLETO'),
+                        _buildTextField(_nameCtrl, 'Como devemos te chamar?', Icons.badge_outlined),
+                        const SizedBox(height: 24),
+
+                        _buildFieldLabel('E-MAIL'),
+                        _buildTextField(_emailCtrl, 'exemplo@email.com', Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+                        const SizedBox(height: 24),
+
+                        _buildFieldLabel('WHATSAPP (DDD + NÚMERO)'),
+                        _buildTextField(
+                          _phoneCtrl, 
+                          '(XX) 99999-9999', 
+                          Icons.phone_android_outlined, 
+                          keyboardType: TextInputType.phone,
+                          formatters: [_phoneFormatter],
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return 'Informe o WhatsApp';
+                            if (!_phoneFormatter.isFill()) return 'Número incompleto';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+
+                        if (_userRole == 'doctor') ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildFieldLabel('CRM'),
+                                    _buildTextField(_crmCtrl, '000000-SP', Icons.assignment_ind_outlined),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildFieldLabel('ESPECIALIDADE'),
+                                    _buildTextField(_specialtyCtrl, 'Ex: Cardiologia', Icons.medical_information_outlined),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
+                        _buildFieldLabel('NOME DE USUÁRIO'),
+                        _buildTextField(_usernameCtrl, 'Escolha um identificador único', Icons.alternate_email),
+                        const SizedBox(height: 24),
+
+                        _buildFieldLabel('SENHA'),
+                        _buildTextField(
+                          _passwordCtrl, 
+                          'No mínimo 6 caracteres', 
+                          Icons.lock_outline,
+                          isPassword: true,
+                          obscure: _obscurePassword,
+                          onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+                        ),
+                        const SizedBox(height: 24),
+
+                        _buildFieldLabel('CONFIRMAR SENHA'),
+                        _buildTextField(
+                          _confirmPasswordCtrl, 
+                          'Repita a senha escolhida', 
+                          Icons.lock_reset,
+                          isPassword: true,
+                          obscure: _obscurePassword,
+                          validator: (v) => v != _passwordCtrl.text ? 'As senhas não coincidem' : null,
+                        ),
+
+                        if (auth.error != null) ...[
+                          const SizedBox(height: 24),
+                          _buildErrorBox(auth.error!),
+                        ],
+
+                        const SizedBox(height: 40),
+
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: auth.isLoading ? null : _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: auth.isLoading
+                                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : Text(_userRole == 'doctor' ? 'Criar conta de médico' : 'Criar minha conta', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+                        Center(
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _showLoginModal();
+                            },
+                            child: const Text('Já tem uma conta? Entre aqui'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoleCard(String title, IconData icon, bool isSelected, VoidCallback onTap) {
+    const Color primaryColor = Color(0xFF003D9B);
+    
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          decoration: BoxDecoration(
+            color: isSelected ? primaryColor.withOpacity(0.05) : const Color(0xFFF7F9FB),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? primaryColor : const Color(0xFFE0E3E5),
+              width: 2,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: isSelected ? primaryColor : const Color(0xFF8E9199), size: 32),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: GoogleFonts.manrope(
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected ? primaryColor : const Color(0xFF434654),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFieldLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: const Color(0xFF8E9199),
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+    TextEditingController controller, 
+    String hint, 
+    IconData icon, {
+    bool isPassword = false,
+    bool obscure = false,
+    VoidCallback? onToggleVisibility,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? formatters,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscure,
+      keyboardType: keyboardType,
+      inputFormatters: formatters,
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: Icon(icon, size: 20),
+        suffixIcon: isPassword && onToggleVisibility != null
+            ? IconButton(
+                icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, size: 20),
+                onPressed: onToggleVisibility,
+              )
+            : null,
+        filled: true,
+        fillColor: const Color(0xFFF7F9FB),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+      validator: validator ?? (v) => v == null || v.isEmpty ? 'Campo obrigatório' : null,
+    );
+  }
+
+  Widget _buildErrorBox(String message) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFEBEE),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFFCDD2)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, color: Color(0xFFD32F2F), size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: GoogleFonts.inter(
+                color: const Color(0xFFC62828),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

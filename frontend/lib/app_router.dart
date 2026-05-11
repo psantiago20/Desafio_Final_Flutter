@@ -16,19 +16,24 @@ import 'shared/models/appointment_model.dart';
 import 'shared/widgets/main_shell.dart';
 import 'screens/client/main_dashboard_screen.dart' as client_screens;
 import 'screens/landing_page.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
 
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+  // Watch only navigation-relevant state to prevent unnecessary router recreation
+  // This ensures the router doesn't rebuild when isLoading or error changes
+  ref.watch(authProvider.select((s) => s.user?.id));
+  ref.watch(authProvider.select((s) => s.user?.role));
 
   return GoRouter(
     initialLocation: kIsWeb 
         ? '/' 
-        : (authState.isAuthenticated 
-            ? (authState.user?.role == 'doctor' ? '/dashboard' : '/client') 
+        : (ref.read(authProvider).isAuthenticated 
+            ? (ref.read(authProvider).user?.role == 'admin' ? '/management-v1' : (ref.read(authProvider).user?.role == 'doctor' ? '/dashboard' : '/client')) 
             : '/login'),
 
     redirect: (context, state) {
+      final authState = ref.read(authProvider);
       final isAuthenticated = authState.isAuthenticated;
       final isAuthRoute = state.matchedLocation == '/login' ||
           state.matchedLocation == '/register';
@@ -42,18 +47,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
         
         if (isAuthenticated) {
+          final isAdmin = authState.user?.role == 'admin';
           final isDoctor = authState.user?.role == 'doctor';
           if (isAuthRoute || isHomeRoute) {
+            if (isAdmin) return '/management-v1';
             return isDoctor ? '/dashboard' : '/client';
           }
         }
       } else {
-        // Lógica Mobile: Mantém o comportamento original (vai direto para login se não autenticado)
+        // Lógica Mobile: Mantém o comportamento original
         if (!isAuthenticated && !isAuthRoute) return '/login';
         
         if (isAuthenticated) {
+          final isAdmin = authState.user?.role == 'admin';
           final isDoctor = authState.user?.role == 'doctor';
           if (isAuthRoute || isHomeRoute) {
+            if (isAdmin) return '/management-v1';
             return isDoctor ? '/dashboard' : '/client';
           }
           
@@ -61,6 +70,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             return '/client';
           }
         }
+      }
+
+      // Proteção Global para a Rota de Admin
+      if (state.matchedLocation == '/management-v1') {
+        if (!isAuthenticated) return '/';
+        if (authState.user?.role != 'admin') return '/';
       }
 
       return null;
@@ -108,6 +123,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/client',
         builder: (_, __) => const client_screens.MainDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/management-v1',
+        builder: (_, __) => const AdminDashboardScreen(),
       ),
 
     ],

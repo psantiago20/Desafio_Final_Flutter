@@ -3,6 +3,7 @@ class UserModel {
   final String email;
   final String username;
   final String? fullName;
+  final String? phone;
   final String role;
   final bool isActive;
   final DateTime createdAt;
@@ -12,6 +13,7 @@ class UserModel {
     required this.email,
     required this.username,
     this.fullName,
+    this.phone,
     required this.role,
     required this.isActive,
     required this.createdAt,
@@ -23,6 +25,7 @@ class UserModel {
       email: json['email'] as String,
       username: json['username'] as String,
       fullName: json['full_name'] as String?,
+      phone: json['phone'] as String?,
       role: json['role'] as String,
       isActive: json['is_active'] as bool,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -34,6 +37,7 @@ class UserModel {
         'email': email,
         'username': username,
         'full_name': fullName,
+        'phone': phone,
         'role': role,
         'is_active': isActive,
         'created_at': createdAt.toIso8601String(),

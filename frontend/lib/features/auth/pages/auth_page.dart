@@ -83,10 +83,30 @@ class _AuthPageState extends ConsumerState<AuthPage> {
 
           if (auth.error != null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                auth.error!,
-                style: const TextStyle(color: AppTheme.alertRed),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.alertRed.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.alertRed.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: AppTheme.alertRed, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        auth.error!,
+                        style: const TextStyle(
+                          color: AppTheme.alertRed,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 

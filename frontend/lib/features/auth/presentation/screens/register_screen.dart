@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../providers/auth_provider.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 
@@ -19,6 +21,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  
+  final _phoneFormatter = MaskTextInputFormatter(
+    mask: '(##) #####-####',
+    filter: { "#": RegExp(r'[0-9]') },
+    type: MaskAutoCompletionType.lazy,
+  );
   bool _obscurePassword = true;
 
   @override
@@ -28,6 +37,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
+    _phoneCtrl.dispose();
     super.dispose();
   }
 
@@ -37,7 +47,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           email: _emailCtrl.text.trim(),
           username: _usernameCtrl.text.trim(),
           password: _passwordCtrl.text,
+          phone: _phoneFormatter.getUnmaskedText(),
           fullName: _nameCtrl.text.trim(),
+          role: 'doctor',
         );
     if (ok && mounted) {
       context.go('/dashboard');
@@ -106,6 +118,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: 14),
                 _buildField(
+                  controller: _phoneCtrl,
+                  label: 'WhatsApp (DDD + Número)',
+                  icon: Icons.phone_android_outlined,
+                  keyboardType: TextInputType.phone,
+                  formatters: [_phoneFormatter],
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Informe o WhatsApp';
+                    if (!_phoneFormatter.isFill()) return 'Número incompleto';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+                _buildField(
                   controller: _usernameCtrl,
                   label: 'Nome de usuário',
                   icon: Icons.person_outline,
@@ -116,24 +141,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   },
                 ),
                 const SizedBox(height: 14),
-                TextFormField(
+                _buildField(
                   controller: _passwordCtrl,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Senha',
-                    prefixIcon: const Icon(Icons.lock_outline,
-                        color: AppColors.textHint),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: AppColors.textHint,
-                      ),
-                      onPressed: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                    ),
-                  ),
+                  label: 'Senha',
+                  icon: Icons.lock_outline,
+                  isPassword: true,
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Informe a senha';
                     if (v.length < 6) return 'Mínimo 6 caracteres';
@@ -141,14 +153,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   },
                 ),
                 const SizedBox(height: 14),
-                TextFormField(
+                _buildField(
                   controller: _confirmCtrl,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Confirmar senha',
-                    prefixIcon:
-                        Icon(Icons.lock_outline, color: AppColors.textHint),
-                  ),
+                  label: 'Confirmar senha',
+                  icon: Icons.lock_outline,
+                  isPassword: true,
                   validator: (v) {
                     if (v != _passwordCtrl.text) return 'Senhas não coincidem';
                     return null;
@@ -229,17 +238,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Widget _buildField({
     required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    TextInputType? keyboardType,
+    required String? label,
+    IconData? icon,
+    bool isPassword = false,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? formatters,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
+      obscureText: isPassword && _obscurePassword,
       keyboardType: keyboardType,
+      inputFormatters: formatters,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: AppColors.textHint),
+        prefixIcon: icon != null ? Icon(icon, color: AppColors.textHint) : null,
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: AppColors.textHint,
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              )
+            : null,
       ),
       validator: validator,
       textInputAction: TextInputAction.next,

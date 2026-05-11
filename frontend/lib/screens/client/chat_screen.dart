@@ -29,13 +29,39 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _picker = ImagePicker();
-  final List<ChatMessage> _messages = [
-    ChatMessage(
-      text: 'Olá! Sou o assistente virtual do Sua Consulta. Como posso ajudar com sua saúde hoje?',
-      isMe: false,
-    ),
-  ];
+  final List<ChatMessage> _messages = [];
   bool _isLoading = false;
+  bool _isFetching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMessages();
+  }
+
+  Future<void> _fetchMessages() async {
+    setState(() => _isFetching = true);
+    try {
+      final response = await ApiClient.get('/api/messages');
+      final List<dynamic> msgs = response['messages'];
+      
+      setState(() {
+        _messages.clear();
+        for (var m in msgs.reversed) {
+          final source = m['source'];
+          _messages.add(ChatMessage(
+            text: m['content'],
+            isMe: source == 'app' || source == 'whatsapp',
+          ));
+        }
+      });
+      _scrollToBottom();
+    } catch (e) {
+      debugPrint('Erro ao buscar mensagens: $e');
+    } finally {
+      setState(() => _isFetching = false);
+    }
+  }
 
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
@@ -50,7 +76,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     try {
       final authState = ref.read(authProvider);
-      final waFrom = authState.user?.email ?? '5511999999999';
+      final waFrom = authState.user?.phone ?? '5511999999999';
 
       final response = await ApiClient.post('/api/rag/query', {
         'query': text,
@@ -84,7 +110,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _scrollToBottom();
 
       final authState = ref.read(authProvider);
-      final waFrom = authState.user?.email ?? '5511999999999';
+      final waFrom = authState.user?.phone ?? '5511999999999';
 
       final url = Uri.parse('${AppConstants.baseUrl}/api/rag/upload-exam');
       var request = http.MultipartRequest('POST', url);
