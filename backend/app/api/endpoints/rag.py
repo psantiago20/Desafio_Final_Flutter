@@ -16,6 +16,11 @@ import logging
 import os
 import uuid
 import shutil
+import json
+import base64
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from langchain_core.messages import HumanMessage
+from app.core.config import settings
 
 from app.db.database import get_db
 from app.models.patient import Patient
@@ -204,30 +209,61 @@ async def upload_exam(
     e anexa o resumo à próxima consulta do paciente.
     """
     try:
-        # Criar diretório static/exams se não existir (na raiz do backend)
+        # 1. Preparar diretório
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         exams_dir = os.path.join(base_dir, "static", "exams")
         os.makedirs(exams_dir, exist_ok=True)
         
-        # Salvar o arquivo
+        # 2. Salvar o arquivo físico
         ext = os.path.splitext(file.filename)[1]
         unique_filename = f"{uuid.uuid4()}{ext}"
         file_path = os.path.join(exams_dir, unique_filename)
         
+        content = await file.read()
         with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+            buffer.write(content)
             
-        public_url = f"/static/exams/{unique_filename}"
+        # 3. IA Vision: Analisar a imagem de verdade usando LLaMA 3.2 Vision
+        import base64
+        from langchain_nvidia_ai_endpoints import ChatNVIDIA
+        from langchain_core.messages import HumanMessage
+
+        print(f"[VISION] Analisando exame: {file.filename}")
+        encoded_image = base64.b64encode(content).decode("utf-8")
         
-        # Simulação do RAG Multimodal (Visão) com LLaMA/NVIDIA
-        ai_summary = (
-            "Análise do Exame (IA Vision - LLaMA/NVIDIA):\n"
-            "O exame apresenta resultados dentro dos limites de normalidade. "
-            "Não foram detectadas anomalias significativas nas estruturas visíveis. "
-            "Recomenda-se a avaliação médica detalhada durante a consulta para correlação clínica."
+        vision_model = ChatNVIDIA(model="meta/llama-3.2-11b-vision-instruct", nvidia_api_key=settings.NVIDIA_API_KEY)
+        
+        prompt = (
+            "Analise este exame médico e responda APENAS em formato JSON com os seguintes campos:\n"
+            "{\n"
+            "  \"title\": \"Nome curto do exame (ex: Hemograma Completo)\",\n"
+            "  \"summary\": \"Resumo de 2 frases sobre os resultados\"\n"
+            "}\n"
+            "Não use blocos de código markdown, apenas o JSON puro."
         )
         
-        # Procurar o paciente
+        message = HumanMessage(
+            content=[
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded_image}"}},
+            ]
+        )
+        
+        try:
+            response = vision_model.invoke([message])
+            logger.info(f"[VISION] Resposta da IA: {response.content}")
+            clean_content = response.content.replace("```json", "").replace("```", "").strip()
+            ai_data = json.loads(clean_content)
+            exam_title = ai_data.get("title", "Exame Médico")
+            exam_summary = ai_data.get("summary", "Análise realizada via IA Vision.")
+        except Exception as vision_err:
+            logger.error(f"[VISION ERROR] Falha na análise: {str(vision_err)}")
+            exam_title = f"Exame: {file.filename}"
+            exam_summary = "O exame foi recebido, mas a análise automática falhou."
+
+        public_url = f"/static/exams/{unique_filename}"
+        
+        # 4. Procurar o paciente
         patient = db.query(Patient).filter(
             (Patient.phone == wa_from) | (Patient.whatsapp == wa_from) | (Patient.email == wa_from)
         ).first()
@@ -235,34 +271,30 @@ async def upload_exam(
         if not patient:
             return {"status": "error", "message": "Paciente não encontrado."}
 
-        # Criar registro de exame independente
+        # 5. Salvar registro no banco
         new_exam = Exam(
             patient_id=patient.id,
-            title=f"Exame - {file.filename}",
+            title=exam_title,
             exam_url=public_url,
-            summary=ai_summary
+            summary=exam_summary
         )
         db.add(new_exam)
 
-        # Opcional: Ainda tenta vincular à consulta mais recente se existir
+        # Opcional: Tenta vincular à consulta mais recente se existir
         next_app = db.query(Appointment).filter(
             Appointment.patient_id == patient.id
         ).order_by(Appointment.appointment_date.desc()).first()
             
         if next_app:
             next_app.exam_url = public_url
-            next_app.exam_summary = ai_summary
+            next_app.exam_summary = exam_summary
             
         db.commit()
         return {
             "status": "success", 
-            "message": (
-                "✅ Seu exame foi processado e anexado ao seu prontuário com sucesso! "
-                "A análise da IA já está disponível e você pode visualizar todos os detalhes "
-                "na aba 'Exames' aqui no aplicativo."
-            ), 
-            "url": public_url, 
-            "summary": ai_summary
+            "title": exam_title,
+            "summary": exam_summary,
+            "url": public_url
         }
             
     except Exception as e:
