@@ -19,25 +19,35 @@ docker compose up -d --build
 Após os containers subirem, você precisa criar as tabelas e injetar os usuários de teste. Execute os comandos abaixo na ordem:
 
 ### A. Criar as Tabelas
+
 ```bash
 docker compose exec backend sh -c "export PYTHONPATH=$PYTHONPATH:/app && python scripts/create_tables.py"
 ```
 
 ### B. Injetar Dados de Teste (Seed)
+
 ```bash
 docker compose exec backend sh -c "export PYTHONPATH=$PYTHONPATH:/app && python scripts/seed_test_users.py"
 ```
 
 **Usuários Criados:**
-*   **Paciente:** `paciente@teste.com` / `senha123`
-*   **Médico:** `medico@teste.com` / `senha123`
+
+- **Paciente:** `paciente@teste.com` / `senha123`
+- **Médico:** `medico@teste.com` / `senha123`
+  `Logins disponíveis:`
+  `ADMIN: admin / admin123`
+  `MÉDICO 1: dr.carlos / senha123`
+  `MÉDICO 2: dra.maria / senha123`
+  `PACIENTE: joao.silva / senha123`
 
 ---
 
 ## 🔑 3. Configuração de Variáveis de Ambiente (.env)
 
 ### Backend (`backend/.env`)
+
 O backend já possui as variáveis configuradas no `docker-compose.yml`, mas para rodar scripts locais ou ferramentas de debug, utilize:
+
 ```env
 DATABASE_URL=postgresql://omniconnect:omniconnect123@localhost:5432/omniconnect
 NVIDIA_API_KEY=sua_chave_aqui
@@ -45,20 +55,29 @@ DEBUG=True
 ```
 
 ### Frontend (`frontend/assets/.env`)
+
 Este arquivo é **obrigatório** para o Flutter saber onde está a API. Crie o arquivo em `frontend/assets/.env`:
 
-*   **Para Flutter Web:**
-    ```env
-    API_URL=http://localhost:8000
-    ```
-*   **Para Emulador Android:**
-    ```env
-    API_URL=http://10.0.2.2:8000
-    ```
+- **Para Flutter Web:**
+  ```env
+  API_URL=http://localhost:8000
+  ```
+- **Para Emulador Android:**
+  ```env
+  API_URL=http://10.0.2.2:8000
+  ```
 
 > **Atenção:** Após alterar o `.env` no frontend, você deve **reiniciar** o app Flutter (Stop e Start) para que as mudanças façam efeito.
 
 ---
+
+Rodar Flutter
+
+abrir aplicativo web:
+flutter run -d chrome
+
+abrir aplicativo android:
+flutter run -d emulator-5554
 
 ## 🌐 4. Dicas para Flutter Web (CORS)
 
@@ -72,6 +91,6 @@ flutter run -d chrome --web-renderer html --web-browser-flag "--disable-web-secu
 
 ## 🛠️ Comandos Úteis
 
-*   **Ver Logs:** `docker compose logs -f backend`
-*   **Parar Tudo:** `docker compose down`
-*   **Resetar Banco:** `docker compose down -v` (apaga os dados do volume)
+- **Ver Logs:** `docker compose logs -f backend`
+- **Parar Tudo:** `docker compose down`
+- **Resetar Banco:** `docker compose down -v` (apaga os dados do volume)
