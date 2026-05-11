@@ -117,7 +117,7 @@ class ProfileScreen extends ConsumerWidget {
                 const Divider(),
                 _buildInfoTile(Icons.person_outline, 'Usuário', user?.username ?? '-'),
                 const Divider(),
-                _buildInfoTile(Icons.phone_outlined, 'Telefone', '(11) 98765-4321'),
+                _buildInfoTile(Icons.phone_outlined, 'Telefone', user?.phone ?? '-'),
                 const Divider(),
                 _buildInfoTile(Icons.calendar_today_outlined, 'Data de Nascimento', '15/03/1985'),
               ],
@@ -171,6 +171,14 @@ class ProfileScreen extends ConsumerWidget {
                 _buildActionTile(Icons.security_outlined, 'Privacidade e Dados'),
                 const Divider(),
                 _buildActionTile(Icons.help_outline, 'Central de Ajuda'),
+                if (user?.isAdmin ?? false) ...[
+                  const Divider(),
+                  _buildActionTile(
+                    Icons.admin_panel_settings_outlined, 
+                    'Painel do Administrador',
+                    onTap: () => context.push('/management-v1'),
+                  ),
+                ],
               ],
             ),
           ),
@@ -284,9 +292,9 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildActionTile(IconData icon, String title) {
+  Widget _buildActionTile(IconData icon, String title, {VoidCallback? onTap}) {
     return InkWell(
-      onTap: () {},
+      onTap: onTap ?? () {},
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(

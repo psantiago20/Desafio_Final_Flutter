@@ -43,10 +43,13 @@ class ApiClient {
       return _handleResponse(response);
     } on SocketException {
       throw ApiException(
-          statusCode: 0, message: 'Sem conexão com o servidor.');
+          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
-          statusCode: 0, message: 'Falha de conexão: ${e.message}');
+          statusCode: 0, message: _mapClientError(e.message));
+    } catch (e) {
+      throw ApiException(
+          statusCode: 0, message: 'Ocorreu um erro inesperado. Tente novamente em breve.');
     }
   }
 
@@ -60,16 +63,18 @@ class ApiClient {
       return _handleResponse(response);
     } on SocketException {
       throw ApiException(
-          statusCode: 0, message: 'Sem conexão com o servidor.');
+          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
-          statusCode: 0, message: 'Falha de conexão: ${e.message}');
+          statusCode: 0, message: _mapClientError(e.message));
+    } catch (e) {
+      throw ApiException(
+          statusCode: 0, message: 'Ocorreu um erro inesperado. Tente novamente em breve.');
     }
   }
 
   static Future<dynamic> postForm(String path, Map<String, String> body) async {
     try {
-      // For form posts we need to merge ngrok header manually (body is Map<String,String>)
       final formHeaders = {
         'ngrok-skip-browser-warning': 'true',
         if (_token != null) 'Authorization': 'Bearer $_token',
@@ -77,17 +82,21 @@ class ApiClient {
       final response = await http.post(
         _uri(path),
         headers: formHeaders,
-        body: body, // http package automatically sets content-type to application/x-www-form-urlencoded
+        body: body,
       );
       return _handleResponse(response);
     } on SocketException {
       throw ApiException(
-          statusCode: 0, message: 'Sem conexão com o servidor.');
+          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
-          statusCode: 0, message: 'Falha de conexão: ${e.message}');
+          statusCode: 0, message: _mapClientError(e.message));
+    } catch (e) {
+      throw ApiException(
+          statusCode: 0, message: 'Ocorreu um erro inesperado. Tente novamente em breve.');
     }
   }
+
   static Future<dynamic> put(String path, Map<String, dynamic> body) async {
     try {
       final response = await http.put(
@@ -98,10 +107,13 @@ class ApiClient {
       return _handleResponse(response);
     } on SocketException {
       throw ApiException(
-          statusCode: 0, message: 'Sem conexão com o servidor.');
+          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
-          statusCode: 0, message: 'Falha de conexão: ${e.message}');
+          statusCode: 0, message: _mapClientError(e.message));
+    } catch (e) {
+      throw ApiException(
+          statusCode: 0, message: 'Ocorreu um erro inesperado. Tente novamente em breve.');
     }
   }
 
@@ -115,10 +127,13 @@ class ApiClient {
       return _handleResponse(response);
     } on SocketException {
       throw ApiException(
-          statusCode: 0, message: 'Sem conexão com o servidor.');
+          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
-          statusCode: 0, message: 'Falha de conexão: ${e.message}');
+          statusCode: 0, message: _mapClientError(e.message));
+    } catch (e) {
+      throw ApiException(
+          statusCode: 0, message: 'Ocorreu um erro inesperado. Tente novamente em breve.');
     }
   }
 
@@ -131,11 +146,23 @@ class ApiClient {
       }
     } on SocketException {
       throw ApiException(
-          statusCode: 0, message: 'Sem conexão com o servidor.');
+          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
-          statusCode: 0, message: 'Falha de conexão: ${e.message}');
+          statusCode: 0, message: _mapClientError(e.message));
+    } catch (e) {
+      throw ApiException(
+          statusCode: 0, message: 'Ocorreu um erro inesperado. Tente novamente em breve.');
     }
+  }
+
+  static String _mapClientError(String originalError) {
+    if (originalError.contains('Failed to fetch') || 
+        originalError.contains('XMLHttpRequest') ||
+        originalError.contains('Connection refused')) {
+      return 'O sistema está temporariamente fora do ar para manutenção. Já estamos trabalhando nisso!';
+    }
+    return 'Ops! Tivemos um problema de conexão. Por favor, tente novamente.';
   }
 
   static dynamic _handleResponse(http.Response response) {
@@ -144,12 +171,30 @@ class ApiClient {
       return jsonDecode(utf8.decode(response.bodyBytes));
     }
 
-    String message = 'Erro desconhecido';
+    if (response.statusCode == 401) {
+      throw ApiException(statusCode: 401, message: 'Sua sessão expirou ou os dados de acesso estão incorretos.');
+    }
+
+    if (response.statusCode == 403) {
+      throw ApiException(statusCode: 403, message: 'Você não tem permissão para realizar esta ação.');
+    }
+
+    if (response.statusCode >= 500) {
+      throw ApiException(statusCode: response.statusCode, message: 'O sistema encontrou uma falha momentânea. Nossa equipe já foi notificada.');
+    }
+
+    String message = 'Ocorreu um erro inesperado. Tente de novo.';
     try {
       final body = jsonDecode(utf8.decode(response.bodyBytes));
       message = body['detail'] ?? body['message'] ?? message;
+      
+      // Tradução de mensagens comuns do backend
+      if (message.toLowerCase().contains('invalid credentials')) {
+        message = 'Usuário ou senha incorretos. Por favor, verifique seus dados.';
+      }
     } catch (_) {}
 
     throw ApiException(statusCode: response.statusCode, message: message);
   }
 }
+

@@ -12,11 +12,21 @@ import '../../shared/models/medico_model.dart';
 import '../../shared/models/dashboard_stats_model.dart';
 import '../../shared/models/user_model.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
+import '../../core/network/api_client.dart';
 
 class HomeScreen extends ConsumerWidget {
   final Function(int) onNavigate;
 
   const HomeScreen({super.key, required this.onNavigate});
+
+  /// Extrai a mensagem amigável de qualquer tipo de exceção
+  String _cleanError(Object err) {
+    if (err is ApiException) return err.message;
+    final s = err.toString();
+    final match = RegExp(r'ApiException\(\d+\):\s*(.+)').firstMatch(s);
+    if (match != null) return match.group(1)!;
+    return 'Não foi possível carregar os dados. Tente novamente.';
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -116,7 +126,7 @@ class HomeScreen extends ConsumerWidget {
                         ],
                       ),
                       loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (err, stack) => Text('Erro ao carregar estatísticas: $err'),
+                      error: (err, stack) => _buildInlineError(_cleanError(err)),
                     ),
                     const SizedBox(height: 48),
 
@@ -131,10 +141,14 @@ class HomeScreen extends ConsumerWidget {
                               upcomingAsync.when(
                                 data: (appointments) => _buildWebTimeline(context, appointments),
                                 loading: () => const CircularProgressIndicator(),
-                                error: (err, stack) => Text('Erro ao carregar consultas: $err'),
+                                error: (err, stack) => _buildInlineError(_cleanError(err)),
                               ),
                               const SizedBox(height: 32),
-                              _buildWebHealthSection(),
+                                statsAsync.when(
+                                  data: (stats) => _buildWebHealthSection(stats),
+                                  loading: () => const SizedBox(height: 100, child: Center(child: CircularProgressIndicator())),
+                                  error: (err, stack) => _buildWebHealthSection(null),
+                                ),
                             ],
                           ),
                         ),
@@ -143,7 +157,11 @@ class HomeScreen extends ConsumerWidget {
                         Expanded(
                           child: Column(
                             children: [
-                              _buildWebVitalsCard(),
+                              statsAsync.when(
+                                data: (stats) => _buildWebVitalsCard(stats),
+                                loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
+                                error: (err, stack) => _buildVitalsUnavailable(),
+                              ),
                               const SizedBox(height: 32),
                               _buildWebSideNavLink(Icons.history, 'Histórico Médico'),
                               _buildWebSideNavLink(Icons.headset_mic_outlined, 'Suporte ao Paciente'),
@@ -279,17 +297,28 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWebHealthSection() {
+  Widget _buildWebHealthSection(DashboardStats? stats) {
     return Row(
       children: [
-        Expanded(child: _buildWebHealthCard('Exames de Sangue', Icons.analytics_outlined, 'Há 2 dias', const Color(0xFF006C4D))),
+        Expanded(child: _buildWebHealthCard(
+          'Exames de Sangue',
+          Icons.analytics_outlined,
+          stats?.lastExamDate,
+          const Color(0xFF006C4D),
+        )),
         const SizedBox(width: 24),
-        Expanded(child: _buildWebHealthCard('Receitas Ativas', Icons.medication_outlined, 'Pendente', const Color(0xFF003D9B))),
+        Expanded(child: _buildWebHealthCard(
+          'Receitas Ativas',
+          Icons.medication_outlined,
+          stats?.lastPrescriptionDate,
+          const Color(0xFF003D9B),
+        )),
       ],
     );
   }
 
-  Widget _buildWebHealthCard(String title, IconData icon, String subtitle, Color color) {
+  Widget _buildWebHealthCard(String title, IconData icon, String? subtitle, Color color) {
+    final bool hasData = subtitle != null && subtitle.isNotEmpty;
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
@@ -304,33 +333,52 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text('Última atualização: $subtitle', style: const TextStyle(color: Color(0xFF434654), fontSize: 12)),
+          Text(
+            hasData ? 'Última atualização: $subtitle' : 'Sem registros recentes',
+            style: TextStyle(
+              color: hasData ? const Color(0xFF434654) : const Color(0xFF9E9E9E),
+              fontSize: 12,
+              fontStyle: hasData ? FontStyle.normal : FontStyle.italic,
+            ),
+          ),
           const SizedBox(height: 24),
           Container(
             height: 80,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _buildBar(40, color.withOpacity(0.2)),
-                const SizedBox(width: 8),
-                _buildBar(30, color.withOpacity(0.2)),
-                const SizedBox(width: 8),
-                _buildBar(70, color),
-                const SizedBox(width: 8),
-                _buildBar(35, color.withOpacity(0.2)),
-              ],
-            ),
+            child: hasData
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _buildBar(40, color.withOpacity(0.2)),
+                      const SizedBox(width: 8),
+                      _buildBar(30, color.withOpacity(0.2)),
+                      const SizedBox(width: 8),
+                      _buildBar(70, color),
+                      const SizedBox(width: 8),
+                      _buildBar(35, color.withOpacity(0.2)),
+                    ],
+                  )
+                : Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.inbox_outlined, color: color.withOpacity(0.3), size: 32),
+                        const SizedBox(height: 8),
+                        Text('Nenhum dado encontrado',
+                            style: TextStyle(color: color.withOpacity(0.5), fontSize: 11)),
+                      ],
+                    ),
+                  ),
           ),
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: () {},
+              onPressed: hasData ? () {} : null,
               style: OutlinedButton.styleFrom(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: const Text('Visualizar PDF'),
+              child: Text(hasData ? 'Visualizar PDF' : 'Indisponível'),
             ),
           ),
         ],
@@ -347,7 +395,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWebVitalsCard() {
+  Widget _buildWebVitalsCard(DashboardStats? stats) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -359,17 +407,18 @@ class HomeScreen extends ConsumerWidget {
         children: [
           const Text('SIGNOS VITAIS RECENTES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Color(0xFF434654))),
           const SizedBox(height: 24),
-          _buildVitalItem('Frequência Cardíaca', '72', 'BPM', Icons.favorite),
+          _buildVitalItem('Frequência Cardíaca', stats?.heartRate, 'BPM', Icons.favorite),
           const SizedBox(height: 24),
-          _buildVitalItem('Pressão Arterial', '12/8', 'mmHg', Icons.speed),
+          _buildVitalItem('Pressão Arterial', stats?.bloodPressure, 'mmHg', Icons.speed),
           const SizedBox(height: 24),
-          _buildVitalItem('Glicemia', '94', 'mg/dL', Icons.water_drop),
+          _buildVitalItem('Glicemia', stats?.glucose, 'mg/dL', Icons.water_drop),
         ],
       ),
     );
   }
 
-  Widget _buildVitalItem(String label, String value, String unit, IconData icon) {
+  Widget _buildVitalItem(String label, String? value, String unit, IconData icon) {
+    final bool hasValue = value != null && value.isNotEmpty;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -380,15 +429,79 @@ class HomeScreen extends ConsumerWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(value, style: GoogleFonts.manrope(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF006C4D))),
+                Text(
+                  hasValue ? value! : '--',
+                  style: GoogleFonts.manrope(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: hasValue ? const Color(0xFF006C4D) : const Color(0xFF9E9E9E),
+                  ),
+                ),
                 const SizedBox(width: 4),
-                Text(unit, style: const TextStyle(fontSize: 12, color: Color(0xFF006C4D))),
+                Text(
+                  hasValue ? unit : 'Não disponível',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: hasValue ? const Color(0xFF006C4D) : const Color(0xFF9E9E9E),
+                  ),
+                ),
               ],
             ),
           ],
         ),
-        Icon(icon, color: const Color(0xFF006C4D).withOpacity(0.4)),
+        Icon(icon, color: const Color(0xFF006C4D).withOpacity(hasValue ? 0.4 : 0.15)),
       ],
+    );
+  }
+
+  Widget _buildInlineError(String message) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFFB74D).withOpacity(0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, color: Color(0xFFF57C00), size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(color: Color(0xFFE65100), fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVitalsUnavailable() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE0E3E5),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('SIGNOS VITAIS RECENTES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Color(0xFF434654))),
+          const SizedBox(height: 24),
+          const Icon(Icons.cloud_off_outlined, color: Color(0xFF9E9E9E), size: 36),
+          const SizedBox(height: 12),
+          const Text(
+            'Informações indisponíveis no momento.',
+            style: TextStyle(color: Color(0xFF616161), fontSize: 13),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Estamos resolvendo isso. Tente novamente em breve.',
+            style: TextStyle(color: Color(0xFF9E9E9E), fontSize: 12),
+          ),
+        ],
+      ),
     );
   }
 
@@ -527,7 +640,7 @@ class HomeScreen extends ConsumerWidget {
                   ],
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Text('Erro: $err'),
+                error: (err, stack) => _buildInlineError(_cleanError(err)),
               ),
               const SizedBox(height: 24),
 
@@ -636,7 +749,7 @@ class HomeScreen extends ConsumerWidget {
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Text('Erro ao carregar consulta: $err'),
+                error: (err, stack) => _buildInlineError(_cleanError(err)),
               ),
               const SizedBox(height: 24),
 

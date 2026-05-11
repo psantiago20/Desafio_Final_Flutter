@@ -20,6 +20,7 @@ class User(Base):
     username = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(200))
+    phone = Column(String(20), unique=True, index=True, nullable=True) # Will be mandatory in schema
     role = Column(String(50), default=UserRole.RECEPTIONIST.value)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)

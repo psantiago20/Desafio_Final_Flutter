@@ -30,6 +30,12 @@ class DashboardStats(BaseModel):
     revenue_month: float
     no_show_rate: float
     appointment_type_breakdown: dict
+    # Novos campos para Paciente
+    heart_rate: Optional[str] = None
+    blood_pressure: Optional[str] = None
+    glucose: Optional[str] = None
+    last_exam_date: Optional[str] = None
+    last_prescription_date: Optional[str] = None
 
 
 @router.get("/stats", response_model=DashboardStats)
@@ -58,6 +64,18 @@ def get_dashboard_stats(
         
         unread_messages = db.query(Message).filter(Message.patient_id == patient.id, Message.is_read == False).count()
         
+        from app.models.exam import Exam
+        last_exam = db.query(Exam).filter(Exam.patient_id == patient.id).order_by(Exam.created_at.desc()).first()
+        last_exam_date = None
+        if last_exam:
+            diff = datetime.utcnow() - last_exam.created_at.replace(tzinfo=None)
+            if diff.days == 0:
+                last_exam_date = "Hoje"
+            elif diff.days == 1:
+                last_exam_date = "Ontem"
+            else:
+                last_exam_date = f"Há {diff.days} dias"
+
         return {
             "total_patients": 1,
             "total_appointments": total_appointments,
@@ -70,7 +88,13 @@ def get_dashboard_stats(
             "revenue_week": 0,
             "revenue_month": 0,
             "no_show_rate": 0,
-            "appointment_type_breakdown": {}
+            "appointment_type_breakdown": {},
+            # Dados reais do paciente (None = sem registros, frontend exibe estado vazio)
+            "heart_rate": patient.heart_rate or None,
+            "blood_pressure": patient.blood_pressure or None,
+            "glucose": patient.glucose or None,
+            "last_exam_date": last_exam_date,
+            "last_prescription_date": None  # Sem módulo de receitas implementado
         }
 
     # Caso contrário (Admin/Médico), retorna estatísticas globais

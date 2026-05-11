@@ -22,8 +22,18 @@ def list_messages(
 ):
     query = db.query(Message)
     
-    if patient_id:
+    # Se for paciente, filtra apenas as suas mensagens
+    if current_user.role == "patient":
+        from app.models.patient import Patient
+        patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
+        if patient:
+            query = query.filter(Message.patient_id == patient.id)
+        else:
+            # Se é paciente mas não tem perfil (erro?), não retorna nada ou retorna vazio
+            return {"total": 0, "messages": []}
+    elif patient_id:
         query = query.filter(Message.patient_id == patient_id)
+    
     if unread_only:
         query = query.filter(Message.is_read == False)
     

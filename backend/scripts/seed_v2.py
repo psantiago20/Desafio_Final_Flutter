@@ -130,12 +130,22 @@ def seed():
                 cpf="555.555.555-55",
                 city="São Paulo",
                 state="SP",
-                notes="Tipo Sanguíneo: O+ | Alergias: Penicilina, Pólen | Condições Crônicas: Hipertensão | Medicamentos em Uso: Losartana 50mg"
+                notes="Tipo Sanguíneo: O+ | Alergias: Penicilina, Pólen | Condições Crônicas: Hipertensão | Medicamentos em Uso: Losartana 50mg",
+                heart_rate="74",
+                blood_pressure="12/8",
+                glucose="98"
             )
             db.add(patient)
-            db.commit()
-            db.refresh(patient)
             print(f"Registro de Paciente criado: {patient.name}")
+        else:
+            # Atualizar dados se já existir
+            patient.heart_rate = "74"
+            patient.blood_pressure = "12/8"
+            patient.glucose = "98"
+            print(f"Registro de Paciente atualizado: {patient.name}")
+        
+        db.commit()
+        db.refresh(patient)
 
         # 3. Criar Agendamentos para Maria Silva
         # Consulta com Dr. Ricardo Almeida (Amanhã)
@@ -201,6 +211,20 @@ def seed():
             )
             db.add(apt3)
             print(f"Agendamento PASSADO criado: Maria Silva -> {created_doctors[2]['medico'].nome_completo}")
+
+        # 5. Criar Exame para Maria Silva
+        from app.models.exam import Exam
+        existing_exam = db.query(Exam).filter(Exam.patient_id == patient.id).first()
+        if not existing_exam:
+            exam = Exam(
+                patient_id=patient.id,
+                title="Hemograma Completo",
+                exam_url="https://example.com/exam.pdf",
+                summary="Resultados dentro da normalidade. Leve anemia observada.",
+                created_at=datetime.utcnow() - timedelta(days=2)
+            )
+            db.add(exam)
+            print(f"Exame criado para Maria Silva")
 
         db.commit()
         print("Seed finalizado com sucesso!")
