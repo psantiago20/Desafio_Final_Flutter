@@ -3,12 +3,11 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/features/auth/providers/auth_provider.dart';
+import 'package:frontend/shared/utils/responsive_helper.dart';
 
 class MainShell extends ConsumerWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
-  
-  static final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   int _currentIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
@@ -22,72 +21,70 @@ class MainShell extends ConsumerWidget {
     final user = ref.watch(authProvider).user;
 
     return Scaffold(
-      key: _scaffoldKey,
-      appBar: MediaQuery.of(context).size.width < 600
-          ? AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.menu, color: AppTheme.primaryBlueDark),
-                onPressed: () {
-                  _scaffoldKey.currentState?.openDrawer();
-                },
-              ),
-              title: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/images/suaConsulta.png',
-                    height: 32,
-                    width: 32,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: ResponsiveHelper.isMobile(context),
+        title: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/images/suaConsulta.png',
+              height: 32,
+              width: 32,
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'Sua Consulta',
+                  style: TextStyle(
+                    color: AppTheme.primaryBlueDark,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    letterSpacing: 0.5,
                   ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Sua Consulta',
-                        style: TextStyle(
-                          color: AppTheme.primaryBlueDark,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      Text(
-                        user?.displayName ?? 'Bem-vindo',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.primaryBlue,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
+                ),
+                Text(
+                  user?.displayName ?? 'Bem-vindo',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.primaryBlue,
+                    fontWeight: FontWeight.w400,
                   ),
-                ],
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.logout_rounded,
-                    color: AppColors.textSecondary,
-                  ),
-                  onPressed: () {
-                    ref.read(authProvider.notifier).logout();
-                    context.go('/login');
-                  },
                 ),
               ],
-            )
-          : null,
-      drawer: MediaQuery.of(context).size.width < 600
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.logout_rounded,
+              color: AppColors.textSecondary,
+            ),
+            onPressed: () {
+              ref.read(authProvider.notifier).logout();
+              context.go('/login');
+            },
+          ),
+        ],
+      ),
+      drawer: ResponsiveHelper.isMobile(context)
           ? _buildDrawer(context, ref)
           : null,
-      body: child,
-      bottomNavigationBar: MediaQuery.of(context).size.width >= 600
-          ? null
-          : Container(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: ResponsiveHelper.getMaxContentWidth(context),
+          ),
+          child: child,
+        ),
+      ),
+      bottomNavigationBar: ResponsiveHelper.isMobile(context)
+          ? Container(
               decoration: const BoxDecoration(
                 border: Border(top: BorderSide(color: AppColors.border)),
               ),
@@ -121,7 +118,8 @@ class MainShell extends ConsumerWidget {
                   ),
                 ],
               ),
-            ),
+            )
+          : null,
     );
   }
 
