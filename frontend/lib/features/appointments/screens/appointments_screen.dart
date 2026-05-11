@@ -42,10 +42,9 @@ class AppointmentsScreen extends ConsumerWidget {
             height: 52,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               itemCount: _statusOptions.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, i) {
                 final opt = _statusOptions[i];
                 final selected = filters.statusFilter == opt.value;
@@ -53,26 +52,26 @@ class AppointmentsScreen extends ConsumerWidget {
                   onTap: () {
                     ref
                         .read(appointmentFiltersProvider.notifier)
-                        .update((s) => AppointmentFilters(
-                              statusFilter: opt.value,
-                              dateFrom: s.dateFrom,
-                              dateTo: s.dateTo,
-                              doctorId: s.doctorId,
-                            ));
+                        .update(
+                          (s) => AppointmentFilters(
+                            statusFilter: opt.value,
+                            dateFrom: s.dateFrom,
+                            dateTo: s.dateTo,
+                            doctorId: s.doctorId,
+                          ),
+                        );
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 6),
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: selected
-                          ? AppColors.primary
-                          : AppColors.surface,
+                      color: selected ? AppColors.primary : AppColors.surface,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: selected
-                            ? AppColors.primary
-                            : AppColors.border,
+                        color: selected ? AppColors.primary : AppColors.border,
                       ),
                     ),
                     child: Text(
@@ -101,12 +100,18 @@ class AppointmentsScreen extends ConsumerWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.calendar_today_outlined,
-                              size: 48, color: AppColors.textHint),
+                          const Icon(
+                            Icons.calendar_today_outlined,
+                            size: 48,
+                            color: AppColors.textHint,
+                          ),
                           const SizedBox(height: 12),
-                          Text('Nenhuma consulta encontrada',
-                              style: GoogleFonts.dmSans(
-                                  color: AppColors.textSecondary)),
+                          Text(
+                            'Nenhuma consulta encontrada',
+                            style: GoogleFonts.dmSans(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
                         ],
                       ),
                     )
@@ -117,32 +122,36 @@ class AppointmentsScreen extends ConsumerWidget {
                       child: ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemCount: appointments.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 10),
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (context, i) => _AppointmentTile(
                           appointment: appointments[i],
                           onTap: () => context.push(
-                              '/appointments/${appointments[i].id}',
-                              extra: appointments[i]),
+                            '/appointments/${appointments[i].id}',
+                            extra: appointments[i],
+                          ),
                         ),
                       ),
                     ),
               loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.primary)),
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
               error: (e, _) => Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline,
-                        color: AppColors.cancelled, size: 40),
+                    const Icon(
+                      Icons.error_outline,
+                      color: AppColors.cancelled,
+                      size: 40,
+                    ),
                     const SizedBox(height: 12),
-                    Text('Erro ao carregar consultas',
-                        style: GoogleFonts.dmSans(
-                            color: AppColors.textSecondary)),
+                    Text(
+                      'Erro ao carregar consultas',
+                      style: GoogleFonts.dmSans(color: AppColors.textSecondary),
+                    ),
                     const SizedBox(height: 12),
                     OutlinedButton(
-                      onPressed: () =>
-                          ref.invalidate(appointmentsListProvider),
+                      onPressed: () => ref.invalidate(appointmentsListProvider),
                       child: const Text('Tentar novamente'),
                     ),
                   ],
@@ -160,13 +169,12 @@ class _AppointmentTile extends StatelessWidget {
   final AppointmentModel appointment;
   final VoidCallback onTap;
 
-  const _AppointmentTile(
-      {required this.appointment, required this.onTap});
+  const _AppointmentTile({required this.appointment, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final color = statusColor(appointment.status);
-    final dateFmt = DateFormat('dd/MM/yyyy');
+    // final dateFmt = DateFormat('dd/MM/yyyy');
     final timeFmt = DateFormat('HH:mm');
 
     return GestureDetector(
@@ -199,9 +207,10 @@ class _AppointmentTile extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    DateFormat('MMM', 'pt_BR')
-                        .format(appointment.appointmentDate)
-                        .toUpperCase(),
+                    DateFormat(
+                      'MMM',
+                      'pt_BR',
+                    ).format(appointment.appointmentDate).toUpperCase(),
                     style: GoogleFonts.dmSans(
                       fontSize: 11,
                       color: AppColors.primary,
@@ -228,22 +237,32 @@ class _AppointmentTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.access_time_rounded,
-                          size: 13, color: AppColors.textHint),
+                      const Icon(
+                        Icons.access_time_rounded,
+                        size: 13,
+                        color: AppColors.textHint,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         timeFmt.format(appointment.appointmentDate),
                         style: GoogleFonts.dmSans(
-                            fontSize: 12, color: AppColors.textSecondary),
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                       const SizedBox(width: 10),
-                      const Icon(Icons.timer_outlined,
-                          size: 13, color: AppColors.textHint),
+                      const Icon(
+                        Icons.timer_outlined,
+                        size: 13,
+                        color: AppColors.textHint,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${appointment.durationMinutes} min',
                         style: GoogleFonts.dmSans(
-                            fontSize: 12, color: AppColors.textSecondary),
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -251,7 +270,9 @@ class _AppointmentTile extends StatelessWidget {
                   Text(
                     typeLabel(appointment.type),
                     style: GoogleFonts.dmSans(
-                        fontSize: 12, color: AppColors.textSecondary),
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -263,7 +284,9 @@ class _AppointmentTile extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20),
@@ -278,8 +301,11 @@ class _AppointmentTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Icon(Icons.chevron_right_rounded,
-                    color: AppColors.textHint, size: 18),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textHint,
+                  size: 18,
+                ),
               ],
             ),
           ],
