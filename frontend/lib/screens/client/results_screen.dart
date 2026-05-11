@@ -6,6 +6,8 @@ import '../../core/network/api_client.dart';
 import '../../core/constants/app_constants.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 
 /// 📊 Results Screen (Exams)
 /// Responsabilidade: flutter-frontend-agent
@@ -43,14 +45,21 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
         final url = exam['exam_url'] as String?;
         final title = exam['title'] as String? ?? '';
         
-        // Se a URL for nula, vazia ou 'none', não mostra o card conforme solicitado
-        if (url == null || url.trim().isEmpty || url.toLowerCase() == 'none' || url.toLowerCase() == 'null') {
+        // Se a URL for nula, vazia ou strings que indicam ausência de arquivo
+        if (url == null || url.trim().isEmpty || 
+            url.toLowerCase() == 'none' || 
+            url.toLowerCase() == 'null' || 
+            url.toLowerCase() == 'undefined' ||
+            url.toLowerCase().contains('TODO')) {
           return false;
         }
 
-        // Se o título indicar que falhou o upload ou é um erro (opcional, dependendo do backend)
-        if (title.toLowerCase().contains('erro') || title.toLowerCase().contains('falha')) {
-          // Aqui poderíamos decidir ocultar ou não. Por enquanto vamos manter o filtro na URL.
+        // Se o título indicar que falhou o upload ou é um erro
+        final lowerTitle = title.toLowerCase();
+        if (lowerTitle.contains('erro') || 
+            lowerTitle.contains('falha') || 
+            lowerTitle.contains('nenhum exame')) {
+          return false;
         }
 
         return true;
@@ -105,6 +114,165 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
         );
       }
     }
+  }
+
+  void _showFilePopup(Map<String, dynamic> exam) {
+    final url = exam['exam_url'] as String?;
+    final title = exam['title'] as String? ?? 'Exame';
+    if (url == null) return;
+
+    // Garantir que a URL está completa e tratar IPs de emulador legados
+    String fullUrl = url;
+    if (url.contains('10.0.2.2:8000')) {
+      fullUrl = url.replaceAll('http://10.0.2.2:8000', AppConstants.baseUrl);
+    } else if (!url.startsWith('http')) {
+      final cleanUrl = url.startsWith('/') ? url : '/$url';
+      fullUrl = '${AppConstants.baseUrl}$cleanUrl';
+    }
+
+    final isImage = fullUrl.toLowerCase().contains('.png') || 
+                  fullUrl.toLowerCase().contains('.jpg') || 
+                  fullUrl.toLowerCase().contains('.jpeg');
+
+    int rotationTurns = 0;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title, 
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.rotate_right),
+                  onPressed: () => setDialogState(() => rotationTurns = (rotationTurns + 1) % 4),
+                  tooltip: 'Girar 90°',
+                ),
+              ],
+            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            content: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.9,
+              height: MediaQuery.of(context).size.height * 0.7,
+              child: Column(
+                children: [
+                  if (isImage)
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Stack(
+                            children: [
+                              InteractiveViewer(
+                                minScale: 0.5,
+                                maxScale: 5.0,
+                                child: Center(
+                                  child: RotatedBox(
+                                    quarterTurns: rotationTurns,
+                                    child: Image.network(
+                                      fullUrl,
+                                      fit: BoxFit.contain,
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return const Center(child: CircularProgressIndicator());
+                                      },
+                                      errorBuilder: (context, error, stackTrace) => const Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.error_outline, color: AppTheme.alertRed, size: 40),
+                                            SizedBox(height: 8),
+                                            Text('Erro ao carregar imagem', textAlign: TextAlign.center),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'Dica: Use pinça para Zoom',
+                                    style: TextStyle(color: Colors.white, fontSize: 10),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    const Expanded(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.insert_drive_file, size: 80, color: AppTheme.primaryBlue),
+                            SizedBox(height: 16),
+                            Text(
+                              'Este arquivo não pode ser visualizado diretamente.',
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                        label: const Text('Fechar'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          final uri = Uri.parse(fullUrl);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        icon: const Icon(Icons.download),
+                        label: const Text('Abrir/Baixar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
 
@@ -259,9 +427,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                             children: [
                               const Text('Resultado Liberado', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
                               TextButton.icon(
-                                onPressed: () {
-                                  // TODO: Abrir URL do exame
-                                },
+                                onPressed: () => _showFilePopup(exam),
                                 icon: const Icon(Icons.visibility, size: 18),
                                 label: const Text('Ver Resultado'),
                               ),
@@ -354,9 +520,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
             if (hasFile) ...[
               const SizedBox(height: 16),
               OutlinedButton.icon(
-                onPressed: () {
-                  // TODO: Abrir URL do exame
-                },
+                onPressed: () => _showFilePopup(exam),
                 icon: const Icon(Icons.open_in_new),
                 label: const Text('Ver Arquivo Original'),
               ),

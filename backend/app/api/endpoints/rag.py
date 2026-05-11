@@ -204,8 +204,9 @@ async def upload_exam(
     e anexa o resumo à próxima consulta do paciente.
     """
     try:
-        # Criar diretório static/exams se não existir
-        exams_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "static", "exams")
+        # Criar diretório static/exams se não existir (na raiz do backend)
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        exams_dir = os.path.join(base_dir, "static", "exams")
         os.makedirs(exams_dir, exist_ok=True)
         
         # Salvar o arquivo
@@ -216,7 +217,7 @@ async def upload_exam(
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
             
-        public_url = f"http://10.0.2.2:8000/static/exams/{unique_filename}"
+        public_url = f"/static/exams/{unique_filename}"
         
         # Simulação do RAG Multimodal (Visão) com LLaMA/NVIDIA
         ai_summary = (
