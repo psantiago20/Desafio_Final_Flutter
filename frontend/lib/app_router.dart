@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-import 'features/auth/screens/auth_page.dart';
-import 'features/auth/screens/register_screen.dart';
+import 'features/auth/screens/unified_auth_screen.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/appointments/screens/appointments_screen.dart';
@@ -88,9 +87,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (_, _) => const LandingPage()),
 
       // Auth
-      GoRoute(path: '/login', builder: (_, _) => const AuthPage()),
+      GoRoute(path: '/login', builder: (_, _) => const UnifiedAuthScreen(isLogin: true)),
 
-      GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
+      GoRoute(path: '/register', builder: (_, _) => const UnifiedAuthScreen(isLogin: false)),
 
       // App (com shell de navegação)
       ShellRoute(
