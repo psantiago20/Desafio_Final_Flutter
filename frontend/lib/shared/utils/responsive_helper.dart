@@ -61,10 +61,10 @@ class ResponsiveHelper {
     Widget? tablet,
   }) {
     if (isDesktop(context) && desktop != null) {
-      return desktop!;
+      return desktop;
     }
     if (isTablet(context) && tablet != null) {
-      return tablet!;
+      return tablet;
     }
     return mobile;
   }
