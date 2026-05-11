@@ -100,6 +100,11 @@ static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "sta
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+# Servir o frontend do Flutter
+frontend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "frontend", "build", "web")
+if os.path.exists(frontend_dir):
+    app.mount("/app", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+
 @app.get("/chat")
 def chat_simulator_redirect():
     """Redireciona para o simulador de chat"""
