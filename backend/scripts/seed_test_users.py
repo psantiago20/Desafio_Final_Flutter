@@ -25,7 +25,6 @@ def seed_users():
                 full_name="Paciente de Teste",
                 role=UserRole.PATIENT.value,
                 hashed_password=get_password_hash("senha123"),
-                is_verified=True,
                 is_active=True
             )
             db.add(db_patient)
@@ -45,7 +44,6 @@ def seed_users():
                 full_name="Dr. Teste Silva",
                 role=UserRole.DOCTOR.value,
                 hashed_password=get_password_hash("senha123"),
-                is_verified=True,
                 is_active=True
             )
             db.add(db_doctor)
