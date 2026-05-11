@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../shared/widgets/custom_app_bar.dart';
-import '../../../core/network/api_client.dart';
-import '../../../core/constants/app_constants.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:frontend/core/constants/app_constants.dart';
+import 'package:frontend/core/network/api_client.dart';
+import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/shared/widgets/app_card.dart';
+import 'package:frontend/shared/widgets/main_shell.dart';
+import 'package:frontend/shared/utils/responsive_helper.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Results Screen (Exams)
-/// Responsabilidade: flutter-frontend-agent
-/// Exibe lista de exames com status, resultados e alertas.
 class ResultsScreen extends ConsumerStatefulWidget {
   const ResultsScreen({super.key});
 
@@ -34,31 +32,17 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       _isLoading = true;
       _error = null;
     });
+
     try {
       final data = await ApiClient.get(AppConstants.examsEndpoint);
       final list = (data as Map<String, dynamic>)['exams'] as List;
-      final allExams = list.cast<Map<String, dynamic>>();
 
-      // Filtra exames que não possuem URL válida ou que falharam na identificação
-      final validExams = allExams.where((exam) {
+      final validExams = list.cast<Map<String, dynamic>>().where((exam) {
         final url = exam['exam_url'] as String?;
-        final title = exam['title'] as String? ?? '';
-
-        // Se a URL for nula, vazia ou 'none', não mostra o card conforme solicitado
-        if (url == null ||
-            url.trim().isEmpty ||
-            url.toLowerCase() == 'none' ||
-            url.toLowerCase() == 'null') {
-          return false;
-        }
-
-        // Se o título indicar que falhou o upload ou é um erro (opcional, dependendo do backend)
-        if (title.toLowerCase().contains('erro') ||
-            title.toLowerCase().contains('falha')) {
-          // Aqui poderíamos decidir ocultar ou não. Por enquanto vamos manter o filtro na URL.
-        }
-
-        return true;
+        return url != null &&
+            url.trim().isNotEmpty &&
+            url.toLowerCase() != 'none' &&
+            url.toLowerCase() != 'null';
       }).toList();
 
       setState(() {
@@ -76,11 +60,9 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   Future<void> _deleteExam(int examId) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (_) => AlertDialog(
         title: const Text('Excluir Exame'),
-        content: const Text(
-          'Tem certeza que deseja remover este exame? Esta ação não pode ser desfeita.',
-        ),
+        content: const Text('Tem certeza que deseja remover este exame?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -88,7 +70,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.alertRed),
             child: const Text('Excluir'),
           ),
         ],
@@ -100,337 +81,102 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     try {
       await ApiClient.delete('${AppConstants.examsEndpoint}/$examId');
       _fetchExams();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Exame removido com sucesso')),
-        );
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Erro ao remover exame: $e')));
+        ).showSnackBar(SnackBar(content: Text('Erro: $e')));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) {
-      return _buildWeb();
-    }
-    return _buildMobile();
-  }
-
-  Widget _buildWeb() {
-    final filteredExams = _exams;
-
-    return Scaffold(
-      appBar: const CustomAppBar(subtitle: 'Seus Resultados'),
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-            ? Center(child: Text(_error!))
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Container(
-                      padding: const EdgeInsets.all(16.0),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlueLight.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: AppTheme.primaryBlue.withOpacity(0.3),
-                        ),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.auto_awesome,
-                                color: AppTheme.primaryBlueDark,
-                                size: 20,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Resumo da IA',
-                                style: TextStyle(
-                                  color: AppTheme.primaryBlueDark,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Seus exames de sangue recentes estão dentro da normalidade. Não se esqueça de realizar o Raio-X de Tórax agendado.',
-                            style: TextStyle(
-                              color: AppTheme.textPrimary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+    return MainShell(
+      child: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(child: Text(_error!))
+          : Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    padding: ResponsiveHelper.getResponsivePadding(context),
+                    itemCount: _exams.length,
+                    itemBuilder: (_, index) {
+                      final exam = _exams[index];
+                      return _buildExamCard(exam);
+                    },
                   ),
-                  const SizedBox(height: 16),
-
-                  // Lista de Exames
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16.0),
-                      itemCount: filteredExams.length,
-                      itemBuilder: (context, index) {
-                        return _buildExamCard(filteredExams[index]);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _fetchExams,
-        child: const Icon(Icons.refresh),
-      ),
-    );
-  }
-
-  Widget _buildMobile() {
-    return Scaffold(
-      appBar: const CustomAppBar(subtitle: 'Seus Resultados'),
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-            ? Center(child: Text(_error!))
-            : ListView.builder(
-                padding: const EdgeInsets.all(16.0),
-                itemCount: _exams.length,
-                itemBuilder: (context, index) {
-                  final exam = _exams[index];
-
-                  // Formatação de data
-                  DateTime? date;
-                  try {
-                    date = DateTime.parse(exam['created_at'] as String);
-                  } catch (_) {}
-                  final dateStr = date != null
-                      ? DateFormat('dd/MM/yyyy').format(date)
-                      : '—';
-                  final title = exam['title'] as String? ?? 'Exame';
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.successGreenLight,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.check_circle,
-                                  color: AppTheme.successGreen,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      title,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    Text(
-                                      dateStr,
-                                      style: const TextStyle(
-                                        color: AppTheme.textSecondary,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: AppTheme.alertRed,
-                                  size: 20,
-                                ),
-                                onPressed: () => _deleteExam(exam['id'] as int),
-                                tooltip: 'Remover exame',
-                              ),
-                            ],
-                          ),
-                          const Divider(height: 24),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Resultado Liberado',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                              TextButton.icon(
-                                onPressed: () async {
-                                  final url = exam['exam_url'] as String?;
-                                  if (url != null && url.isNotEmpty) {
-                                    final uri = Uri.parse(url);
-                                    if (await canLaunchUrl(uri)) {
-                                      await launchUrl(uri);
-                                    }
-                                  }
-                                },
-                                icon: const Icon(Icons.visibility, size: 18),
-                                label: const Text('Ver Resultado'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _fetchExams,
-        child: const Icon(Icons.refresh),
-      ),
+                ),
+              ],
+            ),
     );
   }
 
   Widget _buildExamCard(Map<String, dynamic> exam) {
-    final examUrl = exam['exam_url'] as String?;
-    final summary = exam['summary'] as String?;
-    final hasSummary = summary != null && summary.isNotEmpty;
-    final hasFile = examUrl != null && examUrl.isNotEmpty;
-
-    DateTime? date;
-    try {
-      date = DateTime.parse(exam['created_at'] as String);
-    } catch (_) {}
-    final dateStr = date != null
+    final date = DateTime.tryParse(exam['created_at'] ?? '');
+    final formattedDate = date != null
         ? DateFormat('dd/MM/yyyy HH:mm').format(date)
         : '—';
-    final title = exam['title'] as String? ?? 'Exame';
 
-    return Card(
-      color: hasSummary ? AppTheme.surfaceWhite : AppTheme.backgroundGray,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: hasSummary
-              ? AppTheme.successGreen.withOpacity(0.3)
-              : AppTheme.borderGray,
-          width: 1,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: hasSummary
-                        ? AppTheme.successGreenLight
-                        : AppTheme.backgroundGray,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.assignment,
-                    color: hasSummary
-                        ? AppTheme.successGreen
-                        : AppTheme.textSecondary,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(
-                        dateStr,
-                        style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: AppTheme.alertRed,
-                  ),
-                  onPressed: () => _deleteExam(exam['id'] as int),
-                  tooltip: 'Remover exame',
-                ),
-              ],
-            ),
-            if (hasSummary) ...[
-              const SizedBox(height: 16),
-              const Text(
-                'Análise da IA:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: AppTheme.primaryBlueDark,
+    final title = exam['title'] ?? 'Exame';
+    final url = exam['exam_url'] as String?;
+
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          /// HEADER
+          Row(
+            children: [
+              const Icon(Icons.assignment),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(summary, style: const TextStyle(fontSize: 14)),
+              IconButton(
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.red,
+                  size: 20,
+                ),
+                onPressed: () => _deleteExam(exam['id'] as int),
+              ),
             ],
-            if (hasFile) ...[
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final examUrl = exam['exam_url'] as String?;
-                  if (examUrl != null && examUrl.isNotEmpty) {
-                    final uri = Uri.parse(examUrl);
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri);
-                    }
+          ),
+
+          const SizedBox(height: 8),
+
+          /// DATA
+          Text(
+            formattedDate,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+
+          const SizedBox(height: 12),
+
+          /// BOTÃO DE AÇÃO
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () async {
+                if (url != null && url.isNotEmpty) {
+                  final uri = Uri.parse(url);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
                   }
-                },
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('Ver Arquivo Original'),
-              ),
-            ],
-          ],
-        ),
+                }
+              },
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Abrir exame'),
+            ),
+          ),
+        ],
       ),
     );
   }
