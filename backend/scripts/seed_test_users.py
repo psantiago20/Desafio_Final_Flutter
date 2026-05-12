@@ -77,28 +77,32 @@ def seed_users(db: Session):
             "username": "joao.silva",
             "full_name": "João Silva",
             "role": UserRole.PATIENT.value,
-            "password": "senha123"
+            "password": "senha123",
+            "phone": "5511987654321"
         },
         {
             "email": "ana.souza@email.com",
             "username": "ana.souza",
             "full_name": "Ana Souza",
             "role": UserRole.PATIENT.value,
-            "password": "senha123"
+            "password": "senha123",
+            "phone": "5511999998888"
         },
         {
             "email": "pedro.santiago@email.com",
             "username": "pedro.santiago",
             "full_name": "Pedro Santiago",
             "role": UserRole.PATIENT.value,
-            "password": "senha123"
+            "password": "senha123",
+            "phone": "5511977776666"
         },
         {
             "email": "carla.ferreira@email.com",
             "username": "carla.ferreira",
             "full_name": "Carla Ferreira",
             "role": UserRole.PATIENT.value,
-            "password": "senha123"
+            "password": "senha123",
+            "phone": "5511966665555"
         }
     ]
     
@@ -110,6 +114,7 @@ def seed_users(db: Session):
             full_name=u_data["full_name"],
             role=u_data["role"],
             hashed_password=get_password_hash(u_data["password"]),
+            phone=u_data.get("phone"),
             is_active=True
         )
         db.add(user)
@@ -197,7 +202,7 @@ def seed_medicos(db: Session, users: dict):
     db.commit()
     return medicos
 
-def seed_patients(db: Session):
+def seed_patients(db: Session, users: dict):
     print("Semeando pacientes...")
     
     patients_data = [
@@ -211,7 +216,8 @@ def seed_patients(db: Session):
             "cpf": "123.456.789-00",
             "city": "São Paulo",
             "state": "SP",
-            "insurance": "Unimed"
+            "insurance": "Unimed",
+            "username": "joao.silva"
         },
         {
             "name": "Ana Souza",
@@ -223,7 +229,8 @@ def seed_patients(db: Session):
             "cpf": "222.222.222-22",
             "city": "São Paulo",
             "state": "SP",
-            "insurance": "Bradesco"
+            "insurance": "Bradesco",
+            "username": "ana.souza"
         },
         {
             "name": "Pedro Santiago",
@@ -234,7 +241,8 @@ def seed_patients(db: Session):
             "gender": Gender.MALE.value,
             "cpf": "333.333.333-33",
             "city": "São Paulo",
-            "state": "SP"
+            "state": "SP",
+            "username": "pedro.santiago"
         },
         {
             "name": "Carla Ferreira",
@@ -246,17 +254,19 @@ def seed_patients(db: Session):
             "cpf": "444.444.444-44",
             "city": "São Paulo",
             "state": "SP",
-            "insurance": "SulAmérica"
+            "insurance": "SulAmérica",
+            "username": "carla.ferreira"
         }
     ]
     
     patients = []
     for p_data in patients_data:
-        patient = Patient(**p_data)
+        username = p_data.pop("username")
+        patient = Patient(**p_data, user_id=users[username].id)
         db.add(patient)
         db.flush()
         patients.append(patient)
-        print(f"Paciente {patient.name} criado.")
+        print(f"Paciente {patient.name} criado e vinculado ao usuário {username}.")
         
     db.commit()
     return patients
@@ -333,7 +343,7 @@ def seed():
         clear_db(db)
         users = seed_users(db)
         medicos = seed_medicos(db, users)
-        patients = seed_patients(db)
+        patients = seed_patients(db, users)
         seed_exams(db, patients)
         
         # Adicionar alguns agendamentos para não ficar vazio
