@@ -9,7 +9,10 @@ Este repositório contém uma plataforma Full Stack (FastAPI + Flutter) com inte
 _Se você é um agente de IA, siga este fluxo para colocar o projeto no ar:_
 
 1.  **Validar Ambiente:** Verifique se `docker` e `flutter` estão instalados.
-2.  **Configurar Env:** Use o arquivo `/.env` na raiz. Verifique se a `NVIDIA_API_KEY` existe.
+2.  **Configurar Env:** Você precisará de DOIS arquivos `.env`:
+    - `/.env` (na raiz do projeto): Usado pelo Docker e Backend.
+    - `/frontend/assets/.env` (dentro da pasta do Flutter): Usado pelo app mobile/web.
+    - Certifique-se de que a `NVIDIA_API_KEY` existe no arquivo da raiz.
 3.  **Deploy Backend:** Execute `docker compose up -d --build`.
 4.  **Init DB:** Aguarde o container `omniconnect-db` estar `healthy`, então rode:
     - `docker compose exec backend python scripts/create_tables.py`
@@ -37,18 +40,29 @@ docker compose exec backend python scripts/seed_test_users.py
 
 ## ⚙️ 2. Variáveis de Ambiente (.env)
 
-O arquivo **`/.env` na raiz** é a única fonte de verdade.
+O projeto utiliza **dois arquivos `.env`** para separar as configurações de infraestrutura das configurações do aplicativo.
 
-### Modelo do Arquivo `.env`
+### 1. `.env` na Raiz (Backend & Docker)
+Local: `/.env`
 
-Crie um arquivo chamado `.env` na raiz e preencha conforme o modelo abaixo:
+Crie este arquivo na raiz do projeto. Ele é usado pelo Docker Compose e pelo container do Backend.
 
 ```env
 # --- [ BACKEND & DOCKER ] ---
 NVIDIA_API_KEY=sua_chave_nvapi_aqui
 SECRET_KEY=uma_chave_secreta_aleatoria
 DEBUG=True
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=omniconnect
+```
 
+### 2. `.env` do Frontend (Flutter)
+Local: `/frontend/assets/.env`
+
+Crie este arquivo dentro da pasta de assets do frontend. Ele é carregado pelo Flutter em tempo de execução.
+
+```env
 # --- [ FRONTEND / FLUTTER ] ---
 # Use localhost para Web/iOS/macOS ou 10.0.2.2 para Android Emulator
 
@@ -57,7 +71,6 @@ DEBUG=True
 
 # 2. Para Web/iOS/macOS
 API_URL=http://localhost:8000
-
 ```
 
 ---
@@ -100,5 +113,6 @@ flutter run -d windows # Windows (se estiver no Windows)
 
 - `/backend`: Core do sistema (Python/FastAPI).
 - `/frontend`: Interface do usuário (Flutter).
-- `/.env`: Configurações globais.
+- `/.env`: Configurações globais de infraestrutura.
+- `/frontend/assets/.env`: Configurações de API do aplicativo.
 - `/static/exams`: Pasta de armazenamento de arquivos (local).
