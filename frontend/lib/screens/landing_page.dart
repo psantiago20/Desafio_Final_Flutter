@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../features/auth/presentation/providers/auth_provider.dart';
-import '../core/theme/app_theme.dart';
 
 class LandingPage extends ConsumerStatefulWidget {
   const LandingPage({super.key});
@@ -40,15 +39,10 @@ class _LandingPageState extends ConsumerState<LandingPage> {
     );
   }
 
-
   void _showRegisterModal() {
     ref.read(authProvider.notifier).clearError();
-    showDialog(
-      context: context,
-      builder: (context) => const RegisterModal(),
-    );
+    showDialog(context: context, builder: (context) => const RegisterModal());
   }
-
 
   @override
   void dispose() {
@@ -73,10 +67,12 @@ class _LandingPageState extends ConsumerState<LandingPage> {
             child: Column(
               children: [
                 const SizedBox(height: 70), // Espaço para o AppBar fixo
-
                 // 1. Hero Section
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 64),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 64,
+                  ),
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1200),
@@ -84,24 +80,37 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                         builder: (context, constraints) {
                           bool isMobile = constraints.maxWidth < 900;
                           return Flex(
-                            direction: isMobile ? Axis.vertical : Axis.horizontal,
+                            direction: isMobile
+                                ? Axis.vertical
+                                : Axis.horizontal,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Expanded(
                                 flex: isMobile ? 0 : 1,
                                 child: Column(
-                                  crossAxisAlignment: isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+                                  crossAxisAlignment: isMobile
+                                      ? CrossAxisAlignment.center
+                                      : CrossAxisAlignment.start,
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF86F8C8),
-                                        borderRadius: BorderRadius.circular(999),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
                                       ),
                                       child: const Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(Icons.verified, size: 16, color: secondaryColor),
+                                          Icon(
+                                            Icons.verified,
+                                            size: 16,
+                                            color: secondaryColor,
+                                          ),
                                           SizedBox(width: 8),
                                           Text(
                                             'EXCELÊNCIA EM SAÚDE DIGITAL',
@@ -118,7 +127,9 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                     const SizedBox(height: 32),
                                     Text(
                                       'Sua saúde em um santuário de cuidado',
-                                      textAlign: isMobile ? TextAlign.center : TextAlign.start,
+                                      textAlign: isMobile
+                                          ? TextAlign.center
+                                          : TextAlign.start,
                                       style: const TextStyle(
                                         fontFamily: 'Manrope',
                                         fontSize: 56,
@@ -130,7 +141,9 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                     const SizedBox(height: 24),
                                     Text(
                                       'Experiência clínica de alto nível onde a tecnologia de ponta encontra o toque humano, criando um ambiente de cura acolhedor e eficiente.',
-                                      textAlign: isMobile ? TextAlign.center : TextAlign.start,
+                                      textAlign: isMobile
+                                          ? TextAlign.center
+                                          : TextAlign.start,
                                       style: const TextStyle(
                                         fontSize: 18,
                                         color: onSurfaceVariantColor,
@@ -139,7 +152,9 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                     ),
                                     const SizedBox(height: 40),
                                     Wrap(
-                                      alignment: isMobile ? WrapAlignment.center : WrapAlignment.start,
+                                      alignment: isMobile
+                                          ? WrapAlignment.center
+                                          : WrapAlignment.start,
                                       spacing: 16,
                                       runSpacing: 16,
                                       children: [
@@ -148,28 +163,58 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: primaryColor,
                                             foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 32,
+                                              vertical: 20,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
                                             elevation: 4,
                                           ),
                                           child: const Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Text('Agendar Consulta', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                              Text(
+                                                'Agendar Consulta',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
                                               SizedBox(width: 8),
-                                              Icon(Icons.calendar_month, size: 20),
+                                              Icon(
+                                                Icons.calendar_month,
+                                                size: 20,
+                                              ),
                                             ],
                                           ),
                                         ),
                                         TextButton(
-                                          onPressed: () => _scrollTo(_specialtiesKey),
+                                          onPressed: () =>
+                                              _scrollTo(_specialtiesKey),
                                           style: TextButton.styleFrom(
-                                            backgroundColor: const Color(0xFFECEEF0),
-                                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                                            backgroundColor: const Color(
+                                              0xFFECEEF0,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 32,
+                                              vertical: 20,
+                                            ),
                                             foregroundColor: primaryColor,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
                                           ),
-                                          child: const Text('Conhecer Especialidades', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                          child: const Text(
+                                            'Conhecer Especialidades',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -203,7 +248,10 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                   key: _specialtiesKey,
                   width: double.infinity,
                   color: const Color(0xFFF2F4F6),
-                  padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 80,
+                    horizontal: 24,
+                  ),
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1200),
@@ -226,7 +274,10 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                 SizedBox(height: 12),
                                 Text(
                                   'Cuidado especializado em cada batimento, pensamento e fase da vida.',
-                                  style: TextStyle(fontSize: 18, color: onSurfaceVariantColor),
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: onSurfaceVariantColor,
+                                  ),
                                 ),
                               ],
                             ),
@@ -241,26 +292,35 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                   _buildSpecialtyCard(
                                     icon: Icons.medical_services,
                                     title: 'Clínica Geral',
-                                    description: 'Atendimento humanizado e foco em prevenção para cuidar da sua saúde de forma integral.',
+                                    description:
+                                        'Atendimento humanizado e foco em prevenção para cuidar da sua saúde de forma integral.',
                                     color: const Color(0xFFDAE2FF),
                                     iconColor: primaryColor,
-                                    width: constraints.maxWidth > 900 ? (constraints.maxWidth - 48) / 3 : constraints.maxWidth,
+                                    width: constraints.maxWidth > 900
+                                        ? (constraints.maxWidth - 48) / 3
+                                        : constraints.maxWidth,
                                   ),
                                   _buildSpecialtyCard(
                                     icon: Icons.favorite,
                                     title: 'Cardiologia',
-                                    description: 'Especialista em arritmias e saúde do coração com monitoramento avançado.',
+                                    description:
+                                        'Especialista em arritmias e saúde do coração com monitoramento avançado.',
                                     color: const Color(0xFF86F8C8),
                                     iconColor: secondaryColor,
-                                    width: constraints.maxWidth > 900 ? (constraints.maxWidth - 48) / 3 : constraints.maxWidth,
+                                    width: constraints.maxWidth > 900
+                                        ? (constraints.maxWidth - 48) / 3
+                                        : constraints.maxWidth,
                                   ),
                                   _buildSpecialtyCard(
                                     icon: Icons.psychology,
                                     title: 'Neurologia',
-                                    description: 'Diagnóstico preciso e tratamentos inovadores para o sistema nervoso.',
+                                    description:
+                                        'Diagnóstico preciso e tratamentos inovadores para o sistema nervoso.',
                                     color: const Color(0xFFFFDBCF),
                                     iconColor: const Color(0xFF7B2600),
-                                    width: constraints.maxWidth > 900 ? (constraints.maxWidth - 48) / 3 : constraints.maxWidth,
+                                    width: constraints.maxWidth > 900
+                                        ? (constraints.maxWidth - 48) / 3
+                                        : constraints.maxWidth,
                                   ),
                                 ],
                               );
@@ -276,7 +336,10 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                 Container(
                   key: _techKey,
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 80,
+                    horizontal: 24,
+                  ),
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1200),
@@ -284,7 +347,9 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                         builder: (context, constraints) {
                           bool isMobile = constraints.maxWidth < 900;
                           return Flex(
-                            direction: isMobile ? Axis.vertical : Axis.horizontal,
+                            direction: isMobile
+                                ? Axis.vertical
+                                : Axis.horizontal,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Expanded(
@@ -319,19 +384,22 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                     _buildTechItem(
                                       icon: Icons.smart_toy,
                                       title: 'Agendamento por IA',
-                                      description: 'Nossa inteligência artificial otimiza horários para garantir o menor tempo de espera possível.',
+                                      description:
+                                          'Nossa inteligência artificial otimiza horários para garantir o menor tempo de espera possível.',
                                     ),
                                     const SizedBox(height: 24),
                                     _buildTechItem(
                                       icon: Icons.chat,
                                       title: 'Integração WhatsApp',
-                                      description: 'Receba lembretes, resultados de exames e suporte diretamente no seu aplicativo de mensagens.',
+                                      description:
+                                          'Receba lembretes, resultados de exames e suporte diretamente no seu aplicativo de mensagens.',
                                     ),
                                     const SizedBox(height: 24),
                                     _buildTechItem(
                                       icon: Icons.description,
                                       title: 'Prontuário Digital',
-                                      description: 'Acesse seu histórico médico completo em um ambiente seguro e criptografado a qualquer momento.',
+                                      description:
+                                          'Acesse seu histórico médico completo em um ambiente seguro e criptografado a qualquer momento.',
                                     ),
                                   ],
                                 ),
@@ -349,7 +417,10 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                   key: _teamKey,
                   width: double.infinity,
                   color: backgroundColor,
-                  padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 80,
+                    horizontal: 24,
+                  ),
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1200),
@@ -368,7 +439,10 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                           const Text(
                             'Conheça os especialistas dedicados a transformar sua jornada de saúde em um caminho de bem-estar.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 18, color: onSurfaceVariantColor),
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: onSurfaceVariantColor,
+                            ),
                           ),
                           const SizedBox(height: 64),
                           LayoutBuilder(
@@ -381,22 +455,26 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                   _buildDoctorCard(
                                     name: 'Dra. Marina Costa',
                                     specialty: 'Clínica Geral',
-                                    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC1JRANblusvtWJnvqk2a-oxeZxoI1Ohlyu_bruRcs1IJAKEWDhOArvyEtFx56WPttX5omEnFXnkGOPo5BxuEcCSV2_zAOrbjNufj3_ahqRhyY3pZEi-SL-ckxtL3HwhXPHK0zmDYUfrN7JFSmXTnrgqk9RASPuGA7D5EvRIYjmNMvh6a9s8oLD4XhBa1ABC2GJSXK5qVaMyODUoXI7d3Wl644SMkWR6EYbObmrJ1jD90B_FQEKGcCnUNQcG4Lyv_jr3clu0OScgnk',
+                                    imageUrl:
+                                        'https://lh3.googleusercontent.com/aida-public/AB6AXuC1JRANblusvtWJnvqk2a-oxeZxoI1Ohlyu_bruRcs1IJAKEWDhOArvyEtFx56WPttX5omEnFXnkGOPo5BxuEcCSV2_zAOrbjNufj3_ahqRhyY3pZEi-SL-ckxtL3HwhXPHK0zmDYUfrN7JFSmXTnrgqk9RASPuGA7D5EvRIYjmNMvh6a9s8oLD4XhBa1ABC2GJSXK5qVaMyODUoXI7d3Wl644SMkWR6EYbObmrJ1jD90B_FQEKGcCnUNQcG4Lyv_jr3clu0OScgnk',
                                   ),
                                   _buildDoctorCard(
                                     name: 'Dr. Thorne Blackwood',
                                     specialty: 'Cardiologia',
-                                    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBMX8qlX31tB6vkWfy_Zz-DK7twmO-VbFYtoyB5j8UDVKZ8D88EimlpADyfRtIAgT2O3fMAQKXJNaxlYXtyu9xzGF44bhGsrQPK54IjC5DDKun9ckp6-apH2R4twR__qvRKQL5EnICUTT-j8D_4TV2qjebNQTzUmdBaAHUCc805lh7ECpR2Y8fyWpXG6HQhA7fj-3EaVFo3c-bA5Q8YRjViPHJQw3cWNts03GDr77XPBIKhV1DwBmzTCWA2QvN84dviwb16MHYOFdg',
+                                    imageUrl:
+                                        'https://lh3.googleusercontent.com/aida-public/AB6AXuBMX8qlX31tB6vkWfy_Zz-DK7twmO-VbFYtoyB5j8UDVKZ8D88EimlpADyfRtIAgT2O3fMAQKXJNaxlYXtyu9xzGF44bhGsrQPK54IjC5DDKun9ckp6-apH2R4twR__qvRKQL5EnICUTT-j8D_4TV2qjebNQTzUmdBaAHUCc805lh7ECpR2Y8fyWpXG6HQhA7fj-3EaVFo3c-bA5Q8YRjViPHJQw3cWNts03GDr77XPBIKhV1DwBmzTCWA2QvN84dviwb16MHYOFdg',
                                   ),
                                   _buildDoctorCard(
                                     name: 'Dra. Ana Costa',
                                     specialty: 'Dermatologia',
-                                    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDJNWJ2VP_xJDcVkFMOekQjvp-D1xxXM2Ds6IAya9vYVVf2jetQPtBi-jR1HDkpyH50uz8iYs-J40PI68tbX6qI0tZ5b2bUuSyu8-LhZEWF4NP8d4ntIp1ZueiGD-WfUh1uBWbGSbbS0CU3K78p7ps_fbr_ZMPyEUzoQO_uykbdwCuCm2UGE4eZ0DbeMl3_ksuozL14F3n_5lpSco4COB8QBLw6EYgnPxxafwQHBrPBP-BLD5gyQneKyJmWhjCfFZVacFlKwZG04GA',
+                                    imageUrl:
+                                        'https://lh3.googleusercontent.com/aida-public/AB6AXuDJNWJ2VP_xJDcVkFMOekQjvp-D1xxXM2Ds6IAya9vYVVf2jetQPtBi-jR1HDkpyH50uz8iYs-J40PI68tbX6qI0tZ5b2bUuSyu8-LhZEWF4NP8d4ntIp1ZueiGD-WfUh1uBWbGSbbS0CU3K78p7ps_fbr_ZMPyEUzoQO_uykbdwCuCm2UGE4eZ0DbeMl3_ksuozL14F3n_5lpSco4COB8QBLw6EYgnPxxafwQHBrPBP-BLD5gyQneKyJmWhjCfFZVacFlKwZG04GA',
                                   ),
                                   _buildDoctorCard(
                                     name: 'Dr. Ricardo Mello',
                                     specialty: 'Neurologia',
-                                    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA08Tr3se70cvoH2Sb7_bYgNOxHXx8V5RvxxrIuEZ1JfYt1lwhMlfPl_844KuHvmIFOaQE044kLPVlXfb3e4KJzvOoyse-vFsQrnXohpJa-c5zBl0lb-1NhSlmXBiHgTcV25u8dxpcdsiDnb0dsr7YWFL1L9l5Upjkr0-rs-DVrOiHOJgRzTj1MCs9BT5PYD356icnSDkt2HB8b56Hb2g9_S34ckQh0Oq_3jukVLpSXD_5FmQODTNRmvZeCHUAKTirTol6tR1VTEtM',
+                                    imageUrl:
+                                        'https://lh3.googleusercontent.com/aida-public/AB6AXuA08Tr3se70cvoH2Sb7_bYgNOxHXx8V5RvxxrIuEZ1JfYt1lwhMlfPl_844KuHvmIFOaQE044kLPVlXfb3e4KJzvOoyse-vFsQrnXohpJa-c5zBl0lb-1NhSlmXBiHgTcV25u8dxpcdsiDnb0dsr7YWFL1L9l5Upjkr0-rs-DVrOiHOJgRzTj1MCs9BT5PYD356icnSDkt2HB8b56Hb2g9_S34ckQh0Oq_3jukVLpSXD_5FmQODTNRmvZeCHUAKTirTol6tR1VTEtM',
                                   ),
                                 ],
                               );
@@ -440,7 +518,11 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         InkWell(
-                          onTap: () => _scrollController.animateTo(0, duration: const Duration(milliseconds: 500), curve: Curves.easeOut),
+                          onTap: () => _scrollController.animateTo(
+                            0,
+                            duration: const Duration(milliseconds: 500),
+                            curve: Curves.easeOut,
+                          ),
                           child: Row(
                             children: [
                               Container(
@@ -449,7 +531,11 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                   color: Color(0xFF0052CC),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.health_and_safety, color: Colors.white, size: 24),
+                                child: const Icon(
+                                  Icons.health_and_safety,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               const Text(
@@ -469,16 +555,36 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                           builder: (context, constraints) {
                             if (MediaQuery.of(context).size.width < 900) {
                               return IconButton(
-                                icon: const Icon(Icons.menu, color: onSurfaceVariantColor),
+                                icon: const Icon(
+                                  Icons.menu,
+                                  color: onSurfaceVariantColor,
+                                ),
                                 onPressed: () {},
                               );
                             }
                             return Row(
                               children: [
-                                _buildNavItem('Painel', isActive: true, onTap: () => _scrollController.animateTo(0, duration: const Duration(milliseconds: 500), curve: Curves.easeOut)),
-                                _buildNavItem('Especialidades', onTap: () => _scrollTo(_specialtiesKey)),
-                                _buildNavItem('Corpo Clínico', onTap: () => _scrollTo(_teamKey)),
-                                _buildNavItem('Tecnologia', onTap: () => _scrollTo(_techKey)),
+                                _buildNavItem(
+                                  'Painel',
+                                  isActive: true,
+                                  onTap: () => _scrollController.animateTo(
+                                    0,
+                                    duration: const Duration(milliseconds: 500),
+                                    curve: Curves.easeOut,
+                                  ),
+                                ),
+                                _buildNavItem(
+                                  'Especialidades',
+                                  onTap: () => _scrollTo(_specialtiesKey),
+                                ),
+                                _buildNavItem(
+                                  'Corpo Clínico',
+                                  onTap: () => _scrollTo(_teamKey),
+                                ),
+                                _buildNavItem(
+                                  'Tecnologia',
+                                  onTap: () => _scrollTo(_techKey),
+                                ),
                                 _buildNavItem('Entrar', onTap: _showLoginModal),
                               ],
                             );
@@ -496,7 +602,11 @@ class _LandingPageState extends ConsumerState<LandingPage> {
     );
   }
 
-  Widget _buildNavItem(String label, {bool isActive = false, VoidCallback? onTap}) {
+  Widget _buildNavItem(
+    String label, {
+    bool isActive = false,
+    VoidCallback? onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -540,17 +650,37 @@ class _LandingPageState extends ConsumerState<LandingPage> {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Icon(icon, color: iconColor, size: 32),
           ),
           const SizedBox(height: 24),
-          Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF191C1E))),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF191C1E),
+            ),
+          ),
           const SizedBox(height: 12),
-          Text(description, style: const TextStyle(fontSize: 15, color: Color(0xFF434654), height: 1.5)),
+          Text(
+            description,
+            style: const TextStyle(
+              fontSize: 15,
+              color: Color(0xFF434654),
+              height: 1.5,
+            ),
+          ),
           const SizedBox(height: 32),
           Row(
             children: [
-              Text('Saiba mais', style: TextStyle(fontWeight: FontWeight.bold, color: iconColor)),
+              Text(
+                'Saiba mais',
+                style: TextStyle(fontWeight: FontWeight.bold, color: iconColor),
+              ),
               const SizedBox(width: 8),
               Icon(Icons.arrow_forward, size: 16, color: iconColor),
             ],
@@ -560,7 +690,11 @@ class _LandingPageState extends ConsumerState<LandingPage> {
     );
   }
 
-  Widget _buildTechItem({required IconData icon, required String title, required String description}) {
+  Widget _buildTechItem({
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -577,9 +711,23 @@ class _LandingPageState extends ConsumerState<LandingPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF191C1E))),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF191C1E),
+                ),
+              ),
               const SizedBox(height: 4),
-              Text(description, style: const TextStyle(fontSize: 15, color: Color(0xFF434654), height: 1.5)),
+              Text(
+                description,
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: Color(0xFF434654),
+                  height: 1.5,
+                ),
+              ),
             ],
           ),
         ),
@@ -587,7 +735,11 @@ class _LandingPageState extends ConsumerState<LandingPage> {
     );
   }
 
-  Widget _buildDoctorCard({required String name, required String specialty, required String imageUrl}) {
+  Widget _buildDoctorCard({
+    required String name,
+    required String specialty,
+    required String imageUrl,
+  }) {
     return Column(
       children: [
         Container(
@@ -604,12 +756,17 @@ class _LandingPageState extends ConsumerState<LandingPage> {
               ),
             ],
           ),
-          child: ClipOval(
-            child: Image.network(imageUrl, fit: BoxFit.cover),
-          ),
+          child: ClipOval(child: Image.network(imageUrl, fit: BoxFit.cover)),
         ),
         const SizedBox(height: 24),
-        Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF191C1E))),
+        Text(
+          name,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF191C1E),
+          ),
+        ),
         const SizedBox(height: 4),
         Text(
           specialty.toUpperCase(),
@@ -641,10 +798,9 @@ class _LoginModalState extends ConsumerState<LoginModal> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final ok = await ref.read(authProvider.notifier).login(
-      _usernameCtrl.text.trim(),
-      _passwordCtrl.text,
-    );
+    final ok = await ref
+        .read(authProvider.notifier)
+        .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
     if (ok && mounted) {
       Navigator.pop(context); // Fecha o modal
       context.go('/dashboard');
@@ -660,7 +816,10 @@ class _LoginModalState extends ConsumerState<LoginModal> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Container(
-        constraints: BoxConstraints(maxWidth: 450, maxHeight: isMobile ? double.infinity : 650),
+        constraints: BoxConstraints(
+          maxWidth: 450,
+          maxHeight: isMobile ? double.infinity : 650,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
@@ -696,7 +855,11 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                         color: Colors.white.withOpacity(0.2),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.health_and_safety, color: Colors.white, size: 32),
+                      child: const Icon(
+                        Icons.health_and_safety,
+                        color: Colors.white,
+                        size: 32,
+                      ),
                     ),
                     const SizedBox(height: 20),
                     Text(
@@ -719,7 +882,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                   ],
                 ),
               ),
-              
+
               // Formulário
               Flexible(
                 child: SingleChildScrollView(
@@ -751,7 +914,9 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          validator: (v) => v == null || v.isEmpty ? 'Informe o usuário' : null,
+                          validator: (v) => v == null || v.isEmpty
+                              ? 'Informe o usuário'
+                              : null,
                         ),
                         const SizedBox(height: 24),
                         Text(
@@ -771,8 +936,14 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                             hintText: 'Digite sua senha',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
-                              icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
                             ),
                             filled: true,
                             fillColor: const Color(0xFFF7F9FB),
@@ -781,21 +952,31 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          validator: (v) => v == null || v.isEmpty ? 'Informe a senha' : null,
+                          validator: (v) =>
+                              v == null || v.isEmpty ? 'Informe a senha' : null,
                         ),
-                        
+
                         if (auth.error != null) ...[
                           const SizedBox(height: 16),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFEBEE),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFFFCDD2)),
+                              border: Border.all(
+                                color: const Color(0xFFFFCDD2),
+                              ),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.error_outline, color: Color(0xFFD32F2F), size: 18),
+                                const Icon(
+                                  Icons.error_outline,
+                                  color: Color(0xFFD32F2F),
+                                  size: 18,
+                                ),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
@@ -811,9 +992,9 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                             ),
                           ),
                         ],
-                        
+
                         const SizedBox(height: 40),
-                        
+
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -822,14 +1003,29 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                               backgroundColor: const Color(0xFF003D9B),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 20),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             child: auth.isLoading
-                              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : const Text('Entrar no Sistema', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Entrar no Sistema',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 20),
                         Center(
                           child: TextButton(
@@ -839,7 +1035,9 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                                 widget.onShowRegister!();
                               }
                             },
-                            child: const Text('Não tem conta? Cadastre-se aqui'),
+                            child: const Text(
+                              'Não tem conta? Cadastre-se aqui',
+                            ),
                           ),
                         ),
                       ],
@@ -854,6 +1052,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
     );
   }
 }
+
 class RegisterModal extends ConsumerStatefulWidget {
   const RegisterModal({super.key});
 
@@ -868,15 +1067,15 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
   final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
-  
+
   // Doctor specific
   final _crmCtrl = TextEditingController();
   final _specialtyCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
-  
+
   final _phoneFormatter = MaskTextInputFormatter(
     mask: '(##) #####-####',
-    filter: { "#": RegExp(r'[0-9]') },
+    filter: {"#": RegExp(r'[0-9]')},
     type: MaskAutoCompletionType.lazy,
   );
 
@@ -886,18 +1085,20 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
 
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     // Actual registration with CRM and Specialty for doctors
-    final success = await ref.read(authProvider.notifier).register(
-      email: _emailCtrl.text.trim(),
-      username: _usernameCtrl.text.trim(),
-      password: _passwordCtrl.text,
-      phone: _phoneFormatter.getUnmaskedText(), // Send only numbers
-      role: _userRole,
-      fullName: _nameCtrl.text.trim(),
-      crm: _userRole == 'doctor' ? _crmCtrl.text.trim() : null,
-      specialty: _userRole == 'doctor' ? _specialtyCtrl.text.trim() : null,
-    );
+    final success = await ref
+        .read(authProvider.notifier)
+        .register(
+          email: _emailCtrl.text.trim(),
+          username: _usernameCtrl.text.trim(),
+          password: _passwordCtrl.text,
+          phone: _phoneFormatter.getUnmaskedText(), // Send only numbers
+          role: _userRole,
+          fullName: _nameCtrl.text.trim(),
+          crm: _userRole == 'doctor' ? _crmCtrl.text.trim() : null,
+          specialty: _userRole == 'doctor' ? _specialtyCtrl.text.trim() : null,
+        );
 
     if (success && mounted) {
       setState(() => _showSuccess = true);
@@ -919,10 +1120,7 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
 
   void _showRegisterModal() {
     // Already in RegisterModal, but this is used if we want to "reset" or reopen
-    showDialog(
-      context: context,
-      builder: (context) => const RegisterModal(),
-    );
+    showDialog(context: context, builder: (context) => const RegisterModal());
   }
 
   @override
@@ -943,14 +1141,25 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.check_circle_outline, color: Color(0xFF006C4D), size: 80),
+              const Icon(
+                Icons.check_circle_outline,
+                color: Color(0xFF006C4D),
+                size: 80,
+              ),
               const SizedBox(height: 24),
               Text(
                 'Conta criada!',
-                style: GoogleFonts.manrope(fontSize: 28, fontWeight: FontWeight.bold, color: primaryColor),
+                style: GoogleFonts.manrope(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
               ),
               const SizedBox(height: 12),
-              const Text('Sua conta foi criada com sucesso. Redirecionando...', textAlign: TextAlign.center),
+              const Text(
+                'Sua conta foi criada com sucesso. Redirecionando...',
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),
@@ -961,12 +1170,19 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Container(
-        constraints: BoxConstraints(maxWidth: 600, maxHeight: MediaQuery.of(context).size.height * 0.9),
+        constraints: BoxConstraints(
+          maxWidth: 600,
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 40, offset: const Offset(0, 20)),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 40,
+              offset: const Offset(0, 20),
+            ),
           ],
         ),
         child: ClipRRect(
@@ -976,7 +1192,10 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
               // Header
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 40),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 32,
+                  horizontal: 40,
+                ),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Color(0xFF003D9B), Color(0xFF0052CC)],
@@ -988,12 +1207,19 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
                   children: [
                     Text(
                       'Criar nova conta',
-                      style: GoogleFonts.manrope(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white),
+                      style: GoogleFonts.manrope(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Selecione o tipo de conta e preencha os dados',
-                      style: GoogleFonts.inter(fontSize: 14, color: Colors.white.withOpacity(0.8)),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
                     ),
                   ],
                 ),
@@ -1031,23 +1257,34 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildFieldLabel('NOME COMPLETO'),
-                        _buildTextField(_nameCtrl, 'Como devemos te chamar?', Icons.badge_outlined),
+                        _buildTextField(
+                          _nameCtrl,
+                          'Como devemos te chamar?',
+                          Icons.badge_outlined,
+                        ),
                         const SizedBox(height: 24),
 
                         _buildFieldLabel('E-MAIL'),
-                        _buildTextField(_emailCtrl, 'exemplo@email.com', Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+                        _buildTextField(
+                          _emailCtrl,
+                          'exemplo@email.com',
+                          Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                        ),
                         const SizedBox(height: 24),
 
                         _buildFieldLabel('WHATSAPP (DDD + NÚMERO)'),
                         _buildTextField(
-                          _phoneCtrl, 
-                          '(XX) 99999-9999', 
-                          Icons.phone_android_outlined, 
+                          _phoneCtrl,
+                          '(XX) 99999-9999',
+                          Icons.phone_android_outlined,
                           keyboardType: TextInputType.phone,
                           formatters: [_phoneFormatter],
                           validator: (v) {
-                            if (v == null || v.isEmpty) return 'Informe o WhatsApp';
-                            if (!_phoneFormatter.isFill()) return 'Número incompleto';
+                            if (v == null || v.isEmpty)
+                              return 'Informe o WhatsApp';
+                            if (!_phoneFormatter.isFill())
+                              return 'Número incompleto';
                             return null;
                           },
                         ),
@@ -1061,7 +1298,11 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     _buildFieldLabel('CRM'),
-                                    _buildTextField(_crmCtrl, '000000-SP', Icons.assignment_ind_outlined),
+                                    _buildTextField(
+                                      _crmCtrl,
+                                      '000000-SP',
+                                      Icons.assignment_ind_outlined,
+                                    ),
                                   ],
                                 ),
                               ),
@@ -1071,7 +1312,11 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     _buildFieldLabel('ESPECIALIDADE'),
-                                    _buildTextField(_specialtyCtrl, 'Ex: Cardiologia', Icons.medical_information_outlined),
+                                    _buildTextField(
+                                      _specialtyCtrl,
+                                      'Ex: Cardiologia',
+                                      Icons.medical_information_outlined,
+                                    ),
                                   ],
                                 ),
                               ),
@@ -1081,28 +1326,36 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
                         ],
 
                         _buildFieldLabel('NOME DE USUÁRIO'),
-                        _buildTextField(_usernameCtrl, 'Escolha um identificador único', Icons.alternate_email),
+                        _buildTextField(
+                          _usernameCtrl,
+                          'Escolha um identificador único',
+                          Icons.alternate_email,
+                        ),
                         const SizedBox(height: 24),
 
                         _buildFieldLabel('SENHA'),
                         _buildTextField(
-                          _passwordCtrl, 
-                          'No mínimo 6 caracteres', 
+                          _passwordCtrl,
+                          'No mínimo 6 caracteres',
                           Icons.lock_outline,
                           isPassword: true,
                           obscure: _obscurePassword,
-                          onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+                          onToggleVisibility: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
                         const SizedBox(height: 24),
 
                         _buildFieldLabel('CONFIRMAR SENHA'),
                         _buildTextField(
-                          _confirmPasswordCtrl, 
-                          'Repita a senha escolhida', 
+                          _confirmPasswordCtrl,
+                          'Repita a senha escolhida',
                           Icons.lock_reset,
                           isPassword: true,
                           obscure: _obscurePassword,
-                          validator: (v) => v != _passwordCtrl.text ? 'As senhas não coincidem' : null,
+                          validator: (v) => v != _passwordCtrl.text
+                              ? 'As senhas não coincidem'
+                              : null,
                         ),
 
                         if (auth.error != null) ...[
@@ -1120,11 +1373,28 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
                               backgroundColor: primaryColor,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 20),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             child: auth.isLoading
-                                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : Text(_userRole == 'doctor' ? 'Criar conta de médico' : 'Criar minha conta', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    _userRole == 'doctor'
+                                        ? 'Criar conta de médico'
+                                        : 'Criar minha conta',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
                           ),
                         ),
 
@@ -1150,9 +1420,14 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
     );
   }
 
-  Widget _buildRoleCard(String title, IconData icon, bool isSelected, VoidCallback onTap) {
+  Widget _buildRoleCard(
+    String title,
+    IconData icon,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
     const Color primaryColor = Color(0xFF003D9B);
-    
+
     return Expanded(
       child: InkWell(
         onTap: onTap,
@@ -1161,7 +1436,9 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 24),
           decoration: BoxDecoration(
-            color: isSelected ? primaryColor.withOpacity(0.05) : const Color(0xFFF7F9FB),
+            color: isSelected
+                ? primaryColor.withOpacity(0.05)
+                : const Color(0xFFF7F9FB),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected ? primaryColor : const Color(0xFFE0E3E5),
@@ -1170,7 +1447,11 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
           ),
           child: Column(
             children: [
-              Icon(icon, color: isSelected ? primaryColor : const Color(0xFF8E9199), size: 32),
+              Icon(
+                icon,
+                color: isSelected ? primaryColor : const Color(0xFF8E9199),
+                size: 32,
+              ),
               const SizedBox(height: 12),
               Text(
                 title,
@@ -1203,8 +1484,8 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
   }
 
   Widget _buildTextField(
-    TextEditingController controller, 
-    String hint, 
+    TextEditingController controller,
+    String hint,
     IconData icon, {
     bool isPassword = false,
     bool obscure = false,
@@ -1223,7 +1504,10 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
         prefixIcon: Icon(icon, size: 20),
         suffixIcon: isPassword && onToggleVisibility != null
             ? IconButton(
-                icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, size: 20),
+                icon: Icon(
+                  obscure ? Icons.visibility_off : Icons.visibility,
+                  size: 20,
+                ),
                 onPressed: onToggleVisibility,
               )
             : null,
@@ -1233,9 +1517,14 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
       ),
-      validator: validator ?? (v) => v == null || v.isEmpty ? 'Campo obrigatório' : null,
+      validator:
+          validator ??
+          (v) => v == null || v.isEmpty ? 'Campo obrigatório' : null,
     );
   }
 

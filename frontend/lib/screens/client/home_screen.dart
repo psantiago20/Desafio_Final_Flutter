@@ -37,9 +37,21 @@ class HomeScreen extends ConsumerWidget {
     final user = authState.user;
 
     if (kIsWeb) {
-      return _buildWebLayout(context, statsAsync, upcomingAsync, medicosAsync, user);
+      return _buildWebLayout(
+        context,
+        statsAsync,
+        upcomingAsync,
+        medicosAsync,
+        user,
+      );
     }
-    return _buildMobileLayout(context, statsAsync, upcomingAsync, medicosAsync, user);
+    return _buildMobileLayout(
+      context,
+      statsAsync,
+      upcomingAsync,
+      medicosAsync,
+      user,
+    );
   }
 
   // --- WEB LAYOUT ---
@@ -62,7 +74,10 @@ class HomeScreen extends ConsumerWidget {
 
           return SingleChildScrollView(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 40),
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: 40,
+              ),
               child: SizedBox(
                 width: double.infinity,
                 child: Column(
@@ -121,14 +136,36 @@ class HomeScreen extends ConsumerWidget {
                         physics: const NeverScrollableScrollPhysics(),
                         childAspectRatio: 1.4,
                         children: [
-                          _buildWebStatCard('Próximas consultas', stats.pendingAppointments.toString(), Icons.calendar_today, primaryColor),
-                          _buildWebStatCard('Consultas realizadas', stats.completedAppointments.toString(), Icons.check_circle_outline, const Color(0xFF006C4D)),
-                          _buildWebStatCard('Consultas canceladas', stats.cancelledAppointments.toString(), Icons.cancel_outlined, const Color(0xFFD97706)),
-                          _buildWebStatCard('Mensagens não lidas', stats.unreadMessages.toString(), Icons.chat_bubble_outline, const Color(0xFF9333EA)),
+                          _buildWebStatCard(
+                            'Próximas consultas',
+                            stats.pendingAppointments.toString(),
+                            Icons.calendar_today,
+                            primaryColor,
+                          ),
+                          _buildWebStatCard(
+                            'Consultas realizadas',
+                            stats.completedAppointments.toString(),
+                            Icons.check_circle_outline,
+                            const Color(0xFF006C4D),
+                          ),
+                          _buildWebStatCard(
+                            'Consultas canceladas',
+                            stats.cancelledAppointments.toString(),
+                            Icons.cancel_outlined,
+                            const Color(0xFFD97706),
+                          ),
+                          _buildWebStatCard(
+                            'Mensagens não lidas',
+                            stats.unreadMessages.toString(),
+                            Icons.chat_bubble_outline,
+                            const Color(0xFF9333EA),
+                          ),
                         ],
                       ),
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (err, stack) => _buildInlineError(_cleanError(err)),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (err, stack) =>
+                          _buildInlineError(_cleanError(err)),
                     ),
                     const SizedBox(height: 48),
 
@@ -141,16 +178,25 @@ class HomeScreen extends ConsumerWidget {
                           child: Column(
                             children: [
                               upcomingAsync.when(
-                                data: (appointments) => _buildWebTimeline(context, appointments),
-                                loading: () => const CircularProgressIndicator(),
-                                error: (err, stack) => _buildInlineError(_cleanError(err)),
+                                data: (appointments) =>
+                                    _buildWebTimeline(context, appointments),
+                                loading: () =>
+                                    const CircularProgressIndicator(),
+                                error: (err, stack) =>
+                                    _buildInlineError(_cleanError(err)),
                               ),
                               const SizedBox(height: 32),
-                                statsAsync.when(
-                                  data: (stats) => _buildWebHealthSection(stats),
-                                  loading: () => const SizedBox(height: 100, child: Center(child: CircularProgressIndicator())),
-                                  error: (err, stack) => _buildWebHealthSection(null),
+                              statsAsync.when(
+                                data: (stats) => _buildWebHealthSection(stats),
+                                loading: () => const SizedBox(
+                                  height: 100,
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
                                 ),
+                                error: (err, stack) =>
+                                    _buildWebHealthSection(null),
+                              ),
                             ],
                           ),
                         ),
@@ -161,13 +207,28 @@ class HomeScreen extends ConsumerWidget {
                             children: [
                               statsAsync.when(
                                 data: (stats) => _buildWebVitalsCard(stats),
-                                loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
-                                error: (err, stack) => _buildVitalsUnavailable(),
+                                loading: () => const SizedBox(
+                                  height: 200,
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ),
+                                error: (err, stack) =>
+                                    _buildVitalsUnavailable(),
                               ),
                               const SizedBox(height: 32),
-                              _buildWebSideNavLink(Icons.history, 'Histórico Médico'),
-                              _buildWebSideNavLink(Icons.headset_mic_outlined, 'Suporte ao Paciente'),
-                              _buildWebSideNavLink(Icons.folder_shared_outlined, 'Documentos Legais'),
+                              _buildWebSideNavLink(
+                                Icons.history,
+                                'Histórico Médico',
+                              ),
+                              _buildWebSideNavLink(
+                                Icons.headset_mic_outlined,
+                                'Suporte ao Paciente',
+                              ),
+                              _buildWebSideNavLink(
+                                Icons.folder_shared_outlined,
+                                'Documentos Legais',
+                              ),
                               const SizedBox(height: 32),
                               _buildWebComplianceBadge(),
                             ],
@@ -186,14 +247,23 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWebStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildWebStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 40, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 40,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -210,17 +280,34 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 child: Icon(icon, color: color, size: 28),
               ),
-              Text(value, style: GoogleFonts.manrope(fontSize: 40, fontWeight: FontWeight.w800, color: const Color(0xFF191C1E))),
+              Text(
+                value,
+                style: GoogleFonts.manrope(
+                  fontSize: 40,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF191C1E),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),
-          Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF434654))),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF434654),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildWebTimeline(BuildContext context, List<AppointmentModel> appointments) {
+  Widget _buildWebTimeline(
+    BuildContext context,
+    List<AppointmentModel> appointments,
+  ) {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
@@ -233,8 +320,21 @@ class HomeScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Timeline de Atendimento', style: GoogleFonts.manrope(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF191C1E))),
-              TextButton(onPressed: () => onNavigate(1), child: const Text('Ver tudo', style: TextStyle(fontWeight: FontWeight.bold))),
+              Text(
+                'Timeline de Atendimento',
+                style: GoogleFonts.manrope(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF191C1E),
+                ),
+              ),
+              TextButton(
+                onPressed: () => onNavigate(1),
+                child: const Text(
+                  'Ver tudo',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -254,9 +354,14 @@ class HomeScreen extends ConsumerWidget {
                 return _buildWebTimelineItem(
                   apt.doctorName,
                   '${apt.type} • Presencial',
-                  DateFormat('dd MMM, HH:mm', 'pt_BR').format(apt.appointmentDate),
+                  DateFormat(
+                    'dd MMM, HH:mm',
+                    'pt_BR',
+                  ).format(apt.appointmentDate),
                   'Unidade Principal',
-                  apt.type == 'consulta' ? const Color(0xFF003D9B) : const Color(0xFF006C4D),
+                  apt.type == 'consulta'
+                      ? const Color(0xFF003D9B)
+                      : const Color(0xFF006C4D),
                   'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=2070&auto=format&fit=crop',
                 );
               },
@@ -266,7 +371,14 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWebTimelineItem(String name, String spec, String time, String loc, Color borderColor, String imgUrl) {
+  Widget _buildWebTimelineItem(
+    String name,
+    String spec,
+    String time,
+    String loc,
+    Color borderColor,
+    String imgUrl,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -282,16 +394,37 @@ class HomeScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(spec, style: const TextStyle(color: Color(0xFF434654), fontSize: 14)),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  spec,
+                  style: const TextStyle(
+                    color: Color(0xFF434654),
+                    fontSize: 14,
+                  ),
+                ),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(time, style: TextStyle(fontWeight: FontWeight.bold, color: borderColor)),
-              Text(loc, style: const TextStyle(color: Color(0xFF434654), fontSize: 14)),
+              Text(
+                time,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: borderColor,
+                ),
+              ),
+              Text(
+                loc,
+                style: const TextStyle(color: Color(0xFF434654), fontSize: 14),
+              ),
             ],
           ),
         ],
@@ -302,28 +435,40 @@ class HomeScreen extends ConsumerWidget {
   Widget _buildWebHealthSection(DashboardStats? stats) {
     return Row(
       children: [
-        Expanded(child: _buildWebHealthCard(
-          'Exames de Sangue',
-          Icons.analytics_outlined,
-          stats?.lastExamDate,
-          const Color(0xFF006C4D),
-        )),
+        Expanded(
+          child: _buildWebHealthCard(
+            'Exames de Sangue',
+            Icons.analytics_outlined,
+            stats?.lastExamDate,
+            const Color(0xFF006C4D),
+          ),
+        ),
         const SizedBox(width: 24),
-        Expanded(child: _buildWebHealthCard(
-          'Receitas Ativas',
-          Icons.medication_outlined,
-          stats?.lastPrescriptionDate,
-          const Color(0xFF003D9B),
-        )),
+        Expanded(
+          child: _buildWebHealthCard(
+            'Receitas Ativas',
+            Icons.medication_outlined,
+            stats?.lastPrescriptionDate,
+            const Color(0xFF003D9B),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildWebHealthCard(String title, IconData icon, String? subtitle, Color color) {
+  Widget _buildWebHealthCard(
+    String title,
+    IconData icon,
+    String? subtitle,
+    Color color,
+  ) {
     final bool hasData = subtitle != null && subtitle.isNotEmpty;
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -336,15 +481,19 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            hasData ? 'Última atualização: $subtitle' : 'Sem registros recentes',
+            hasData
+                ? 'Última atualização: $subtitle'
+                : 'Sem registros recentes',
             style: TextStyle(
-              color: hasData ? const Color(0xFF434654) : const Color(0xFF9E9E9E),
+              color: hasData
+                  ? const Color(0xFF434654)
+                  : const Color(0xFF9E9E9E),
               fontSize: 12,
               fontStyle: hasData ? FontStyle.normal : FontStyle.italic,
             ),
           ),
           const SizedBox(height: 24),
-          Container(
+          SizedBox(
             height: 80,
             child: hasData
                 ? Row(
@@ -363,10 +512,19 @@ class HomeScreen extends ConsumerWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.inbox_outlined, color: color.withOpacity(0.3), size: 32),
+                        Icon(
+                          Icons.inbox_outlined,
+                          color: color.withOpacity(0.3),
+                          size: 32,
+                        ),
                         const SizedBox(height: 8),
-                        Text('Nenhum dado encontrado',
-                            style: TextStyle(color: color.withOpacity(0.5), fontSize: 11)),
+                        Text(
+                          'Nenhum dado encontrado',
+                          style: TextStyle(
+                            color: color.withOpacity(0.5),
+                            fontSize: 11,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -377,7 +535,9 @@ class HomeScreen extends ConsumerWidget {
             child: OutlinedButton(
               onPressed: hasData ? () {} : null,
               style: OutlinedButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: Text(hasData ? 'Visualizar PDF' : 'Indisponível'),
@@ -392,7 +552,10 @@ class HomeScreen extends ConsumerWidget {
     return Expanded(
       child: Container(
         height: height,
-        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(4),
+        ),
       ),
     );
   }
@@ -407,19 +570,47 @@ class HomeScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('SIGNOS VITAIS RECENTES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Color(0xFF434654))),
+          const Text(
+            'SIGNOS VITAIS RECENTES',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+              color: Color(0xFF434654),
+            ),
+          ),
           const SizedBox(height: 24),
-          _buildVitalItem('Frequência Cardíaca', stats?.heartRate, 'BPM', Icons.favorite),
+          _buildVitalItem(
+            'Frequência Cardíaca',
+            stats?.heartRate,
+            'BPM',
+            Icons.favorite,
+          ),
           const SizedBox(height: 24),
-          _buildVitalItem('Pressão Arterial', stats?.bloodPressure, 'mmHg', Icons.speed),
+          _buildVitalItem(
+            'Pressão Arterial',
+            stats?.bloodPressure,
+            'mmHg',
+            Icons.speed,
+          ),
           const SizedBox(height: 24),
-          _buildVitalItem('Glicemia', stats?.glucose, 'mg/dL', Icons.water_drop),
+          _buildVitalItem(
+            'Glicemia',
+            stats?.glucose,
+            'mg/dL',
+            Icons.water_drop,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildVitalItem(String label, String? value, String unit, IconData icon) {
+  Widget _buildVitalItem(
+    String label,
+    String? value,
+    String unit,
+    IconData icon,
+  ) {
     final bool hasValue = value != null && value.isNotEmpty;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -427,16 +618,21 @@ class HomeScreen extends ConsumerWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF434654))),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF434654)),
+            ),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  hasValue ? value! : '--',
+                  hasValue ? value : '--',
                   style: GoogleFonts.manrope(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: hasValue ? const Color(0xFF006C4D) : const Color(0xFF9E9E9E),
+                    color: hasValue
+                        ? const Color(0xFF006C4D)
+                        : const Color(0xFF9E9E9E),
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -444,14 +640,19 @@ class HomeScreen extends ConsumerWidget {
                   hasValue ? unit : 'Não disponível',
                   style: TextStyle(
                     fontSize: 12,
-                    color: hasValue ? const Color(0xFF006C4D) : const Color(0xFF9E9E9E),
+                    color: hasValue
+                        ? const Color(0xFF006C4D)
+                        : const Color(0xFF9E9E9E),
                   ),
                 ),
               ],
             ),
           ],
         ),
-        Icon(icon, color: const Color(0xFF006C4D).withOpacity(hasValue ? 0.4 : 0.15)),
+        Icon(
+          icon,
+          color: const Color(0xFF006C4D).withOpacity(hasValue ? 0.4 : 0.15),
+        ),
       ],
     );
   }
@@ -489,9 +690,21 @@ class HomeScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('SIGNOS VITAIS RECENTES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Color(0xFF434654))),
+          const Text(
+            'SIGNOS VITAIS RECENTES',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+              color: Color(0xFF434654),
+            ),
+          ),
           const SizedBox(height: 24),
-          const Icon(Icons.cloud_off_outlined, color: Color(0xFF9E9E9E), size: 36),
+          const Icon(
+            Icons.cloud_off_outlined,
+            color: Color(0xFF9E9E9E),
+            size: 36,
+          ),
           const SizedBox(height: 12),
           const Text(
             'Informações indisponíveis no momento.',
@@ -514,7 +727,9 @@ class HomeScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
+        ],
       ),
       child: Row(
         children: [
@@ -537,13 +752,22 @@ class HomeScreen extends ConsumerWidget {
       child: const Row(
         children: [
           Icon(Icons.verified_user, color: Color(0xFF007352), size: 40),
-          const SizedBox(width: 16),
+          SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Portal 100% Seguro', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF006C4D))),
-                Text('Em conformidade com a LGPD', style: TextStyle(fontSize: 12, color: Color(0xFF006C4D))),
+                Text(
+                  'Portal 100% Seguro',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF006C4D),
+                  ),
+                ),
+                Text(
+                  'Em conformidade com a LGPD',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF006C4D)),
+                ),
               ],
             ),
           ),
@@ -566,9 +790,7 @@ class HomeScreen extends ConsumerWidget {
         showProfileButton: true,
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -635,7 +857,8 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     _buildStatCard(
                       title: 'Exames prontos',
-                      value: stats.completedAppointments.toString(), // Usando consultas concluídas como proxy ou similar disponível
+                      value: stats.completedAppointments
+                          .toString(), // Usando consultas concluídas como proxy ou similar disponível
                       icon: Icons.description_outlined,
                       iconColor: AppTheme.successGreen,
                     ),
@@ -685,7 +908,9 @@ class HomeScreen extends ConsumerWidget {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
-                                      DateFormat('MMM', 'pt_BR').format(nextApt.appointmentDate).toUpperCase(),
+                                      DateFormat('MMM', 'pt_BR')
+                                          .format(nextApt.appointmentDate)
+                                          .toUpperCase(),
                                       style: const TextStyle(
                                         color: AppTheme.primaryBlue,
                                         fontSize: 12,
@@ -693,7 +918,9 @@ class HomeScreen extends ConsumerWidget {
                                       ),
                                     ),
                                     Text(
-                                      DateFormat('dd').format(nextApt.appointmentDate),
+                                      DateFormat(
+                                        'dd',
+                                      ).format(nextApt.appointmentDate),
                                       style: const TextStyle(
                                         color: AppTheme.primaryBlue,
                                         fontSize: 20,
@@ -740,7 +967,9 @@ class HomeScreen extends ConsumerWidget {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                               ),
                               child: const Text('Ver detalhes'),
                             ),
@@ -809,7 +1038,12 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatCard({required String title, required String value, required IconData icon, required Color iconColor}) {
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+  }) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -821,30 +1055,74 @@ class HomeScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Icon(icon, color: iconColor, size: 24),
-                Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
               ],
             ),
             const Spacer(),
-            Text(title, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary), maxLines: 1),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppTheme.textSecondary,
+              ),
+              maxLines: 1,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActionCard({required String title, required IconData icon, required Color color, required Color lightColor, required VoidCallback onTap}) {
+  Widget _buildActionCard({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required Color lightColor,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(24),
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: color.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))]),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: lightColor, borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: color, size: 24)),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: lightColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
             const Spacer(),
-            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
+            ),
           ],
         ),
       ),
