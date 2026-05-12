@@ -26,7 +26,7 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   await initializeDateFormatting('pt_BR', null);
-  await dotenv.load(fileName: "assets/.env");
+  await dotenv.load(fileName: "../.env");
   await TokenStorage.init();
 
   // Initialize the notification service (Request permission & get token)
