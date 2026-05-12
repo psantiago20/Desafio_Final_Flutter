@@ -120,7 +120,10 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
             ),
           ),
           Expanded(
-            child: _screens[_currentIndex],
+            child: IndexedStack(
+              index: _currentIndex,
+              children: _screens,
+            ),
           ),
         ],
       ),
@@ -158,7 +161,10 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
 
   Widget _buildMobileShell(BuildContext context) {
     return Scaffold(
-      body: _screens[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: _navigate,

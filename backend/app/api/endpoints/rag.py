@@ -154,17 +154,39 @@ async def query_rag(
 ):
     """
     Pipeline RAG completo: busca FAQ + dados do médico → LLM → resposta.
-    Endpoint para testar o RAG diretamente.
+    Agora persiste as mensagens no banco de dados para histórico permanente.
     """
     try:
-        # Buscar chunks para retornar a contagem (usando id 1 por enquanto para faq, ou ignorar doctor_id)
+        from app.models.message import Message, MessageSource
+        from app.models.patient import Patient
+
+        # 1. Identificar o paciente
+        patient = None
+        if request.wa_from:
+            patient = db.query(Patient).filter(
+                (Patient.phone == request.wa_from) | 
+                (Patient.whatsapp == request.wa_from)
+            ).first()
+
+        # 2. Salvar mensagem do usuário no banco (se paciente identificado)
+        if patient:
+            user_msg = Message(
+                patient_id=patient.id,
+                content=request.query,
+                source=request.source,
+                wa_from=request.wa_from
+            )
+            db.add(user_msg)
+            db.commit()
+
+        # 3. Buscar chunks para retornar a contagem
         chunks = rag_service.search_only(
             query=request.query,
             doctor_id=None,
             top_k=request.top_k
         )
 
-        # Pipeline completo (com gerenciamento de estado se wa_from fornecido)
+        # 4. Pipeline completo
         response = await rag_service.get_rag_response(
             query=request.query,
             wa_to=request.wa_to,
@@ -172,6 +194,17 @@ async def query_rag(
             wa_from=request.wa_from,
             source=request.source
         )
+
+        # 5. Salvar resposta da IA no banco (se paciente identificado)
+        if patient:
+            ai_msg = Message(
+                patient_id=patient.id,
+                content=response,
+                source=MessageSource.SYSTEM.value,
+                wa_from="isis_ia"
+            )
+            db.add(ai_msg)
+            db.commit()
 
         return RAGQueryResponse(
             query=request.query,
@@ -289,6 +322,27 @@ async def upload_exam(
             next_app.exam_url = public_url
             next_app.exam_summary = exam_summary
             
+        # 6. Salvar mensagens no histórico do chat (Persistência Permanente)
+        from app.models.message import Message, MessageSource
+        
+        # Mensagem do usuário enviando o arquivo
+        user_msg = Message(
+            patient_id=patient.id,
+            content=f"Enviando exame: {file.filename}",
+            source=MessageSource.APP.value,
+            wa_from=wa_from
+        )
+        db.add(user_msg)
+        
+        # Resposta da IA com o resumo
+        ai_msg = Message(
+            patient_id=patient.id,
+            content=f"Recebi seu exame! ✨\n\n*Título:* {exam_title}\n*Resumo:* {exam_summary}",
+            source=MessageSource.SYSTEM.value,
+            wa_from="isis_ia"
+        )
+        db.add(ai_msg)
+
         db.commit()
         return {
             "status": "success", 
