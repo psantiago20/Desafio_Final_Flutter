@@ -1,4 +1,5 @@
-# 🏥 OmniConnect - Gestão Inteligente de Saúde
+# 🏥 OmniConnect - Gestão Inteligente de Saúde 
+## Aplicativo: Sua Consulta
 
 Este repositório contém uma plataforma Full Stack (FastAPI + Flutter) com integração de IA para saúde.
 
