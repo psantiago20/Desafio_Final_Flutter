@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:frontend/main.dart'; 
-
 /// 🧪 Basic App Load Test
 /// Responsabilidade: qa-test-engineer
 void main() {
-  testWidgets('App starts and shows MainDashboardScreen', (WidgetTester tester) async {
+  testWidgets('App starts and shows MainDashboardScreen', (
+    WidgetTester tester,
+  ) async {
     // Build our app and trigger a frame.
     // await tester.pumpWidget(const OmniConnectApp());
 
@@ -15,7 +15,7 @@ void main() {
 
     // Verify that the Home screen is the default one (has the 'Portal do Paciente' text)
     expect(find.text('Portal do Paciente'), findsOneWidget);
-    
+
     // Verify that tabs Consultas and Exames exist in the bottom bar
     expect(find.text('Consultas'), findsWidgets);
     expect(find.text('Exames'), findsWidgets);

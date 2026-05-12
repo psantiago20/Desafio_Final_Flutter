@@ -14,14 +14,13 @@ class AppointmentsRepository {
     final params = <String, dynamic>{
       'skip': skip,
       'limit': limit,
-      if (doctorId != null) 'doctor_id': doctorId,
-      if (statusFilter != null) 'status_filter': statusFilter,
+      'doctor_id': ?doctorId,
+      'status_filter': ?statusFilter,
       if (dateFrom != null) 'date_from': dateFrom.toIso8601String(),
       if (dateTo != null) 'date_to': dateTo.toIso8601String(),
     };
 
-    final data = await ApiClient.get(
-        AppConstants.appointmentsEndpoint, params);
+    final data = await ApiClient.get(AppConstants.appointmentsEndpoint, params);
     final map = data as Map<String, dynamic>;
     final list = map['appointments'] as List<dynamic>;
     return list
@@ -30,8 +29,9 @@ class AppointmentsRepository {
   }
 
   Future<AppointmentModel> getAppointment(int id) async {
-    final data =
-        await ApiClient.get('${AppConstants.appointmentsEndpoint}/$id');
+    final data = await ApiClient.get(
+      '${AppConstants.appointmentsEndpoint}/$id',
+    );
     return AppointmentModel.fromJson(data as Map<String, dynamic>);
   }
 
@@ -44,14 +44,13 @@ class AppointmentsRepository {
     String? reason,
     double price = 0.0,
   }) async {
-    final data =
-        await ApiClient.post(AppConstants.appointmentsEndpoint, {
+    final data = await ApiClient.post(AppConstants.appointmentsEndpoint, {
       'patient_id': patientId,
       'doctor_id': doctorId,
       'appointment_date': date.toIso8601String(),
       'duration_minutes': durationMinutes,
       'type': type,
-      if (reason != null) 'reason': reason,
+      'reason': ?reason,
       'price': price,
     });
     return AppointmentModel.fromJson(data as Map<String, dynamic>);
@@ -66,7 +65,9 @@ class AppointmentsRepository {
   }
 
   Future<AppointmentModel> updateAppointment(
-      int id, Map<String, dynamic> updates) async {
+    int id,
+    Map<String, dynamic> updates,
+  ) async {
     final data = await ApiClient.put(
       '${AppConstants.appointmentsEndpoint}/$id',
       updates,

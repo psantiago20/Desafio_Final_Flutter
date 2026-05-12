@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
@@ -44,15 +43,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     try {
       final response = await ApiClient.get('/api/messages');
       final List<dynamic> msgs = response['messages'];
-      
+
       setState(() {
         _messages.clear();
         for (var m in msgs.reversed) {
           final source = m['source'];
-          _messages.add(ChatMessage(
-            text: m['content'],
-            isMe: source == 'app' || source == 'whatsapp',
-          ));
+          _messages.add(
+            ChatMessage(
+              text: m['content'],
+              isMe: source == 'app' || source == 'whatsapp',
+            ),
+          );
         }
       });
       _scrollToBottom();
@@ -80,7 +81,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
       final response = await ApiClient.post('/api/rag/query', {
         'query': text,
-        'wa_from': waFrom, 
+        'wa_from': waFrom,
       });
 
       setState(() {
@@ -88,7 +89,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       });
     } catch (e) {
       setState(() {
-        _messages.add(ChatMessage(text: 'Erro de conexão: Não foi possível contatar o assistente virtual.', isMe: false));
+        _messages.add(
+          ChatMessage(
+            text:
+                'Erro de conexão: Não foi possível contatar o assistente virtual.',
+            isMe: false,
+          ),
+        );
       });
     } finally {
       setState(() {
@@ -104,7 +111,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (image == null) return;
 
       setState(() {
-        _messages.add(ChatMessage(text: 'Enviando exame (${image.name})...', isMe: true));
+        _messages.add(
+          ChatMessage(text: 'Enviando exame (${image.name})...', isMe: true),
+        );
         _isLoading = true;
       });
       _scrollToBottom();
@@ -116,7 +125,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       var request = http.MultipartRequest('POST', url);
       request.fields['wa_from'] = waFrom;
       final bytes = await image.readAsBytes();
-      request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: image.name));
+      request.files.add(
+        http.MultipartFile.fromBytes('file', bytes, filename: image.name),
+      );
 
       var response = await request.send();
       var responseBody = await response.stream.bytesToString();
@@ -124,16 +135,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(responseBody);
         setState(() {
-          _messages.add(ChatMessage(text: data['message'] ?? 'Exame processado com sucesso!', isMe: false));
+          _messages.add(
+            ChatMessage(
+              text: data['message'] ?? 'Exame processado com sucesso!',
+              isMe: false,
+            ),
+          );
         });
       } else {
         setState(() {
-          _messages.add(ChatMessage(text: 'Erro ao enviar o exame. Tente novamente.', isMe: false));
+          _messages.add(
+            ChatMessage(
+              text: 'Erro ao enviar o exame. Tente novamente.',
+              isMe: false,
+            ),
+          );
         });
       }
     } catch (e) {
       setState(() {
-        _messages.add(ChatMessage(text: 'Erro ao selecionar ou enviar a imagem: $e', isMe: false));
+        _messages.add(
+          ChatMessage(
+            text: 'Erro ao selecionar ou enviar a imagem: $e',
+            isMe: false,
+          ),
+        );
       });
     } finally {
       setState(() {
@@ -166,9 +192,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget _buildWeb() {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
         child: Column(
           children: [
             Expanded(
@@ -181,7 +205,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     return const Align(
                       alignment: Alignment.centerLeft,
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 16.0,
+                          horizontal: 8.0,
+                        ),
                         child: CircularProgressIndicator(),
                       ),
                     );
@@ -200,13 +227,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Widget _buildMobile() {
     return Scaffold(
-      appBar: const CustomAppBar(
-        subtitle: 'Atendimento por IA',
-      ),
+      appBar: const CustomAppBar(subtitle: 'Atendimento por IA'),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
         child: Column(
           children: [
             Expanded(
@@ -219,7 +242,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     return const Align(
                       alignment: Alignment.centerLeft,
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 16.0,
+                          horizontal: 8.0,
+                        ),
                         child: CircularProgressIndicator(),
                       ),
                     );
@@ -239,7 +265,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.attach_file, color: AppTheme.textSecondary),
+                    icon: const Icon(
+                      Icons.attach_file,
+                      color: AppTheme.textSecondary,
+                    ),
                     onPressed: _pickAndUploadExam,
                   ),
                   Expanded(
@@ -254,13 +283,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                         filled: true,
                         fillColor: AppTheme.backgroundGray,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.send, color: AppTheme.primaryBlueDark),
+                    icon: const Icon(
+                      Icons.send,
+                      color: AppTheme.primaryBlueDark,
+                    ),
                     onPressed: _sendMessage,
                   ),
                 ],
@@ -292,9 +327,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         child: Text(
           message,
-          style: TextStyle(
-            color: isMe ? Colors.white : AppTheme.textPrimary,
-          ),
+          style: TextStyle(color: isMe ? Colors.white : AppTheme.textPrimary),
         ),
       ),
     );
@@ -326,7 +359,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
                 filled: true,
                 fillColor: AppTheme.backgroundGray,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
               ),
             ),
           ),

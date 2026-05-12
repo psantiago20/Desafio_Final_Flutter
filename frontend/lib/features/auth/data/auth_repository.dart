@@ -33,10 +33,10 @@ class AuthRepository {
       'username': username,
       'password': password,
       'phone': phone,
-      if (fullName != null) 'full_name': fullName,
+      'full_name': ?fullName,
       'role': role,
-      if (crm != null) 'crm': crm,
-      if (specialty != null) 'specialty': specialty,
+      'crm': ?crm,
+      'specialty': ?specialty,
     });
 
     return UserModel.fromJson(data as Map<String, dynamic>);
