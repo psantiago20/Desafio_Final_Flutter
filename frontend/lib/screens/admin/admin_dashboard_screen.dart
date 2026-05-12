@@ -4,12 +4,12 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/network/api_client.dart';
 import '../../features/auth/providers/auth_provider.dart';
 
-
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
 
   @override
-  ConsumerState<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+  ConsumerState<AdminDashboardScreen> createState() =>
+      _AdminDashboardScreenState();
 }
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
@@ -61,13 +61,24 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Confirmar Exclusão', style: GoogleFonts.manrope(fontWeight: FontWeight.bold)),
-        content: Text('Deseja realmente excluir "$name"? Esta ação é irreversível e pode afetar registros vinculados.'),
+        title: Text(
+          'Confirmar Exclusão',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Deseja realmente excluir "$name"? Esta ação é irreversível e pode afetar registros vinculados.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: _errorColor, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _errorColor,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Excluir'),
           ),
         ],
@@ -80,14 +91,20 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       await ApiClient.delete('/api/simulator/delete/$table/$id');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$name excluído com sucesso!'), backgroundColor: _secondaryColor),
+          SnackBar(
+            content: Text('$name excluído com sucesso!'),
+            backgroundColor: _secondaryColor,
+          ),
         );
         _fetchData();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao excluir: $e'), backgroundColor: _errorColor),
+          SnackBar(
+            content: Text('Erro ao excluir: $e'),
+            backgroundColor: _errorColor,
+          ),
         );
       }
     }
@@ -105,10 +122,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       bool isActive = item['is_active'] ?? true;
 
       fields = [
-        TextFormField(initialValue: name, decoration: const InputDecoration(labelText: 'Nome Completo'), onSaved: (v) => editData['full_name'] = v),
-        TextFormField(initialValue: email, decoration: const InputDecoration(labelText: 'E-mail'), onSaved: (v) => editData['email'] = v),
+        TextFormField(
+          initialValue: name,
+          decoration: const InputDecoration(labelText: 'Nome Completo'),
+          onSaved: (v) => editData['full_name'] = v,
+        ),
+        TextFormField(
+          initialValue: email,
+          decoration: const InputDecoration(labelText: 'E-mail'),
+          onSaved: (v) => editData['email'] = v,
+        ),
         DropdownButtonFormField<String>(
-          value: role,
+          initialValue: role,
           decoration: const InputDecoration(labelText: 'Papel'),
           items: const [
             DropdownMenuItem(value: 'admin', child: Text('Admin')),
@@ -118,39 +143,80 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           onChanged: (v) => editData['role'] = v,
           onSaved: (v) => editData['role'] = v,
         ),
-        StatefulBuilder(builder: (context, setStateSB) {
-          return SwitchListTile(
-            title: const Text('Conta Ativa'),
-            value: isActive,
-            onChanged: (v) {
-              setStateSB(() => isActive = v);
-              editData['is_active'] = v;
-            },
-          );
-        }),
+        StatefulBuilder(
+          builder: (context, setStateSB) {
+            return SwitchListTile(
+              title: const Text('Conta Ativa'),
+              value: isActive,
+              onChanged: (v) {
+                setStateSB(() => isActive = v);
+                editData['is_active'] = v;
+              },
+            );
+          },
+        ),
       ];
       editData['is_active'] = isActive; // default if untouched
     } else if (type == 'medicos') {
       fields = [
-        TextFormField(initialValue: item['nome'], decoration: const InputDecoration(labelText: 'Nome'), onSaved: (v) => editData['nome'] = v),
-        TextFormField(initialValue: item['crm'], decoration: const InputDecoration(labelText: 'CRM/UF'), onSaved: (v) => editData['crm'] = v),
-        TextFormField(initialValue: item['especialidade'], decoration: const InputDecoration(labelText: 'Especialidade'), onSaved: (v) => editData['especialidade'] = v),
-        TextFormField(initialValue: item['telefone'], decoration: const InputDecoration(labelText: 'Telefone'), onSaved: (v) => editData['telefone'] = v),
-        TextFormField(initialValue: item['cidade'], decoration: const InputDecoration(labelText: 'Cidade'), onSaved: (v) => editData['cidade'] = v),
+        TextFormField(
+          initialValue: item['nome'],
+          decoration: const InputDecoration(labelText: 'Nome'),
+          onSaved: (v) => editData['nome'] = v,
+        ),
+        TextFormField(
+          initialValue: item['crm'],
+          decoration: const InputDecoration(labelText: 'CRM/UF'),
+          onSaved: (v) => editData['crm'] = v,
+        ),
+        TextFormField(
+          initialValue: item['especialidade'],
+          decoration: const InputDecoration(labelText: 'Especialidade'),
+          onSaved: (v) => editData['especialidade'] = v,
+        ),
+        TextFormField(
+          initialValue: item['telefone'],
+          decoration: const InputDecoration(labelText: 'Telefone'),
+          onSaved: (v) => editData['telefone'] = v,
+        ),
+        TextFormField(
+          initialValue: item['cidade'],
+          decoration: const InputDecoration(labelText: 'Cidade'),
+          onSaved: (v) => editData['cidade'] = v,
+        ),
       ];
     } else if (type == 'pacientes') {
       fields = [
-        TextFormField(initialValue: item['nome'], decoration: const InputDecoration(labelText: 'Nome'), onSaved: (v) => editData['nome'] = v),
-        TextFormField(initialValue: item['cpf'], decoration: const InputDecoration(labelText: 'CPF'), onSaved: (v) => editData['cpf'] = v),
-        TextFormField(initialValue: item['whatsapp'], decoration: const InputDecoration(labelText: 'WhatsApp'), onSaved: (v) => editData['whatsapp'] = v),
-        TextFormField(initialValue: item['cidade'], decoration: const InputDecoration(labelText: 'Cidade'), onSaved: (v) => editData['cidade'] = v),
+        TextFormField(
+          initialValue: item['nome'],
+          decoration: const InputDecoration(labelText: 'Nome'),
+          onSaved: (v) => editData['nome'] = v,
+        ),
+        TextFormField(
+          initialValue: item['cpf'],
+          decoration: const InputDecoration(labelText: 'CPF'),
+          onSaved: (v) => editData['cpf'] = v,
+        ),
+        TextFormField(
+          initialValue: item['whatsapp'],
+          decoration: const InputDecoration(labelText: 'WhatsApp'),
+          onSaved: (v) => editData['whatsapp'] = v,
+        ),
+        TextFormField(
+          initialValue: item['cidade'],
+          decoration: const InputDecoration(labelText: 'Cidade'),
+          onSaved: (v) => editData['cidade'] = v,
+        ),
       ];
     }
 
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Editar ${type.toUpperCase()}', style: GoogleFonts.manrope(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Editar ${type.toUpperCase()}',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+        ),
         content: Form(
           key: formKey,
           child: SingleChildScrollView(
@@ -158,13 +224,19 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           ElevatedButton(
             onPressed: () {
               formKey.currentState?.save();
               Navigator.pop(context, true);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: _primaryColor, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _primaryColor,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Salvar'),
           ),
         ],
@@ -173,14 +245,23 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
     if (confirm == true) {
       try {
-        await ApiClient.put('/api/simulator/edit/$type/${item['id']}', {'data': editData});
+        await ApiClient.put('/api/simulator/edit/$type/${item['id']}', {
+          'data': editData,
+        });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Registro atualizado!'), backgroundColor: _secondaryColor));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Registro atualizado!'),
+              backgroundColor: _secondaryColor,
+            ),
+          );
           _fetchData();
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e'), backgroundColor: _errorColor));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro: $e'), backgroundColor: _errorColor),
+          );
         }
       }
     }
@@ -203,10 +284,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 if (isDesktop) _buildSidebar(),
                 Expanded(
                   child: _isLoading
-                      ? Center(child: CircularProgressIndicator(color: _primaryColor))
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: _primaryColor,
+                          ),
+                        )
                       : _error != null
-                          ? _buildErrorView()
-                          : _buildMainContent(isDesktop),
+                      ? _buildErrorView()
+                      : _buildMainContent(isDesktop),
                 ),
               ],
             ),
@@ -285,9 +370,17 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     backgroundColor: _errorColor.withOpacity(0.1),
                     foregroundColor: _errorColor,
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    textStyle: GoogleFonts.manrope(fontWeight: FontWeight.bold, fontSize: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    textStyle: GoogleFonts.manrope(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
             ],
@@ -344,17 +437,38 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Controle do Sistema', style: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: _textColor)),
-                  Text('Gestão da Plataforma', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: _textVariant)),
+                  Text(
+                    'Controle do Sistema',
+                    style: GoogleFonts.manrope(
+                      fontWeight: FontWeight.bold,
+                      color: _textColor,
+                    ),
+                  ),
+                  Text(
+                    'Gestão da Plataforma',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _textVariant,
+                    ),
+                  ),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 32),
           _buildSidebarItem(0, Icons.group, 'Gerenciamento de Usuários'),
-          _buildSidebarItem(1, Icons.medical_services_outlined, 'Diretório de Médicos'),
+          _buildSidebarItem(
+            1,
+            Icons.medical_services_outlined,
+            'Diretório de Médicos',
+          ),
           _buildSidebarItem(2, Icons.person_outline, 'Diretório de Pacientes'),
-          _buildSidebarItem(3, Icons.settings_suggest_outlined, 'Configurações do Sistema'),
+          _buildSidebarItem(
+            3,
+            Icons.settings_suggest_outlined,
+            'Configurações do Sistema',
+          ),
           _buildSidebarItem(4, Icons.help_outline, 'Suporte e Ajuda'),
           const Spacer(),
           const Divider(),
@@ -362,8 +476,23 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('STATUS GLOBAL', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: _outlineColor, letterSpacing: 1.5)),
-              Text('v2.4.0-admin', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: _secondaryColor)),
+              Text(
+                'STATUS GLOBAL',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: _outlineColor,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              Text(
+                'v2.4.0-admin',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: _secondaryColor,
+                ),
+              ),
             ],
           ),
         ],
@@ -385,7 +514,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon, color: isSelected ? _primaryColor : _textVariant, size: 24),
+            Icon(
+              icon,
+              color: isSelected ? _primaryColor : _textVariant,
+              size: 24,
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
@@ -408,9 +541,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       height: 70,
       decoration: BoxDecoration(
         color: _surfaceLowest.withOpacity(0.9),
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
         boxShadow: [
-          BoxShadow(color: _textColor.withOpacity(0.06), blurRadius: 40, offset: const Offset(0, -4)),
+          BoxShadow(
+            color: _textColor.withOpacity(0.06),
+            blurRadius: 40,
+            offset: const Offset(0, -4),
+          ),
         ],
       ),
       child: Row(
@@ -419,15 +559,25 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           _buildBottomNavItem(0, Icons.group, 'Usuários'),
           _buildBottomNavItem(1, Icons.medical_services_outlined, 'Médicos'),
           _buildBottomNavItem(2, Icons.person_outline, 'Pacientes'),
-          _buildBottomNavItem(3, Icons.settings_suggest, 'Sistema', isPrimary: true),
+          _buildBottomNavItem(
+            3,
+            Icons.settings_suggest,
+            'Sistema',
+            isPrimary: true,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildBottomNavItem(int index, IconData icon, String label, {bool isPrimary = false}) {
+  Widget _buildBottomNavItem(
+    int index,
+    IconData icon,
+    String label, {
+    bool isPrimary = false,
+  }) {
     final isSelected = _selectedSidebarIndex == index && !isPrimary;
-    
+
     if (isPrimary) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -440,7 +590,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           children: [
             Icon(icon, color: Colors.white, size: 24),
             const SizedBox(height: 2),
-            Text(label.toUpperCase(), style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.2)),
+            Text(
+              label.toUpperCase(),
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 1.2,
+              ),
+            ),
           ],
         ),
       );
@@ -451,7 +609,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: isSelected ? _primaryColor : _textVariant, size: 24),
+          Icon(
+            icon,
+            color: isSelected ? _primaryColor : _textVariant,
+            size: 24,
+          ),
           const SizedBox(height: 4),
           Text(
             label.toUpperCase(),
@@ -474,11 +636,20 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         children: [
           Icon(Icons.error_outline, size: 48, color: _errorColor),
           const SizedBox(height: 16),
-          Text(_error!, style: GoogleFonts.inter(color: _errorColor, fontWeight: FontWeight.w500)),
+          Text(
+            _error!,
+            style: GoogleFonts.inter(
+              color: _errorColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: _fetchData,
-            style: ElevatedButton.styleFrom(backgroundColor: _primaryColor, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _primaryColor,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Tentar Novamente'),
           ),
         ],
@@ -490,11 +661,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final usuarios = (_data?['usuarios'] as List?) ?? [];
     final medicos = (_data?['medicos'] as List?) ?? [];
     final pacientes = (_data?['pacientes'] as List?) ?? [];
-    
+
     List<dynamic> activeList = [];
     String activeTitle = '';
     String tableType = 'usuarios';
-    
+
     switch (_selectedSidebarIndex) {
       case 0:
         activeList = usuarios;
@@ -515,7 +686,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         activeList = usuarios;
         activeTitle = 'Gerenciamento Geral';
     }
-    
+
     return SingleChildScrollView(
       padding: EdgeInsets.all(isDesktop ? 32 : 16),
       child: Column(
@@ -532,20 +703,46 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   children: [
                     Row(
                       children: [
-                        Text('Portal do Sistema', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: _textVariant)),
-                        Icon(Icons.chevron_right, size: 16, color: _textVariant),
-                        Text(activeTitle, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: _primaryColor)),
+                        Text(
+                          'Portal do Sistema',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: _textVariant,
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right,
+                          size: 16,
+                          color: _textVariant,
+                        ),
+                        Text(
+                          activeTitle,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: _primaryColor,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Administração da Plataforma',
-                      style: GoogleFonts.manrope(fontSize: 32, fontWeight: FontWeight.w800, color: _textColor, letterSpacing: -1),
+                      style: GoogleFonts.manrope(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        color: _textColor,
+                        letterSpacing: -1,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Centro de controle global para acesso de usuários, monitoramento da saúde da plataforma e configurações do sistema.',
-                      style: GoogleFonts.inter(fontSize: 14, color: _textVariant),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: _textVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -556,7 +753,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     Container(
                       width: 280,
                       height: 40,
-                      decoration: BoxDecoration(color: _surfaceLowest, borderRadius: BorderRadius.circular(12)),
+                      decoration: BoxDecoration(
+                        color: _surfaceLowest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
                         children: [
@@ -566,7 +766,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                             child: TextField(
                               decoration: InputDecoration(
                                 hintText: 'Buscar por ID, papel ou nome...',
-                                hintStyle: GoogleFonts.inter(fontSize: 13, color: _outlineColor),
+                                hintStyle: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: _outlineColor,
+                                ),
                                 border: InputBorder.none,
                                 isDense: true,
                               ),
@@ -579,9 +782,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     Container(
                       height: 40,
                       width: 40,
-                      decoration: BoxDecoration(color: _surfaceLowest, borderRadius: BorderRadius.circular(12)),
+                      decoration: BoxDecoration(
+                        color: _surfaceLowest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: IconButton(
-                        icon: Icon(Icons.filter_alt, color: _textVariant, size: 20),
+                        icon: Icon(
+                          Icons.filter_alt,
+                          color: _textVariant,
+                          size: 20,
+                        ),
                         onPressed: () {},
                       ),
                     ),
@@ -603,10 +813,41 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 crossAxisSpacing: 16,
                 childAspectRatio: isSmall ? 2.5 : 1.5,
                 children: [
-                  _buildStatCard('Total de Usuários', '${usuarios.length}', '+12%', _surfaceLowest, _textColor, _primaryColor),
-                  _buildStatCard('Médicos Ativos', '${medicos.length}', 'na plataforma', _surfaceLowest, _textColor, _textColor, subtitleIsBadge: false),
-                  _buildStatCard('Saúde da Plataforma', '99.9%', 'dns', _primaryColor, Colors.white, Colors.white, isIcon: true),
-                  _buildStatCard('Tempo de Atividade', '42d', 'cloud_done', _secondaryColor, Colors.white, Colors.white, isIcon: true),
+                  _buildStatCard(
+                    'Total de Usuários',
+                    '${usuarios.length}',
+                    '+12%',
+                    _surfaceLowest,
+                    _textColor,
+                    _primaryColor,
+                  ),
+                  _buildStatCard(
+                    'Médicos Ativos',
+                    '${medicos.length}',
+                    'na plataforma',
+                    _surfaceLowest,
+                    _textColor,
+                    _textColor,
+                    subtitleIsBadge: false,
+                  ),
+                  _buildStatCard(
+                    'Saúde da Plataforma',
+                    '99.9%',
+                    'dns',
+                    _primaryColor,
+                    Colors.white,
+                    Colors.white,
+                    isIcon: true,
+                  ),
+                  _buildStatCard(
+                    'Tempo de Atividade',
+                    '42d',
+                    'cloud_done',
+                    _secondaryColor,
+                    Colors.white,
+                    Colors.white,
+                    isIcon: true,
+                  ),
                 ],
               );
             },
@@ -619,7 +860,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               color: _surfaceLowest,
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
-                BoxShadow(color: _textColor.withOpacity(0.04), blurRadius: 40, offset: const Offset(0, 4)),
+                BoxShadow(
+                  color: _textColor.withOpacity(0.04),
+                  blurRadius: 40,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
             child: Column(
@@ -628,44 +873,84 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 if (activeList.isEmpty)
                   Padding(
                     padding: const EdgeInsets.all(32),
-                    child: Center(child: Text('Nenhum dado encontrado para esta seleção.', style: GoogleFonts.inter(color: _textVariant))),
+                    child: Center(
+                      child: Text(
+                        'Nenhum dado encontrado para esta seleção.',
+                        style: GoogleFonts.inter(color: _textVariant),
+                      ),
+                    ),
                   )
                 else
                   ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: activeList.length,
-                    separatorBuilder: (context, index) => Divider(height: 1, color: _surfaceLow),
-                    itemBuilder: (context, index) => _buildRowItem(activeList[index], isDesktop, tableType),
+                    separatorBuilder: (context, index) =>
+                        Divider(height: 1, color: _surfaceLow),
+                    itemBuilder: (context, index) =>
+                        _buildRowItem(activeList[index], isDesktop, tableType),
                   ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: _surfaceLow.withOpacity(0.5),
-                    borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(24),
+                      bottomRight: Radius.circular(24),
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Mostrando ${activeList.length} registros', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: _textVariant)),
+                      Text(
+                        'Mostrando ${activeList.length} registros',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: _textVariant,
+                        ),
+                      ),
                       Row(
                         children: [
                           OutlinedButton(
                             onPressed: () {},
                             style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: _outlineColor.withOpacity(0.5)),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              side: BorderSide(
+                                color: _outlineColor.withOpacity(0.5),
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                            child: Text('Anterior', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: _textVariant)),
+                            child: Text(
+                              'Anterior',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: _textVariant,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 8),
                           OutlinedButton(
                             onPressed: () {},
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(color: _primaryColor),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                            child: Text('Próximo', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: _primaryColor)),
+                            child: Text(
+                              'Próximo',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: _primaryColor,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -680,36 +965,89 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, String subtitle, Color bgColor, Color textColor, Color valueColor, {bool subtitleIsBadge = true, bool isIcon = false}) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    String subtitle,
+    Color bgColor,
+    Color textColor,
+    Color valueColor, {
+    bool subtitleIsBadge = true,
+    bool isIcon = false,
+  }) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          if (bgColor != _surfaceLowest) BoxShadow(color: bgColor.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8)),
+          if (bgColor != _surfaceLowest)
+            BoxShadow(
+              color: bgColor.withOpacity(0.4),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title.toUpperCase(), style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: textColor.withOpacity(0.6), letterSpacing: 1.5)),
+          Text(
+            title.toUpperCase(),
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: textColor.withOpacity(0.6),
+              letterSpacing: 1.5,
+            ),
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(value, style: GoogleFonts.manrope(fontSize: 32, fontWeight: FontWeight.w800, color: valueColor, height: 1.1)),
+              Text(
+                value,
+                style: GoogleFonts.manrope(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  color: valueColor,
+                  height: 1.1,
+                ),
+              ),
               if (isIcon)
-                Icon(subtitle == 'dns' ? Icons.dns : Icons.cloud_done, color: textColor)
+                Icon(
+                  subtitle == 'dns' ? Icons.dns : Icons.cloud_done,
+                  color: textColor,
+                )
               else if (subtitleIsBadge)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFF86F8C8), borderRadius: BorderRadius.circular(4)),
-                  child: Text(subtitle, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF007352))),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF86F8C8),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF007352),
+                    ),
+                  ),
                 )
               else
-                Text(subtitle, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: _outlineColor)),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: _outlineColor,
+                  ),
+                ),
             ],
           ),
         ],
@@ -723,11 +1061,36 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       color: _surfaceLow,
       child: Row(
         children: [
-          Expanded(flex: 2, child: _buildHeaderText(type == 'pacientes' ? 'PERFIL DO PACIENTE' : type == 'medicos' ? 'PERFIL DO MÉDICO' : 'PERFIL DO USUÁRIO')),
-          Expanded(flex: 1, child: _buildHeaderText(type == 'medicos' ? 'ESPECIALIDADE' : 'PAPEL NO SISTEMA')),
+          Expanded(
+            flex: 2,
+            child: _buildHeaderText(
+              type == 'pacientes'
+                  ? 'PERFIL DO PACIENTE'
+                  : type == 'medicos'
+                  ? 'PERFIL DO MÉDICO'
+                  : 'PERFIL DO USUÁRIO',
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: _buildHeaderText(
+              type == 'medicos' ? 'ESPECIALIDADE' : 'PAPEL NO SISTEMA',
+            ),
+          ),
           Expanded(flex: 1, child: _buildHeaderText('STATUS DA CONTA')),
-          Expanded(flex: 1, child: _buildHeaderText(type == 'medicos' ? 'CRM / CONTATO' : 'NÍVEL DE SEGURANÇA')),
-          Expanded(flex: 1, child: Align(alignment: Alignment.centerRight, child: _buildHeaderText('CONTROLE DE ACESSO'))),
+          Expanded(
+            flex: 1,
+            child: _buildHeaderText(
+              type == 'medicos' ? 'CRM / CONTATO' : 'NÍVEL DE SEGURANÇA',
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: _buildHeaderText('CONTROLE DE ACESSO'),
+            ),
+          ),
         ],
       ),
     );
@@ -736,7 +1099,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Widget _buildHeaderText(String text) {
     return Text(
       text,
-      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: _outlineColor, letterSpacing: 2.0),
+      style: GoogleFonts.inter(
+        fontSize: 10,
+        fontWeight: FontWeight.bold,
+        color: _outlineColor,
+        letterSpacing: 2.0,
+      ),
     );
   }
 
@@ -755,15 +1123,25 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       roleText = item['role']?.toString().toUpperCase() ?? 'USER';
       isActive = item['is_active'] ?? true;
       statusText = isActive ? 'Ativo' : 'Suspenso';
-      
+
       securityOrContactSection = Container(
         width: 100,
         height: 6,
-        decoration: BoxDecoration(color: _surfaceHigh, borderRadius: BorderRadius.circular(4)),
+        decoration: BoxDecoration(
+          color: _surfaceHigh,
+          borderRadius: BorderRadius.circular(4),
+        ),
         child: FractionallySizedBox(
           alignment: Alignment.centerLeft,
           widthFactor: isActive ? (roleText == 'ADMIN' ? 0.95 : 0.8) : 0.4,
-          child: Container(decoration: BoxDecoration(color: isActive ? (roleText == 'ADMIN' ? _secondaryColor : _primaryColor) : _errorColor, borderRadius: BorderRadius.circular(4))),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isActive
+                  ? (roleText == 'ADMIN' ? _secondaryColor : _primaryColor)
+                  : _errorColor,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
         ),
       );
     } else if (type == 'medicos') {
@@ -772,28 +1150,49 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       roleText = item['especialidade']?.toString().toUpperCase() ?? 'GERAL';
       String crm = item['crm'] ?? '';
       String tel = item['telefone'] ?? '';
-      
+
       securityOrContactSection = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(crm, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: _textColor)),
-          Text(tel, style: GoogleFonts.inter(fontSize: 11, color: _outlineColor)),
+          Text(
+            crm,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: _textColor,
+            ),
+          ),
+          Text(
+            tel,
+            style: GoogleFonts.inter(fontSize: 11, color: _outlineColor),
+          ),
         ],
       );
-    } else { // pacientes
+    } else {
+      // pacientes
       name = item['nome'] ?? 'Paciente';
       subName = item['cidade'] ?? 'Localização não informada';
       roleText = 'PACIENTE';
       String cpf = item['cpf'] ?? '';
       String whats = item['whatsapp'] ?? '';
-      
+
       securityOrContactSection = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(cpf, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: _textColor)),
-          Text(whats, style: GoogleFonts.inter(fontSize: 11, color: _outlineColor)),
+          Text(
+            cpf,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: _textColor,
+            ),
+          ),
+          Text(
+            whats,
+            style: GoogleFonts.inter(fontSize: 11, color: _outlineColor),
+          ),
         ],
       );
     }
@@ -817,16 +1216,43 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         Container(
           width: 48,
           height: 48,
-          decoration: BoxDecoration(color: _surfaceHigh, borderRadius: BorderRadius.circular(12)),
-          child: Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: GoogleFonts.manrope(fontWeight: FontWeight.bold, fontSize: 18))),
+          decoration: BoxDecoration(
+            color: _surfaceHigh,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Center(
+            child: Text(
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
+              style: GoogleFonts.manrope(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ),
         ),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name, style: GoogleFonts.manrope(fontWeight: FontWeight.bold, fontSize: 16, color: _textColor), overflow: TextOverflow.ellipsis),
-              Text(subName, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: _textVariant), overflow: TextOverflow.ellipsis),
+              Text(
+                name,
+                style: GoogleFonts.manrope(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: _textColor,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                subName,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: _textVariant,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
@@ -835,24 +1261,56 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
     Widget roleSection = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(color: roleBgColor, borderRadius: BorderRadius.circular(16)),
-      child: Text(roleText, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: roleTextColor)),
+      decoration: BoxDecoration(
+        color: roleBgColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        roleText,
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: roleTextColor,
+        ),
+      ),
     );
 
     Widget statusSection = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: isActive ? _secondaryColor : _errorColor, shape: BoxShape.circle)),
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: isActive ? _secondaryColor : _errorColor,
+            shape: BoxShape.circle,
+          ),
+        ),
         const SizedBox(width: 8),
-        Text(statusText, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _textColor)),
+        Text(
+          statusText,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: _textColor,
+          ),
+        ),
       ],
     );
 
     Widget actionsSection = Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        IconButton(icon: Icon(Icons.edit, color: _primaryColor, size: 20), onPressed: () => _showEditDialog(type, item), tooltip: 'Editar Cadastro'),
-        IconButton(icon: Icon(Icons.block, color: _errorColor, size: 20), onPressed: () => _deleteItem(type, id, name), tooltip: 'Excluir Definitivamente'),
+        IconButton(
+          icon: Icon(Icons.edit, color: _primaryColor, size: 20),
+          onPressed: () => _showEditDialog(type, item),
+          tooltip: 'Editar Cadastro',
+        ),
+        IconButton(
+          icon: Icon(Icons.block, color: _errorColor, size: 20),
+          onPressed: () => _deleteItem(type, id, name),
+          tooltip: 'Excluir Definitivamente',
+        ),
       ],
     );
 
@@ -864,7 +1322,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [Expanded(child: profileSection), roleSection],
+              children: [
+                Expanded(child: profileSection),
+                roleSection,
+              ],
             ),
             const SizedBox(height: 16),
             Row(
@@ -881,7 +1342,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       child: Row(
         children: [
           Expanded(flex: 2, child: profileSection),
-          Expanded(flex: 1, child: Align(alignment: Alignment.centerLeft, child: roleSection)),
+          Expanded(
+            flex: 1,
+            child: Align(alignment: Alignment.centerLeft, child: roleSection),
+          ),
           Expanded(flex: 1, child: statusSection),
           Expanded(flex: 1, child: securityOrContactSection),
           Expanded(flex: 1, child: actionsSection),
