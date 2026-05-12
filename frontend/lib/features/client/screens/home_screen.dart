@@ -66,13 +66,18 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: surfaceColor,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1200),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final horizontalPadding = constraints.maxWidth >= 1200 ? 48.0 : 24.0;
+
+          return SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: 40,
+              ),
+              child: SizedBox(
+                width: double.infinity,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -230,8 +235,8 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -679,7 +684,7 @@ class HomeScreen extends ConsumerWidget {
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'SIGNOS VITAIS RECENTES',
             style: TextStyle(
               fontSize: 10,
@@ -688,10 +693,14 @@ class HomeScreen extends ConsumerWidget {
               color: Color(0xFF434654),
             ),
           ),
-          SizedBox(height: 24),
-          Icon(Icons.cloud_off_outlined, color: Color(0xFF9E9E9E), size: 36),
-          SizedBox(height: 12),
-          Text(
+          const SizedBox(height: 24),
+          const Icon(
+            Icons.cloud_off_outlined,
+            color: Color(0xFF9E9E9E),
+            size: 36,
+          ),
+          const SizedBox(height: 12),
+          const Text(
             'Informações indisponíveis no momento.',
             style: TextStyle(color: Color(0xFF616161), fontSize: 13),
           ),

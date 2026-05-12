@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
+import os
 
 from app.db.database import get_db
 from app.models.exam import Exam
@@ -62,8 +63,26 @@ def delete_exam(
     elif current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
             
+    # 1. Tentar deletar o arquivo físico
+    if exam.exam_url and exam.exam_url.startswith("/static/"):
+        try:
+            # Construir o caminho completo do arquivo
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+            # Remover o prefixo '/static/' para pegar o caminho relativo
+            relative_path = exam.exam_url.lstrip("/")
+            file_path = os.path.join(base_dir, relative_path)
+            
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print(f"[DEBUG] Arquivo físico deletado: {file_path}")
+            else:
+                print(f"[DEBUG] Arquivo não encontrado no disco: {file_path}")
+        except Exception as e:
+            print(f"[ERROR] Falha ao deletar arquivo físico: {e}")
+
+    # 2. Deletar do banco de dados
     db.delete(exam)
     db.commit()
-    print(f"[DEBUG] Exame {exam_id} deletado com sucesso")
-    return {"message": "Exam deleted successfully"}
+    print(f"[DEBUG] Exame {exam_id} deletado do banco com sucesso")
+    return {"message": "Exam and physical file deleted successfully"}
 

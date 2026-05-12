@@ -6,6 +6,7 @@ env/
 .env
 .env.*
 !.env.example
+serviceAccountKey.json
 
 # Python
 __pycache__/
@@ -96,3 +97,6 @@ docs/templates-sua-consulta/
 
 # Scratch and local dev
 backend/scratch/
+
+# Backend static files
+backend/static/exams/

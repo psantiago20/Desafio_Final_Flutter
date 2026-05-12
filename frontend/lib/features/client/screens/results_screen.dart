@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+
+
 /// Results Screen (Exams)
 /// Responsabilidade: flutter-frontend-agent
 /// Exibe lista de exames com status, resultados e alertas.
@@ -43,19 +45,22 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       final validExams = allExams.where((exam) {
         final url = exam['exam_url'] as String?;
         final title = exam['title'] as String? ?? '';
-
-        // Se a URL for nula, vazia ou 'none', não mostra o card conforme solicitado
-        if (url == null ||
-            url.trim().isEmpty ||
-            url.toLowerCase() == 'none' ||
-            url.toLowerCase() == 'null') {
+        
+        // Se a URL for nula, vazia ou strings que indicam ausência de arquivo
+        if (url == null || url.trim().isEmpty || 
+            url.toLowerCase() == 'none' || 
+            url.toLowerCase() == 'null' || 
+            url.toLowerCase() == 'undefined' ||
+            url.toLowerCase().contains('TODO')) {
           return false;
         }
 
-        // Se o título indicar que falhou o upload ou é um erro (opcional, dependendo do backend)
-        if (title.toLowerCase().contains('erro') ||
-            title.toLowerCase().contains('falha')) {
-          // Aqui poderíamos decidir ocultar ou não. Por enquanto vamos manter o filtro na URL.
+        // Se o título indicar que falhou o upload ou é um erro
+        final lowerTitle = title.toLowerCase();
+        if (lowerTitle.contains('erro') || 
+            lowerTitle.contains('falha') || 
+            lowerTitle.contains('nenhum exame')) {
+          return false;
         }
 
         return true;
@@ -114,6 +119,195 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     }
   }
 
+  void _showFilePopup(Map<String, dynamic> exam) {
+    final url = exam['exam_url'] as String?;
+    final title = exam['title'] as String? ?? 'Exame';
+    if (url == null) return;
+
+    // Garantir que a URL está completa e tratar IPs de emulador legados
+    String fullUrl = url;
+    if (url.contains('10.0.2.2:8000')) {
+      fullUrl = url.replaceAll('http://10.0.2.2:8000', AppConstants.baseUrl);
+    } else if (!url.startsWith('http')) {
+      final cleanUrl = url.startsWith('/') ? url : '/$url';
+      fullUrl = '${AppConstants.baseUrl}$cleanUrl';
+    }
+
+    final isImage = fullUrl.toLowerCase().contains('.png') || 
+                  fullUrl.toLowerCase().contains('.jpg') || 
+                  fullUrl.toLowerCase().contains('.jpeg');
+
+    int rotationTurns = 0;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title, 
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.rotate_right),
+                  onPressed: () => setDialogState(() => rotationTurns = (rotationTurns + 1) % 4),
+                  tooltip: 'Girar 90°',
+                ),
+              ],
+            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            content: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.9,
+              height: MediaQuery.of(context).size.height * 0.7,
+              child: Column(
+                children: [
+                  if (isImage)
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Stack(
+                            children: [
+                              InteractiveViewer(
+                                minScale: 0.5,
+                                maxScale: 5.0,
+                                child: Center(
+                                  child: RotatedBox(
+                                    quarterTurns: rotationTurns,
+                                    child: Image.network(
+                                      fullUrl,
+                                      fit: BoxFit.contain,
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return const Center(child: CircularProgressIndicator());
+                                      },
+                                      errorBuilder: (context, error, stackTrace) => const Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.error_outline, color: AppTheme.alertRed, size: 40),
+                                            SizedBox(height: 8),
+                                            Text('Erro ao carregar imagem', textAlign: TextAlign.center),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'Dica: Use pinça para Zoom',
+                                    style: TextStyle(color: Colors.white, fontSize: 10),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    const Expanded(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.insert_drive_file, size: 80, color: AppTheme.primaryBlue),
+                            SizedBox(height: 16),
+                            Text(
+                              'Este arquivo não pode ser visualizado diretamente.',
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                        label: const Text('Fechar'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          final uri = Uri.parse(fullUrl);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        icon: const Icon(Icons.download),
+                        label: const Text('Abrir/Baixar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+
+  final List<Map<String, dynamic>> _mockExams = [
+    {
+      'id': 1,
+      'name': 'Hemograma Completo',
+      'type': 'Análise Sanguínea',
+      'date': 'Enviado em 01/05',
+      'status': 'available',
+      'doctor': 'Avaliado por Dr. João Santos',
+      'hasAbnormalities': false,
+    },
+    {
+      'id': 3,
+      'name': 'Glicemia em Jejum',
+      'type': 'Análise Sanguínea',
+      'date': '2026-04-25',
+      'status': 'available',
+      'doctor': 'Dra. Maria Lima',
+      'hasAbnormalities': true,
+    },
+    {
+      'id': 4,
+      'name': 'Raio-X de Tórax',
+      'type': 'Imagem',
+      'date': '2026-05-03',
+      'status': 'pending',
+      'doctor': 'Dr. Carlos Souza',
+      'hasAbnormalities': false,
+    },
+  ];
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
@@ -136,50 +330,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Container(
-                      padding: const EdgeInsets.all(16.0),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlueLight.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: AppTheme.primaryBlue.withOpacity(0.3),
-                        ),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.auto_awesome,
-                                color: AppTheme.primaryBlueDark,
-                                size: 20,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Resumo da IA',
-                                style: TextStyle(
-                                  color: AppTheme.primaryBlueDark,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Seus exames de sangue recentes estão dentro da normalidade. Não se esqueça de realizar o Raio-X de Tórax agendado.',
-                            style: TextStyle(
-                              color: AppTheme.textPrimary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+
                   const SizedBox(height: 16),
 
                   // Lista de Exames
@@ -291,15 +442,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                                 ),
                               ),
                               TextButton.icon(
-                                onPressed: () async {
-                                  final url = exam['exam_url'] as String?;
-                                  if (url != null && url.isNotEmpty) {
-                                    final uri = Uri.parse(url);
-                                    if (await canLaunchUrl(uri)) {
-                                      await launchUrl(uri);
-                                    }
-                                  }
-                                },
+                                onPressed: () => _showFilePopup(exam),
                                 icon: const Icon(Icons.visibility, size: 18),
                                 label: const Text('Ver Resultado'),
                               ),
@@ -322,7 +465,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   Widget _buildExamCard(Map<String, dynamic> exam) {
     final examUrl = exam['exam_url'] as String?;
     final summary = exam['summary'] as String?;
-    final hasSummary = summary != null && summary.isNotEmpty;
     final hasFile = examUrl != null && examUrl.isNotEmpty;
 
     DateTime? date;
@@ -335,14 +477,12 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     final title = exam['title'] as String? ?? 'Exame';
 
     return Card(
-      color: hasSummary ? AppTheme.surfaceWhite : AppTheme.backgroundGray,
+      color: AppTheme.surfaceWhite,
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: hasSummary
-              ? AppTheme.successGreen.withOpacity(0.3)
-              : AppTheme.borderGray,
+          color: AppTheme.borderGray,
           width: 1,
         ),
       ),
@@ -356,16 +496,12 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: hasSummary
-                        ? AppTheme.successGreenLight
-                        : AppTheme.backgroundGray,
+                    color: AppTheme.backgroundGray,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.assignment,
-                    color: hasSummary
-                        ? AppTheme.successGreen
-                        : AppTheme.textSecondary,
+                    color: AppTheme.textSecondary,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -400,31 +536,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                 ),
               ],
             ),
-            if (hasSummary) ...[
-              const SizedBox(height: 16),
-              const Text(
-                'Análise da IA:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: AppTheme.primaryBlueDark,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(summary, style: const TextStyle(fontSize: 14)),
-            ],
             if (hasFile) ...[
               const SizedBox(height: 16),
               OutlinedButton.icon(
-                onPressed: () async {
-                  final examUrl = exam['exam_url'] as String?;
-                  if (examUrl != null && examUrl.isNotEmpty) {
-                    final uri = Uri.parse(examUrl);
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri);
-                    }
-                  }
-                },
+                onPressed: () => _showFilePopup(exam),
                 icon: const Icon(Icons.open_in_new),
                 label: const Text('Ver Arquivo Original'),
               ),
