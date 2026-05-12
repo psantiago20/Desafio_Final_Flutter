@@ -80,6 +80,12 @@ app.include_router(simulator_admin.router, prefix="/api/simulator", tags=["simul
 app.include_router(medicos.router, prefix="/api/medicos", tags=["medicos"])
 app.include_router(exams.router, prefix="/api/exams", tags=["exams"])
 
+from app.core.scheduler import start_scheduler
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Initializing background tasks...")
+    start_scheduler()
 
 @app.get("/")
 def root():

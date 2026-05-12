@@ -2,6 +2,7 @@ import 'package:frontend/core/constants/app_constants.dart';
 import 'package:frontend/core/network/api_client.dart';
 import 'package:frontend/core/utils/token_storage.dart';
 import 'package:frontend/shared/models/user_model.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class AuthRepository {
   Future<UserModel> login(String username, String password) async {
@@ -13,6 +14,13 @@ class AuthRepository {
     final token = data['access_token'] as String;
     TokenStorage.saveToken(token);
     ApiClient.setToken(token);
+
+    try {
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken != null) {
+        await ApiClient.patch('/api/auth/fcm-token', {'fcm_token': fcmToken});
+      }
+    } catch (_) {}
 
     final user = await getMe();
     return user;

@@ -31,6 +31,7 @@ services:
       - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
       - FAQ_DIR=/app/faq
       - CHROMA_DIR=/app/chroma_data
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/serviceAccountKey.json
     depends_on:
       postgres:
         condition: service_healthy
