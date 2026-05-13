@@ -1,21 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/constants/app_constants.dart';
-import '../../../features/auth/providers/auth_provider.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/network/api_client.dart';
-import '../../../shared/widgets/custom_app_bar.dart';
-
-class ChatMessage {
-  final String text;
-  final bool isMe;
-
-  ChatMessage({required this.text, required this.isMe});
-}
+import '../../core/theme/app_theme.dart';
+import '../../widgets/custom_app_bar.dart';
+import '../../features/chat/providers/chat_provider.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -28,77 +17,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _picker = ImagePicker();
-  final List<ChatMessage> _messages = [];
-  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchMessages();
+    // A busca inicial já é feita no construtor do Notifier, 
+    // mas garantimos que o scroll vá para o final após o build inicial
+    _scrollToBottom();
   }
 
-  Future<void> _fetchMessages() async {
-    try {
-      final response = await ApiClient.get('/api/messages');
-      final List<dynamic> msgs = response['messages'];
-
-      setState(() {
-        _messages.clear();
-        for (var m in msgs.reversed) {
-          final source = m['source'];
-          _messages.add(
-            ChatMessage(
-              text: m['content'],
-              isMe: source == 'app' || source == 'whatsapp',
-            ),
-          );
-        }
-      });
-      _scrollToBottom();
-    } catch (e) {
-      debugPrint('Erro ao buscar mensagens: $e');
-    }
-  }
-
-  Future<void> _sendMessage() async {
+  void _sendMessage() {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    setState(() {
-      _messages.add(ChatMessage(text: text, isMe: true));
-      _isLoading = true;
-    });
+    ref.read(chatProvider.notifier).sendMessage(text);
     _controller.clear();
     _scrollToBottom();
-
-    try {
-      final authState = ref.read(authProvider);
-      final waFrom = authState.user?.phone ?? '5511999999999';
-
-      final response = await ApiClient.post('/api/rag/query', {
-        'query': text,
-        'wa_from': waFrom,
-      });
-
-      setState(() {
-        _messages.add(ChatMessage(text: response['response'], isMe: false));
-      });
-    } catch (e) {
-      setState(() {
-        _messages.add(
-          ChatMessage(
-            text:
-                'Erro de conexão: Não foi possível contatar o assistente virtual.',
-            isMe: false,
-          ),
-        );
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-      _scrollToBottom();
-    }
   }
 
   Future<void> _pickAndUploadExam() async {
@@ -106,62 +40,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
       if (image == null) return;
 
-      setState(() {
-        _messages.add(
-          ChatMessage(text: 'Enviando exame (${image.name})...', isMe: true),
-        );
-        _isLoading = true;
-      });
-      _scrollToBottom();
-
-      final authState = ref.read(authProvider);
-      final waFrom = authState.user?.phone ?? '5511999999999';
-
-      final url = Uri.parse('${AppConstants.baseUrl}/api/rag/upload-exam');
-      var request = http.MultipartRequest('POST', url);
-      request.fields['wa_from'] = waFrom;
       final bytes = await image.readAsBytes();
-      request.files.add(
-        http.MultipartFile.fromBytes('file', bytes, filename: image.name),
-      );
-
-      var response = await request.send();
-      var responseBody = await response.stream.bytesToString();
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(responseBody);
-        setState(() {
-          _messages.add(
-            ChatMessage(
-              text: data['message'] ?? 'Exame processado com sucesso!',
-              isMe: false,
-            ),
-          );
-        });
-      } else {
-        setState(() {
-          _messages.add(
-            ChatMessage(
-              text: 'Erro ao enviar o exame. Tente novamente.',
-              isMe: false,
-            ),
-          );
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _messages.add(
-          ChatMessage(
-            text: 'Erro ao selecionar ou enviar a imagem: $e',
-            isMe: false,
-          ),
-        );
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      await ref.read(chatProvider.notifier).uploadExam(image.name, bytes);
       _scrollToBottom();
+    } catch (e) {
+      debugPrint('Erro ao selecionar imagem: $e');
     }
   }
 
@@ -179,13 +62,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final chatState = ref.watch(chatProvider);
+    final messages = chatState.messages;
+    final isLoading = chatState.isLoading;
+
+    // Sempre rolar para o final quando novas mensagens chegarem
+    ref.listen(chatProvider, (previous, next) {
+      if (previous?.messages.length != next.messages.length) {
+        _scrollToBottom();
+      }
+    });
+
     if (kIsWeb) {
-      return _buildWeb();
+      return _buildWeb(messages, isLoading);
     }
-    return _buildMobile();
+    return _buildMobile(messages, isLoading);
   }
 
-  Widget _buildWeb() {
+  Widget _buildWeb(List<ChatMessage> messages, bool isLoading) {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
@@ -195,9 +89,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: ListView.builder(
                 controller: _scrollController,
                 padding: const EdgeInsets.all(16.0),
-                itemCount: _messages.length + (_isLoading ? 1 : 0),
+                itemCount: messages.length + (isLoading ? 1 : 0),
                 itemBuilder: (context, index) {
-                  if (index == _messages.length && _isLoading) {
+                  if (index == messages.length && isLoading) {
                     return const Align(
                       alignment: Alignment.centerLeft,
                       child: Padding(
@@ -209,7 +103,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                     );
                   }
-                  final msg = _messages[index];
+                  final msg = messages[index];
                   return _buildMessageBubble(msg.text, msg.isMe);
                 },
               ),
@@ -221,7 +115,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildMobile() {
+  Widget _buildMobile(List<ChatMessage> messages, bool isLoading) {
     return Scaffold(
       appBar: const CustomAppBar(subtitle: 'Atendimento por IA'),
       body: Container(
@@ -232,9 +126,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: ListView.builder(
                 controller: _scrollController,
                 padding: const EdgeInsets.all(16.0),
-                itemCount: _messages.length + (_isLoading ? 1 : 0),
+                itemCount: messages.length + (isLoading ? 1 : 0),
                 itemBuilder: (context, index) {
-                  if (index == _messages.length && _isLoading) {
+                  if (index == messages.length && isLoading) {
                     return const Align(
                       alignment: Alignment.centerLeft,
                       child: Padding(
@@ -246,12 +140,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                     );
                   }
-                  final msg = _messages[index];
+                  final msg = messages[index];
                   return _buildMessageBubble(msg.text, msg.isMe);
                 },
               ),
             ),
-            // Input simplificado (original atualizado com anexo)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: const BoxDecoration(
