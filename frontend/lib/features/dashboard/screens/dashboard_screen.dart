@@ -40,7 +40,6 @@ class DashboardScreen extends ConsumerWidget {
                       color: AppColors.textSecondary),
                   onPressed: () {
                     ref.read(authProvider.notifier).logout();
-                    context.go('/login');
                   },
                 ),
               ],

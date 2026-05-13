@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Muda para o diretório raiz do projeto (um nível acima deste script)
+cd "$(dirname "$0")/.."
+
 echo "🚀 Reiniciando o Docker do projeto OmniConnect..."
 
 # Para os containers e remove os volumes órfãos (opcional)

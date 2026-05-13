@@ -7,6 +7,9 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Muda para o diretório raiz do projeto (um nível acima deste script)
+cd "$(dirname "$0")/.."
+
 echo -e "${BLUE}🚀 Iniciando o setup completo do OmniConnect...${NC}"
 
 # 1. Verificar Docker
@@ -82,8 +85,10 @@ done
 
 # 7. Criar tabelas e Injetar Seeds
 echo -e "${BLUE}🗄️ Configurando banco de dados (tabelas e seeds)...${NC}"
-docker compose exec backend python scripts/create_tables.py
-docker compose exec backend python scripts/seed_test_users.py
+# Usamos PYTHONPATH=. para que o Python encontre o pacote 'app' dentro do container
+docker compose exec backend bash -c "PYTHONPATH=. python scripts/create_tables.py"
+docker compose exec backend bash -c "PYTHONPATH=. python scripts/seed_test_users.py"
+
 
 # 8. Instalar dependências do Flutter
 echo -e "${BLUE}📱 Instalando dependências do Flutter...${NC}"

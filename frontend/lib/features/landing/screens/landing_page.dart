@@ -803,7 +803,6 @@ class _LoginModalState extends ConsumerState<LoginModal> {
         .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
     if (ok && mounted) {
       Navigator.pop(context); // Fecha o modal
-      context.go('/dashboard');
     }
   }
 

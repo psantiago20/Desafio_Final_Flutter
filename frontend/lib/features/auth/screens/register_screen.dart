@@ -52,7 +52,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           role: 'doctor',
         );
     if (ok && mounted) {
-      context.go('/dashboard');
+      // Redirecionamento automático via GoRouter
     }
   }
 

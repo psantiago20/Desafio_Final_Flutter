@@ -21,116 +21,78 @@ class MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).user;
+    final currentIndex = _currentIndex(context);
 
     return Scaffold(
       key: _scaffoldKey,
-      appBar: MediaQuery.of(context).size.width < 600
-          ? AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.menu, color: AppTheme.primaryBlueDark),
-                onPressed: () {
-                  _scaffoldKey.currentState?.openDrawer();
-                },
-              ),
-              title: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/images/suaConsulta.png',
-                    height: 32,
-                    width: 32,
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Sua Consulta',
-                        style: TextStyle(
-                          color: AppTheme.primaryBlueDark,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      Text(
-                        user?.displayName ?? 'Bem-vindo',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.primaryBlue,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.logout_rounded,
-                    color: AppColors.textSecondary,
-                  ),
-                  onPressed: () {
-                    ref.read(authProvider.notifier).logout();
-                    context.go('/login');
-                  },
-                ),
-              ],
-            )
-          : null,
-      drawer: MediaQuery.of(context).size.width < 600
-          ? _buildDrawer(context, ref)
-          : null,
-      body: child,
-      bottomNavigationBar: MediaQuery.of(context).size.width >= 600
-          ? null
-          : Container(
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: AppColors.border)),
-              ),
-              child: BottomNavigationBar(
-                currentIndex: _currentIndex(context),
-                type: BottomNavigationBarType.fixed,
-                onTap: (i) {
-                  switch (i) {
-                    case 0:
-                      context.go('/dashboard');
-                    case 1:
-                      context.go('/appointments');
-                    case 2:
-                      context.go('/patients');
-                    case 3:
-                      context.go('/profile');
-                  }
-                },
-                items: const [
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.dashboard_outlined),
-                    activeIcon: Icon(Icons.dashboard_rounded),
-                    label: 'Dashboard',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.calendar_today_outlined),
-                    activeIcon: Icon(Icons.calendar_today_rounded),
-                    label: 'Consultas',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.people_outline_rounded),
-                    activeIcon: Icon(Icons.people_rounded),
-                    label: 'Pacientes',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.person_outline_rounded),
-                    activeIcon: Icon(Icons.person_rounded),
-                    label: 'Perfil',
-                  ),
-                ],
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.menu, color: AppTheme.primaryBlueDark),
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+        ),
+        title: Row(
+          children: [
+            Image.asset('assets/images/suaConsulta.png', height: 32),
+            const SizedBox(width: 12),
+            const Text(
+              'Sua Consulta',
+              style: TextStyle(
+                color: AppTheme.primaryBlueDark,
+                fontWeight: FontWeight.bold,
               ),
             ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: AppColors.textSecondary),
+            onPressed: () => ref.read(authProvider.notifier).logout(),
+          ),
+        ],
+      ),
+      drawer: _buildDrawer(context, ref),
+      body: child,
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.border)),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: currentIndex,
+          type: BottomNavigationBarType.fixed,
+          onTap: (i) {
+            switch (i) {
+              case 0: context.go('/dashboard'); break;
+              case 1: context.go('/appointments'); break;
+              case 2: context.go('/patients'); break;
+              case 3: context.go('/profile'); break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard_outlined),
+              activeIcon: Icon(Icons.dashboard_rounded),
+              label: 'Dashboard',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_today_outlined),
+              activeIcon: Icon(Icons.calendar_today_rounded),
+              label: 'Consultas',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.people_outline_rounded),
+              activeIcon: Icon(Icons.people_rounded),
+              label: 'Pacientes',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline_rounded),
+              activeIcon: Icon(Icons.person_rounded),
+              label: 'Perfil',
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -276,7 +238,6 @@ class MainShell extends ConsumerWidget {
             onTap: () {
               Navigator.pop(context);
               ref.read(authProvider.notifier).logout();
-              context.go('/login');
             },
           ),
         ],
