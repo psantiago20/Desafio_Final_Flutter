@@ -5,6 +5,7 @@ import '../../../shared/models/appointment_model.dart';
 class AppointmentsRepository {
   Future<List<AppointmentModel>> getAppointments({
     int? doctorId,
+    int? patientId,
     String? statusFilter,
     DateTime? dateFrom,
     DateTime? dateTo,
@@ -14,8 +15,9 @@ class AppointmentsRepository {
     final params = <String, dynamic>{
       'skip': skip,
       'limit': limit,
-      'doctor_id': ?doctorId,
-      'status_filter': ?statusFilter,
+      if (doctorId != null) 'doctor_id': doctorId,
+      if (patientId != null) 'patient_id': patientId,
+      if (statusFilter != null) 'status_filter': statusFilter,
       if (dateFrom != null) 'date_from': dateFrom.toIso8601String(),
       if (dateTo != null) 'date_to': dateTo.toIso8601String(),
     };

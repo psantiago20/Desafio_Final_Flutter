@@ -9,7 +9,8 @@ class MainShell extends StatelessWidget {
   int _currentIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
     if (location.startsWith('/appointments')) return 1;
-    if (location.startsWith('/profile')) return 2;
+    if (location.startsWith('/patients')) return 2;
+    if (location.startsWith('/profile')) return 3;
     return 0;
   }
 
@@ -23,6 +24,7 @@ class MainShell extends StatelessWidget {
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex(context),
+          type: BottomNavigationBarType.fixed,
           onTap: (i) {
             switch (i) {
               case 0:
@@ -30,6 +32,8 @@ class MainShell extends StatelessWidget {
               case 1:
                 context.go('/appointments');
               case 2:
+                context.go('/patients');
+              case 3:
                 context.go('/profile');
             }
           },
@@ -43,6 +47,11 @@ class MainShell extends StatelessWidget {
               icon: Icon(Icons.calendar_today_outlined),
               activeIcon: Icon(Icons.calendar_today_rounded),
               label: 'Consultas',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.people_outline_rounded),
+              activeIcon: Icon(Icons.people_rounded),
+              label: 'Pacientes',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline_rounded),

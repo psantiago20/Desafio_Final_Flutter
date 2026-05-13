@@ -12,6 +12,9 @@ import 'features/appointments/presentation/screens/appointments_screen.dart';
 import 'features/appointments/presentation/screens/appointment_detail_screen.dart';
 import 'features/appointments/presentation/screens/new_appointment_screen.dart';
 import 'features/profile/presentation/screens/profile_screen.dart';
+import 'features/patients/presentation/screens/patients_screen.dart';
+import 'features/patients/presentation/screens/patient_appointments_screen.dart';
+import 'shared/models/patient_model.dart';
 import 'shared/models/appointment_model.dart';
 import 'shared/widgets/main_shell.dart';
 import 'screens/client/main_dashboard_screen.dart' as client_screens;
@@ -104,6 +107,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/appointments',
             builder: (_, _) => const AppointmentsScreen(),
+          ),
+          GoRoute(
+            path: '/patients',
+            builder: (_, _) => const PatientsScreen(),
+            routes: [
+              GoRoute(
+                path: 'appointments',
+                builder: (context, state) {
+                  final patient = state.extra as PatientModel;
+                  return PatientAppointmentsScreen(patient: patient);
+                },
+              ),
+            ],
           ),
           GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
         ],
