@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import '../screens/client/profile_screen.dart';
-import '../core/theme/app_theme.dart';
+import 'package:frontend/features/profile/screens/profile_screen.dart';
+import '../../core/theme/app_theme.dart';
 
-/// 🎀 Custom AppBar
-/// Responsabilidade: ui-ux-designer-agent / flutter-frontend-agent
-/// Garante que o Logo e o nome "Sua Consulta" fiquem visíveis em todas as telas.
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String subtitle;
   final List<Widget>? actions;
@@ -25,14 +22,19 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: Colors.transparent,
       elevation: 0,
       iconTheme: const IconThemeData(color: AppTheme.primaryBlueDark),
+      // Botão hambúrguer para abrir Drawer
+      leading: Builder(
+        builder: (context) => IconButton(
+          icon: const Icon(Icons.menu, color: AppTheme.primaryBlueDark),
+          onPressed: () {
+            Scaffold.of(context).openDrawer();
+          },
+        ),
+      ),
       title: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Image.asset(
-            'assets/images/suaConsulta.png',
-            height: 32,
-            width: 32,
-          ),
+          Image.asset('assets/images/suaConsulta.png', height: 32, width: 32),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,5 +81,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => Size.fromHeight(kToolbarHeight + (bottom?.preferredSize.height ?? 0.0));
+  Size get preferredSize =>
+      Size.fromHeight(kToolbarHeight + (bottom?.preferredSize.height ?? 0.0));
 }

@@ -3,23 +3,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../core/theme/app_theme.dart';
-import '../../widgets/custom_app_bar.dart';
-import '../../features/dashboard/providers/dashboard_provider.dart';
-import '../../features/home/providers/medicos_provider.dart';
-import '../../shared/models/appointment_model.dart';
-import '../../shared/models/medico_model.dart';
-import '../../shared/models/dashboard_stats_model.dart';
-import '../../shared/models/user_model.dart';
-import '../../features/auth/presentation/providers/auth_provider.dart';
-import '../../core/network/api_client.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/custom_app_bar.dart';
+import '../../../features/dashboard/providers/dashboard_provider.dart';
+import '../../../features/home/providers/medicos_provider.dart';
+import '../../../shared/models/appointment_model.dart';
+import '../../../shared/models/medico_model.dart';
+import '../../../shared/models/dashboard_stats_model.dart';
+import '../../../shared/models/user_model.dart';
+import '../../../features/auth/providers/auth_provider.dart';
+import '../../../core/network/api_client.dart';
 
 class HomeScreen extends ConsumerWidget {
   final Function(int) onNavigate;
 
   const HomeScreen({super.key, required this.onNavigate});
 
-  /// Extrai a mensagem amigável de qualquer tipo de exceção
   String _cleanError(Object err) {
     if (err is ApiException) return err.message;
     final s = err.toString();
@@ -54,7 +53,6 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  // --- WEB LAYOUT ---
   Widget _buildWebLayout(
     BuildContext context,
     AsyncValue<DashboardStats> statsAsync,
@@ -83,7 +81,6 @@ class HomeScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Hero Section
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(48),
@@ -126,7 +123,6 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 48),
 
-                    // Stats Grid
                     statsAsync.when(
                       data: (stats) => GridView.count(
                         crossAxisCount: 4,
@@ -172,7 +168,6 @@ class HomeScreen extends ConsumerWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Left Column: Timeline & Health
                         Expanded(
                           flex: 2,
                           child: Column(
@@ -201,7 +196,6 @@ class HomeScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 48),
-                        // Right Column: Vitals & Navigation
                         Expanded(
                           child: Column(
                             children: [
@@ -687,7 +681,7 @@ class HomeScreen extends ConsumerWidget {
         color: const Color(0xFFE0E3E5),
         borderRadius: BorderRadius.circular(24),
       ),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
@@ -710,8 +704,8 @@ class HomeScreen extends ConsumerWidget {
             'Informações indisponíveis no momento.',
             style: TextStyle(color: Color(0xFF616161), fontSize: 13),
           ),
-          const SizedBox(height: 4),
-          const Text(
+          SizedBox(height: 4),
+          Text(
             'Estamos resolvendo isso. Tente novamente em breve.',
             style: TextStyle(color: Color(0xFF9E9E9E), fontSize: 12),
           ),
@@ -776,7 +770,6 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  // --- MOBILE LAYOUT (Restored to original state but with real data) ---
   Widget _buildMobileLayout(
     BuildContext context,
     AsyncValue<DashboardStats> statsAsync,
@@ -796,7 +789,6 @@ class HomeScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Welcome Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
@@ -839,7 +831,6 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
 
-              // Stats Grid (Real Data)
               statsAsync.when(
                 data: (stats) => GridView.count(
                   crossAxisCount: 2,
@@ -857,8 +848,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     _buildStatCard(
                       title: 'Exames prontos',
-                      value: stats.completedAppointments
-                          .toString(), // Usando consultas concluídas como proxy ou similar disponível
+                      value: stats.completedAppointments.toString(),
                       icon: Icons.description_outlined,
                       iconColor: AppTheme.successGreen,
                     ),
@@ -869,7 +859,6 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
 
-              // Next Appointment Card (Real Data)
               const Text(
                 'Próxima Consulta',
                 style: TextStyle(
@@ -984,7 +973,6 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
 
-              // Quick Actions
               const Text(
                 'Ações Rápidas',
                 style: TextStyle(

@@ -43,6 +43,7 @@ class UserModel {
         'created_at': createdAt.toIso8601String(),
       };
 
+
   String get displayName => fullName ?? username;
 
   bool get isDoctor => role == 'doctor';

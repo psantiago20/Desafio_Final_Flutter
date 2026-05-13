@@ -3,20 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-import 'features/auth/pages/auth_page.dart';
-
-import 'features/auth/presentation/screens/register_screen.dart';
+import 'features/auth/screens/auth_page.dart';
+import 'features/auth/screens/register_screen.dart';
 import 'features/auth/providers/auth_provider.dart';
-import 'features/dashboard/presentation/screens/dashboard_screen.dart';
-import 'features/appointments/presentation/screens/appointments_screen.dart';
-import 'features/appointments/presentation/screens/appointment_detail_screen.dart';
-import 'features/appointments/presentation/screens/new_appointment_screen.dart';
-import 'features/profile/presentation/screens/profile_screen.dart';
+import 'features/dashboard/screens/dashboard_screen.dart';
+import 'features/appointments/screens/appointments_screen.dart';
+import 'features/appointments/screens/appointment_detail_screen.dart';
+import 'features/appointments/screens/new_appointment_screen.dart';
+import 'features/profile/screens/profile_screen.dart';
 import 'shared/models/appointment_model.dart';
 import 'shared/widgets/main_shell.dart';
-import 'screens/client/main_dashboard_screen.dart' as client_screens;
-import 'screens/landing_page.dart';
-import 'screens/admin/admin_dashboard_screen.dart';
+import 'features/client/screens/main_dashboard_screen.dart' as client_screens;
+import 'features/landing/screens/landing_page.dart';
+import 'features/admin/screens/admin_dashboard_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   // Watch only navigation-relevant state to prevent unnecessary router recreation

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-import '../features/auth/presentation/providers/auth_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class LandingPage extends ConsumerStatefulWidget {
   const LandingPage({super.key});
@@ -1126,7 +1126,6 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
-    final isMobile = MediaQuery.of(context).size.width < 600;
     const Color primaryColor = Color(0xFF003D9B);
 
     if (_showSuccess) {
