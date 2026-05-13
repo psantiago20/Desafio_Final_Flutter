@@ -17,6 +17,8 @@ import 'features/client/screens/main_dashboard_screen.dart' as client_screens;
 import 'features/landing/screens/landing_page.dart';
 import 'features/admin/screens/admin_dashboard_screen.dart';
 
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   // Watch only navigation-relevant state to prevent unnecessary router recreation
   // This ensures the router doesn't rebuild when isLoading or error changes
@@ -24,6 +26,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.watch(authProvider.select((s) => s.user?.role));
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: kIsWeb
         ? '/'
         : (ref.read(authProvider).isAuthenticated
