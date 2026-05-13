@@ -33,6 +33,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Generated plugin registrants
+*generated_plugin_registrant.*
+*GeneratedPluginRegistrant.*
+
 # Symbolication related
 app.*.symbols
 
