@@ -7,6 +7,8 @@ from app.models.message import Message
 from app.schemas.message import MessageCreate, MessageUpdate, MessageResponse, MessageListResponse
 from app.api.endpoints.auth import get_current_user
 from app.models.user import User
+from datetime import datetime, timedelta
+from app.services.fcm_service import fcm_service
 
 router = APIRouter()
 
@@ -62,12 +64,47 @@ def create_message(
     current_user: User = Depends(get_current_user)
 ):
     db_message = Message(
-        **message.model_dump(),
+        **message.model_dump(exclude={"sender_id"}),
         sender_id=current_user.id
     )
     db.add(db_message)
     db.commit()
     db.refresh(db_message)
+    
+    # --- FCM Notification Logic ---
+    if db_message.receiver_id:
+        # Debounce: check if sender sent a message to this receiver in the last 1 minute
+        one_minute_ago = datetime.utcnow() - timedelta(minutes=1)
+        recent_msg_count = db.query(Message).filter(
+            Message.sender_id == current_user.id,
+            Message.receiver_id == db_message.receiver_id,
+            Message.created_at >= one_minute_ago,
+            Message.id != db_message.id
+        ).count()
+
+        if recent_msg_count == 0:
+            receiver = db.query(User).filter(User.id == db_message.receiver_id).first()
+            if receiver and receiver.fcm_token:
+                # Payload limits handling
+                if db_message.message_type != "text":
+                    body_text = f"Sent an attachment ({db_message.message_type})"
+                else:
+                    body_text = db_message.content
+
+                sender_name = current_user.full_name or current_user.username or "A user"
+                
+                # Check online status (if we had a websocket, but for now we just use the token)
+                fcm_service.send_notification(
+                    token=receiver.fcm_token,
+                    title=f"New message from {sender_name}",
+                    body=body_text,
+                    data={
+                        "type": "chat_message",
+                        "message_id": str(db_message.id),
+                        "sender_id": str(current_user.id)
+                    }
+                )
+                
     return db_message
 
 
