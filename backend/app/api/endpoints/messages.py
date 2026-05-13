@@ -64,7 +64,7 @@ def create_message(
     current_user: User = Depends(get_current_user)
 ):
     db_message = Message(
-        **message.model_dump(),
+        **message.model_dump(exclude={"sender_id"}),
         sender_id=current_user.id
     )
     db.add(db_message)
