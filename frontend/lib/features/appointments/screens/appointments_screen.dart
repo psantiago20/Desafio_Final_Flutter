@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../providers/appointments_provider.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
+import 'package:frontend/shared/widgets/custom_app_bar.dart';
 
 class AppointmentsScreen extends ConsumerWidget {
   const AppointmentsScreen({super.key});
@@ -26,8 +27,9 @@ class AppointmentsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Consultas'),
+      appBar: CustomAppBar(
+        subtitle: 'Gerenciamento de Consultas',
+        showProfileButton: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded),

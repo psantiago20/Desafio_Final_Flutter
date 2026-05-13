@@ -8,6 +8,7 @@ import 'package:frontend/features/auth/providers/auth_provider.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
 import 'package:frontend/shared/models/dashboard_stats_model.dart';
+import 'package:frontend/shared/widgets/custom_app_bar.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -20,6 +21,10 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: const CustomAppBar(
+        subtitle: 'Painel do Médico',
+        showProfileButton: true,
+      ),
       body: RefreshIndicator(
         color: AppColors.primary,
         onRefresh: () async {
@@ -28,44 +33,51 @@ class DashboardScreen extends ConsumerWidget {
         },
         child: CustomScrollView(
           slivers: [
-            // App Bar customizada
-            SliverAppBar(
-              expandedHeight: 140,
-              pinned: true,
-              backgroundColor: AppColors.surface,
-              elevation: 0,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.logout_rounded,
-                      color: AppColors.textSecondary),
-                  onPressed: () {
-                    ref.read(authProvider.notifier).logout();
-                  },
+            SliverToBoxAdapter(
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.primaryBlue, AppTheme.primaryBlueDark],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryBlue.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                titlePadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                title: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Olá, Dr. ${user?.displayName.split(' ').first ?? ''}',
-                      style: GoogleFonts.dmSerifDisplay(
-                          fontSize: 20, color: AppColors.textPrimary),
+                      style: GoogleFonts.manrope(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
                     ),
+                    const SizedBox(height: 8),
                     Text(
                       DateFormat("EEEE, d 'de' MMMM", 'pt_BR')
                           .format(DateTime.now()),
-                      style: GoogleFonts.dmSans(
-                          fontSize: 12, color: AppColors.textSecondary),
+                      style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.8),
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-
             SliverPadding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 16),

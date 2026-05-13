@@ -22,15 +22,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: Colors.transparent,
       elevation: 0,
       iconTheme: const IconThemeData(color: AppTheme.primaryBlueDark),
-      // Botão hambúrguer para abrir Drawer
-      leading: Builder(
-        builder: (context) => IconButton(
-          icon: const Icon(Icons.menu, color: AppTheme.primaryBlueDark),
-          onPressed: () {
-            Scaffold.of(context).openDrawer();
-          },
-        ),
-      ),
       title: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
