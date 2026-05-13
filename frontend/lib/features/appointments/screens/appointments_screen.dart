@@ -7,6 +7,7 @@ import '../providers/appointments_provider.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
 import 'package:frontend/shared/widgets/custom_app_bar.dart';
+import 'package:frontend/features/patients/providers/patients_provider.dart';
 
 class AppointmentsScreen extends ConsumerWidget {
   const AppointmentsScreen({super.key});
@@ -167,17 +168,17 @@ class AppointmentsScreen extends ConsumerWidget {
   }
 }
 
-class _AppointmentTile extends StatelessWidget {
+class _AppointmentTile extends ConsumerWidget {
   final AppointmentModel appointment;
   final VoidCallback onTap;
 
   const _AppointmentTile({required this.appointment, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final color = statusColor(appointment.status);
-    // final dateFmt = DateFormat('dd/MM/yyyy');
     final timeFmt = DateFormat('HH:mm');
+    final patientAsync = ref.watch(patientByIdProvider(appointment.patientId));
 
     return GestureDetector(
       onTap: onTap,
@@ -228,12 +229,23 @@ class _AppointmentTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Paciente #${appointment.patientId}',
-                    style: GoogleFonts.dmSans(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
+                  patientAsync.when(
+                    data: (patient) => Text(
+                      patient.name,
+                      style: GoogleFonts.dmSans(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    loading: () => const Text('Carregando...'),
+                    error: (_, __) => Text(
+                      'Paciente #${appointment.patientId}',
+                      style: GoogleFonts.dmSans(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),

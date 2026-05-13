@@ -9,6 +9,16 @@ final dashboardRepositoryProvider =
 // Stats
 final dashboardStatsProvider =
     FutureProvider.autoDispose<DashboardStats>((ref) {
+  // Atualizar automaticamente a cada 30 segundos
+  final link = ref.keepAlive();
+  final timer = Stream.periodic(const Duration(seconds: 30)).listen((_) {
+    ref.invalidateSelf();
+  });
+  ref.onDispose(() {
+    timer.cancel();
+    link.close();
+  });
+
   return ref.read(dashboardRepositoryProvider).getStats();
 });
 
@@ -21,5 +31,15 @@ final todayAppointmentsProvider =
 // Próximas consultas
 final upcomingAppointmentsProvider =
     FutureProvider.autoDispose<List<AppointmentModel>>((ref) {
+  // Atualizar automaticamente a cada 30 segundos
+  final link = ref.keepAlive();
+  final timer = Stream.periodic(const Duration(seconds: 30)).listen((_) {
+    ref.invalidateSelf();
+  });
+  ref.onDispose(() {
+    timer.cancel();
+    link.close();
+  });
+
   return ref.read(dashboardRepositoryProvider).getUpcomingAppointments();
 });

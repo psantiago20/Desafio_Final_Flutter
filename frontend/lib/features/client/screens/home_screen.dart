@@ -38,6 +38,7 @@ class HomeScreen extends ConsumerWidget {
     if (kIsWeb) {
       return _buildWebLayout(
         context,
+        ref,
         statsAsync,
         upcomingAsync,
         medicosAsync,
@@ -46,6 +47,7 @@ class HomeScreen extends ConsumerWidget {
     }
     return _buildMobileLayout(
       context,
+      ref,
       statsAsync,
       upcomingAsync,
       medicosAsync,
@@ -55,6 +57,7 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildWebLayout(
     BuildContext context,
+    WidgetRef ref,
     AsyncValue<DashboardStats> statsAsync,
     AsyncValue<List<AppointmentModel>> upcomingAsync,
     AsyncValue<List<MedicoModel>> medicosAsync,
@@ -70,8 +73,15 @@ class HomeScreen extends ConsumerWidget {
         builder: (context, constraints) {
           final horizontalPadding = constraints.maxWidth >= 1200 ? 48.0 : 24.0;
 
-          return SingleChildScrollView(
-            child: Padding(
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(dashboardStatsProvider);
+              ref.invalidate(upcomingAppointmentsProvider);
+              return Future.delayed(const Duration(milliseconds: 500));
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: horizontalPadding,
                 vertical: 40,
@@ -235,7 +245,8 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ),
-          );
+          ),
+            );
         },
       ),
     );
@@ -565,7 +576,7 @@ class HomeScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'SIGNOS VITAIS RECENTES',
+            'SINAIS VITAIS RECENTES',
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.bold,
@@ -593,6 +604,13 @@ class HomeScreen extends ConsumerWidget {
             stats?.glucose,
             'mg/dL',
             Icons.water_drop,
+          ),
+          const SizedBox(height: 24),
+          _buildVitalItem(
+            'Temperatura',
+            stats?.temperature,
+            '°C',
+            Icons.thermostat,
           ),
         ],
       ),
@@ -685,7 +703,7 @@ class HomeScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'SIGNOS VITAIS RECENTES',
+            'SINAIS VITAIS RECENTES',
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.bold,
@@ -772,6 +790,7 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildMobileLayout(
     BuildContext context,
+    WidgetRef ref,
     AsyncValue<DashboardStats> statsAsync,
     AsyncValue<List<AppointmentModel>> upcomingAsync,
     AsyncValue<List<MedicoModel>> medicosAsync,
@@ -784,8 +803,15 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: Container(
         decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(dashboardStatsProvider);
+            ref.invalidate(upcomingAppointmentsProvider);
+            return Future.delayed(const Duration(milliseconds: 500));
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1023,9 +1049,10 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ),
+    ),
     );
   }
-
+  }
   Widget _buildStatCard({
     required String title,
     required String value,
@@ -1116,4 +1143,3 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
-}

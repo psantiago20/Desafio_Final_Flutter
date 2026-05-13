@@ -26,7 +26,7 @@ def clear_db(db: Session):
     db.execute(text("TRUNCATE TABLE appointments RESTART IDENTITY CASCADE"))
     db.execute(text("TRUNCATE TABLE medicos RESTART IDENTITY CASCADE"))
     db.execute(text("TRUNCATE TABLE patients RESTART IDENTITY CASCADE"))
-    db.execute(text("TRUNCATE TABLE doctor_profiles RESTART IDENTITY CASCADE"))
+    db.execute(text("TRUNCATE TABLE doctor_profiles RESTART IDENTITY CASCADE")) # Legado, mantido para limpeza
     db.execute(text("TRUNCATE TABLE users RESTART IDENTITY CASCADE"))
     db.commit()
 
@@ -217,7 +217,13 @@ def seed_patients(db: Session, users: dict):
             "city": "São Paulo",
             "state": "SP",
             "insurance": "Unimed",
-            "username": "joao.silva"
+            "username": "joao.silva",
+            "heart_rate": "72",
+            "blood_pressure": "12/8",
+            "glucose": "95",
+            "temperature": "36.5",
+            "weight": "80kg",
+            "height": "1.80m"
         },
         {
             "name": "Ana Souza",
@@ -230,7 +236,13 @@ def seed_patients(db: Session, users: dict):
             "city": "São Paulo",
             "state": "SP",
             "insurance": "Bradesco",
-            "username": "ana.souza"
+            "username": "ana.souza",
+            "heart_rate": "68",
+            "blood_pressure": "11/7",
+            "glucose": "88",
+            "temperature": "36.2",
+            "weight": "65kg",
+            "height": "1.65m"
         },
         {
             "name": "Pedro Santiago",
@@ -242,7 +254,11 @@ def seed_patients(db: Session, users: dict):
             "cpf": "333.333.333-33",
             "city": "São Paulo",
             "state": "SP",
-            "username": "pedro.santiago"
+            "username": "pedro.santiago",
+            "heart_rate": "75",
+            "blood_pressure": "12/8",
+            "glucose": "92",
+            "temperature": "36.6"
         },
         {
             "name": "Carla Ferreira",
@@ -255,7 +271,11 @@ def seed_patients(db: Session, users: dict):
             "city": "São Paulo",
             "state": "SP",
             "insurance": "SulAmérica",
-            "username": "carla.ferreira"
+            "username": "carla.ferreira",
+            "heart_rate": "70",
+            "blood_pressure": "13/9",
+            "glucose": "110",
+            "temperature": "36.8"
         }
     ]
     
@@ -346,23 +366,57 @@ def seed():
         patients = seed_patients(db, users)
         seed_exams(db, patients)
         
-        # Adicionar alguns agendamentos para não ficar vazio
+        # Adicionar agendamentos para hoje e para o futuro
         print("Semeando agendamentos de teste...")
+        now = datetime.now()
+        
+        m_list = list(medicos.values())
+        
         for i, p in enumerate(patients):
-            m_list = list(medicos.values())
+            # Escolhe um médico de forma circular
             m = m_list[i % len(m_list)]
-            apt = Appointment(
+            
+            # 1. Agendamento para HOJE (agora)
+            apt_today = Appointment(
                 patient_id=p.id,
                 doctor_id=m.user_id,
                 medico_id=m.id,
-                appointment_date=datetime.now() + timedelta(days=i+1, hours=10),
+                appointment_date=now.replace(minute=0, second=0, microsecond=0),
                 duration_minutes=30,
                 status=AppointmentStatus.CONFIRMED.value,
                 type=AppointmentType.CONSULTATION.value,
-                reason="Consulta de rotina",
-                price=m.valor_consulta
+                reason="Consulta de urgência / hoje",
+                price=m.valor_consulta,
+                weight=p.weight,
+                height=p.height,
+                heart_rate=p.heart_rate,
+                blood_pressure=p.blood_pressure,
+                glucose=p.glucose,
+                temperature=p.temperature
             )
-            db.add(apt)
+            db.add(apt_today)
+            
+            # 2. Agendamento para daqui a 2 DIAS
+            apt_future = Appointment(
+                patient_id=p.id,
+                doctor_id=m.user_id,
+                medico_id=m.id,
+                appointment_date=(now + timedelta(days=2)).replace(hour=14, minute=30, second=0, microsecond=0),
+                duration_minutes=30,
+                status=AppointmentStatus.CONFIRMED.value,
+                type=AppointmentType.CONSULTATION.value,
+                reason="Retorno programado",
+                price=m.valor_consulta,
+                weight=p.weight,
+                height=p.height,
+                heart_rate=p.heart_rate,
+                blood_pressure=p.blood_pressure,
+                glucose=p.glucose,
+                temperature=p.temperature
+            )
+            db.add(apt_future)
+            
+            print(f"Agendamentos criados para {p.name} com {m.nome_completo} (Hoje e +2 dias).")
         
         db.commit()
         print("\nSemeação concluída com sucesso!")

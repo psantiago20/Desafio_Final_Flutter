@@ -3,6 +3,15 @@ from datetime import datetime
 from typing import Optional
 
 
+class PatientInfo(BaseModel):
+    id: int
+    name: str
+    date_of_birth: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 class AppointmentBase(BaseModel):
     patient_id: int
     doctor_id: int
@@ -28,6 +37,12 @@ class AppointmentUpdate(BaseModel):
     symptoms: Optional[str] = None
     diagnosis: Optional[str] = None
     prescription: Optional[str] = None
+    weight: Optional[str] = None
+    height: Optional[str] = None
+    heart_rate: Optional[str] = None
+    blood_pressure: Optional[str] = None
+    glucose: Optional[str] = None
+    temperature: Optional[str] = None
     price: Optional[float] = None
     paid: Optional[bool] = None
     payment_method: Optional[str] = None
@@ -36,9 +51,16 @@ class AppointmentUpdate(BaseModel):
 class AppointmentResponse(AppointmentBase):
     id: int
     status: str
+    patient: Optional[PatientInfo] = None
     symptoms: Optional[str] = None
     diagnosis: Optional[str] = None
     prescription: Optional[str] = None
+    weight: Optional[str] = None
+    height: Optional[str] = None
+    heart_rate: Optional[str] = None
+    blood_pressure: Optional[str] = None
+    glucose: Optional[str] = None
+    temperature: Optional[str] = None
     exam_url: Optional[str] = None
     exam_summary: Optional[str] = None
     paid: bool

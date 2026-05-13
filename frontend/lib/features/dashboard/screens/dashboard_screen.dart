@@ -57,7 +57,7 @@ class DashboardScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Olá, Dr. ${user?.displayName.split(' ').first ?? ''}',
+                      'Olá, ${user?.displayName.startsWith('Dr.') == true ? user?.displayName.split(' ').sublist(0, 2).join(' ') : 'Dr. ' + (user?.displayName.split(' ').first ?? '')}',
                       style: GoogleFonts.manrope(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
@@ -260,74 +260,78 @@ class _AppointmentCard extends StatelessWidget {
     final color = statusColor(appointment.status);
     final timeFmt = DateFormat('HH:mm');
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 48,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
+    return InkWell(
+      onTap: () => context.push('/appointments/${appointment.id}', extra: appointment),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 48,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    appointment.patientName,
+                    style: GoogleFonts.dmSans(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                        fontSize: 14),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Nascimento: ${appointment.patientDob}',
+                    style: GoogleFonts.dmSans(
+                        color: AppColors.textSecondary, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  'Paciente #${appointment.patientId}',
+                  timeFmt.format(appointment.appointmentDate),
                   style: GoogleFonts.dmSans(
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
                       fontSize: 14),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  typeLabel(appointment.type),
-                  style: GoogleFonts.dmSans(
-                      color: AppColors.textSecondary, fontSize: 12),
+                const SizedBox(height: 4),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    statusLabel(appointment.status),
+                    style: GoogleFonts.dmSans(
+                        color: color,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600),
+                  ),
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                timeFmt.format(appointment.appointmentDate),
-                style: GoogleFonts.dmSans(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                    fontSize: 14),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  statusLabel(appointment.status),
-                  style: GoogleFonts.dmSans(
-                      color: color,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

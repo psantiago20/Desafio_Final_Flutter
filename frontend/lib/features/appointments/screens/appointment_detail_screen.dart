@@ -26,6 +26,10 @@ class _AppointmentDetailScreenState
   final _prescriptionCtrl = TextEditingController();
   final _weightCtrl = TextEditingController();
   final _heightCtrl = TextEditingController();
+  final _bpmCtrl = TextEditingController();
+  final _pressureCtrl = TextEditingController();
+  final _glucoseCtrl = TextEditingController();
+  final _tempCtrl = TextEditingController();
   bool _editing = false;
 
   @override
@@ -35,9 +39,12 @@ class _AppointmentDetailScreenState
     _symptomsCtrl.text = _appointment.symptoms ?? '';
     _diagnosisCtrl.text = _appointment.diagnosis ?? '';
     _prescriptionCtrl.text = _appointment.prescription ?? '';
-    // Weight and height might not be in the model yet, using placeholders or parsing from notes if needed
-    _weightCtrl.text = ''; 
-    _heightCtrl.text = '';
+    _weightCtrl.text = _appointment.weight ?? ''; 
+    _heightCtrl.text = _appointment.height ?? '';
+    _bpmCtrl.text = _appointment.heartRate ?? '';
+    _pressureCtrl.text = _appointment.bloodPressure ?? '';
+    _glucoseCtrl.text = _appointment.glucose ?? '';
+    _tempCtrl.text = _appointment.temperature ?? '';
   }
 
   @override
@@ -47,6 +54,10 @@ class _AppointmentDetailScreenState
     _prescriptionCtrl.dispose();
     _weightCtrl.dispose();
     _heightCtrl.dispose();
+    _bpmCtrl.dispose();
+    _pressureCtrl.dispose();
+    _glucoseCtrl.dispose();
+    _tempCtrl.dispose();
     super.dispose();
   }
 
@@ -74,6 +85,12 @@ class _AppointmentDetailScreenState
       'symptoms': _symptomsCtrl.text,
       'diagnosis': _diagnosisCtrl.text,
       'prescription': _prescriptionCtrl.text,
+      'weight': _weightCtrl.text,
+      'height': _heightCtrl.text,
+      'heart_rate': _bpmCtrl.text,
+      'blood_pressure': _pressureCtrl.text,
+      'glucose': _glucoseCtrl.text,
+      'temperature': _tempCtrl.text,
     });
     if (updated != null) {
       setState(() {
@@ -222,17 +239,14 @@ class _AppointmentDetailScreenState
             const SizedBox(height: 16),
 
             // Ações de status
-            if (_appointment.status != 'completed' &&
-                _appointment.status != 'cancelled') ...[
-              Text('Atualizar status',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 10),
-              _StatusActions(
-                currentStatus: _appointment.status,
-                onUpdate: _updateStatus,
-              ),
-              const SizedBox(height: 20),
-            ],
+            Text('Atualizar status',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 10),
+            _StatusActions(
+              currentStatus: _appointment.status,
+              onUpdate: _updateStatus,
+            ),
+            const SizedBox(height: 20),
 
             // Anotações clínicas
             Row(
@@ -272,6 +286,54 @@ class _AppointmentDetailScreenState
                     controller: _heightCtrl,
                     unit: 'cm',
                     icon: Icons.height_rounded,
+                    enabled: _editing,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _SmallClinicalField(
+                    label: 'Freq. Cardíaca',
+                    controller: _bpmCtrl,
+                    unit: 'BPM',
+                    icon: Icons.favorite_border_rounded,
+                    enabled: _editing,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _SmallClinicalField(
+                    label: 'Pressão Arterial',
+                    controller: _pressureCtrl,
+                    unit: 'mmHg',
+                    icon: Icons.speed_rounded,
+                    enabled: _editing,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _SmallClinicalField(
+                    label: 'Glicemia',
+                    controller: _glucoseCtrl,
+                    unit: 'mg/dL',
+                    icon: Icons.water_drop_outlined,
+                    enabled: _editing,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _SmallClinicalField(
+                    label: 'Temperatura',
+                    controller: _tempCtrl,
+                    unit: '°C',
+                    icon: Icons.thermostat_outlined,
                     enabled: _editing,
                   ),
                 ),
@@ -341,67 +403,55 @@ class _StatusActions extends StatelessWidget {
   final String currentStatus;
   final Future<void> Function(String) onUpdate;
 
-  const _StatusActions(
-      {required this.currentStatus, required this.onUpdate});
+  const _StatusActions({
+    required this.currentStatus,
+    required this.onUpdate,
+  });
+
+  static const _options = [
+    (status: 'pending', label: 'Pendente'),
+    (status: 'confirmed', label: 'Confirmado'),
+    (status: 'in_progress', label: 'Em Andamento'),
+    (status: 'completed', label: 'Concluído'),
+    (status: 'cancelled', label: 'Cancelado'),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final actions = <({String status, String label, Color color, IconData icon})>[];
-
-    if (currentStatus == 'pending') {
-      actions.addAll([
-        (
-          status: 'confirmed',
-          label: 'Confirmar',
-          color: AppColors.confirmed,
-          icon: Icons.check_circle_outline_rounded
-        ),
-        (
-          status: 'cancelled',
-          label: 'Cancelar',
-          color: AppColors.cancelled,
-          icon: Icons.cancel_outlined
-        ),
-      ]);
-    } else if (currentStatus == 'confirmed') {
-      actions.addAll([
-        (
-          status: 'in_progress',
-          label: 'Iniciar',
-          color: AppColors.inProgress,
-          icon: Icons.play_circle_outline_rounded
-        ),
-        (
-          status: 'no_show',
-          label: 'Não compareceu',
-          color: AppColors.textHint,
-          icon: Icons.person_off_outlined
-        ),
-      ]);
-    } else if (currentStatus == 'in_progress') {
-      actions.add((
-        status: 'completed',
-        label: 'Concluir',
-        color: AppColors.completed,
-        icon: Icons.done_all_rounded
-      ));
-    }
-
     return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: actions.map((a) {
-        return OutlinedButton.icon(
-          onPressed: () => onUpdate(a.status),
-          icon: Icon(a.icon, size: 16, color: a.color),
-          label: Text(a.label,
-              style: GoogleFonts.dmSans(color: a.color, fontSize: 13)),
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(color: a.color.withOpacity(0.5)),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+      spacing: 8,
+      runSpacing: 8,
+      children: _options.map((opt) {
+        final isSelected = currentStatus == opt.status;
+        return GestureDetector(
+          onTap: () => onUpdate(opt.status),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.primary : AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isSelected ? AppColors.primary : AppColors.border,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      )
+                    ]
+                  : null,
+            ),
+            child: Text(
+              opt.label,
+              style: GoogleFonts.dmSans(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+              ),
+            ),
           ),
         );
       }).toList(),

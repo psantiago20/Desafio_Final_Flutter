@@ -1,6 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 
+class PatientInfo {
+  final int id;
+  final String name;
+  final DateTime? dateOfBirth;
+
+  const PatientInfo({
+    required this.id,
+    required this.name,
+    this.dateOfBirth,
+  });
+
+  factory PatientInfo.fromJson(Map<String, dynamic> json) {
+    return PatientInfo(
+      id: json['id'] as int,
+      name: json['name'] as String,
+      dateOfBirth: json['date_of_birth'] != null
+          ? DateTime.parse(json['date_of_birth'] as String)
+          : null,
+    );
+  }
+}
+
 class AppointmentModel {
   final int id;
   final int patientId;
@@ -16,9 +38,16 @@ class AppointmentModel {
   final String? prescription;
   final String? examUrl;
   final String? examSummary;
+  final String? weight;
+  final String? height;
+  final String? heartRate;
+  final String? bloodPressure;
+  final String? glucose;
+  final String? temperature;
   final double price;
   final bool paid;
   final String? paymentMethod;
+  final PatientInfo? patient;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -37,9 +66,16 @@ class AppointmentModel {
     this.prescription,
     this.examUrl,
     this.examSummary,
+    this.weight,
+    this.height,
+    this.heartRate,
+    this.bloodPressure,
+    this.glucose,
+    this.temperature,
     required this.price,
     required this.paid,
     this.paymentMethod,
+    this.patient,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -60,9 +96,18 @@ class AppointmentModel {
       prescription: json['prescription'] as String?,
       examUrl: json['exam_url'] as String?,
       examSummary: json['exam_summary'] as String?,
+      weight: json['weight'] as String?,
+      height: json['height'] as String?,
+      heartRate: json['heart_rate'] as String?,
+      bloodPressure: json['blood_pressure'] as String?,
+      glucose: json['glucose'] as String?,
+      temperature: json['temperature'] as String?,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       paid: json['paid'] as bool? ?? false,
       paymentMethod: json['payment_method'] as String?,
+      patient: json['patient'] != null
+          ? PatientInfo.fromJson(json['patient'] as Map<String, dynamic>)
+          : null,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -76,6 +121,12 @@ class AppointmentModel {
     String? prescription,
     String? examUrl,
     String? examSummary,
+    String? weight,
+    String? height,
+    String? heartRate,
+    String? bloodPressure,
+    String? glucose,
+    String? temperature,
     bool? paid,
     String? paymentMethod,
   }) {
@@ -94,6 +145,12 @@ class AppointmentModel {
       prescription: prescription ?? this.prescription,
       examUrl: examUrl ?? this.examUrl,
       examSummary: examSummary ?? this.examSummary,
+      weight: weight ?? this.weight,
+      height: height ?? this.height,
+      heartRate: heartRate ?? this.heartRate,
+      bloodPressure: bloodPressure ?? this.bloodPressure,
+      glucose: glucose ?? this.glucose,
+      temperature: temperature ?? this.temperature,
       price: price,
       paid: paid ?? this.paid,
       paymentMethod: paymentMethod ?? this.paymentMethod,
@@ -104,6 +161,13 @@ class AppointmentModel {
 
   // Temporary getter to fix UI compilation until the backend provides the doctor's name
   String get doctorName => 'Médico $doctorId';
+
+  String get patientName => patient?.name ?? 'Paciente #$patientId';
+  String get patientDob {
+    if (patient?.dateOfBirth == null) return 'N/A';
+    final dob = patient!.dateOfBirth!;
+    return '${dob.day.toString().padLeft(2, '0')}/${dob.month.toString().padLeft(2, '0')}/${dob.year}';
+  }
 }
 Color statusColor(String status) {
   switch (status) {
@@ -111,6 +175,10 @@ Color statusColor(String status) {
       return AppColors.pending;
     case 'confirmed':
       return AppColors.confirmed;
+    case 'in_progress':
+      return AppColors.primary;
+    case 'no_show':
+      return AppColors.textHint;
     case 'completed':
       return AppColors.completed;
     case 'cancelled':
@@ -139,6 +207,10 @@ String statusLabel(String status) {
       return 'Pendente';
     case 'confirmed':
       return 'Confirmado';
+    case 'in_progress':
+      return 'Em Andamento';
+    case 'no_show':
+      return 'Não compareceu';
     case 'completed':
       return 'Concluído';
     case 'cancelled':

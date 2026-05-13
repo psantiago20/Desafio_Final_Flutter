@@ -104,6 +104,15 @@ def update_appointment(
     for key, value in update_data.items():
         setattr(db_appointment, key, value)
     
+    # Sincronizar sinais vitais com o registro do Paciente para o Dashboard
+    vital_signs = ["heart_rate", "blood_pressure", "glucose", "temperature", "weight", "height"]
+    if any(sign in update_data for sign in vital_signs):
+        patient = db.query(Patient).filter(Patient.id == db_appointment.patient_id).first()
+        if patient:
+            for sign in vital_signs:
+                if sign in update_data:
+                    setattr(patient, sign, update_data[sign])
+    
     db.commit()
     db.refresh(db_appointment)
     return db_appointment
