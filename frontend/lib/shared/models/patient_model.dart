@@ -23,6 +23,10 @@ class PatientModel {
   final String? heartRate;
   final String? bloodPressure;
   final String? glucose;
+  final String? bloodType;
+  final String? allergies;
+  final String? chronicConditions;
+  final String? medications;
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -50,6 +54,10 @@ class PatientModel {
     this.heartRate,
     this.bloodPressure,
     this.glucose,
+    this.bloodType,
+    this.allergies,
+    this.chronicConditions,
+    this.medications,
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
@@ -63,9 +71,7 @@ class PatientModel {
       email: json['email'] as String?,
       phone: json['phone'] as String,
       whatsapp: json['whatsapp'] as String?,
-      dateOfBirth: json['date_of_birth'] != null
-          ? DateTime.parse(json['date_of_birth'] as String)
-          : null,
+      dateOfBirth: json['date_of_birth'] != null ? DateTime.parse(json['date_of_birth'] as String) : null,
       gender: json['gender'] as String?,
       address: json['address'] as String?,
       city: json['city'] as String?,
@@ -81,6 +87,10 @@ class PatientModel {
       heartRate: json['heart_rate'] as String?,
       bloodPressure: json['blood_pressure'] as String?,
       glucose: json['glucose'] as String?,
+      bloodType: json['blood_type'] as String?,
+      allergies: json['allergies'] as String?,
+      chronicConditions: json['chronic_conditions'] as String?,
+      medications: json['medications'] as String?,
       isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -111,6 +121,10 @@ class PatientModel {
       'heart_rate': heartRate,
       'blood_pressure': bloodPressure,
       'glucose': glucose,
+      'blood_type': bloodType,
+      'allergies': allergies,
+      'chronic_conditions': chronicConditions,
+      'medications': medications,
       'is_active': isActive,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),

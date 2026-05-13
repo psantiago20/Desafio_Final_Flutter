@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// 🎨 AppTheme: Design System for OmniConnect
 /// Foco: Interface moderna, Tailwind-inspired (Glassmorphism, clean UI)
@@ -36,6 +37,18 @@ class AppTheme {
   static const Color textSecondary = Color(0xFF4B5563); // gray-600
   static const Color textTertiary = Color(0xFF6B7280); // gray-500
 
+  static TextTheme get _manropeTextTheme => GoogleFonts.manropeTextTheme(
+    const TextTheme(
+      displayLarge: TextStyle(color: textPrimary, fontSize: 32, fontWeight: FontWeight.bold),
+      headlineMedium: TextStyle(color: textPrimary, fontSize: 24, fontWeight: FontWeight.w700),
+      titleLarge: TextStyle(color: textPrimary, fontSize: 20, fontWeight: FontWeight.w600),
+      titleMedium: TextStyle(color: textPrimary, fontSize: 16, fontWeight: FontWeight.w500),
+      bodyLarge: TextStyle(color: textPrimary, fontSize: 16),
+      bodyMedium: TextStyle(color: textSecondary, fontSize: 14),
+      bodySmall: TextStyle(color: textTertiary, fontSize: 12),
+    ),
+  );
+
   static ThemeData get lightTheme {
     return ThemeData(
       primaryColor: primaryBlue,
@@ -58,15 +71,7 @@ class AppTheme {
         surface: surfaceWhite,
         error: alertRed,
       ),
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(color: textPrimary, fontSize: 32, fontWeight: FontWeight.bold),
-        headlineMedium: TextStyle(color: textPrimary, fontSize: 24, fontWeight: FontWeight.w700),
-        titleLarge: TextStyle(color: textPrimary, fontSize: 20, fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(color: textPrimary, fontSize: 16, fontWeight: FontWeight.w500),
-        bodyLarge: TextStyle(color: textPrimary, fontSize: 16),
-        bodyMedium: TextStyle(color: textSecondary, fontSize: 14),
-        bodySmall: TextStyle(color: textTertiary, fontSize: 12),
-      ),
+      textTheme: _manropeTextTheme,
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryBlue,

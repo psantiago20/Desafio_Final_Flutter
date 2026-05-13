@@ -47,9 +47,11 @@ class ApiClient {
     } on http.ClientException catch (e) {
       throw ApiException(
           statusCode: 0, message: _mapClientError(e.message));
+    } on ApiException {
+      rethrow;
     } catch (e) {
       throw ApiException(
-          statusCode: 0, message: 'Ocorreu um erro inesperado. Tente novamente em breve.');
+          statusCode: 0, message: 'Ocorreu um erro inesperado: $e');
     }
   }
 
