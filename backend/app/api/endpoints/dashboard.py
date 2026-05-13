@@ -121,17 +121,17 @@ def get_dashboard_stats(
     
     revenue_today = db.query(func.sum(Appointment.price)).filter(
         Appointment.appointment_date >= datetime.combine(today, datetime.min.time()),
-        Appointment.paid == True
+        (Appointment.paid == True) | (Appointment.status == "completed")
     ).scalar() or 0
     
     revenue_week = db.query(func.sum(Appointment.price)).filter(
         Appointment.appointment_date >= datetime.combine(week_ago, datetime.min.time()),
-        Appointment.paid == True
+        (Appointment.paid == True) | (Appointment.status == "completed")
     ).scalar() or 0
     
     revenue_month = db.query(func.sum(Appointment.price)).filter(
         Appointment.appointment_date >= datetime.combine(month_ago, datetime.min.time()),
-        Appointment.paid == True
+        (Appointment.paid == True) | (Appointment.status == "completed")
     ).scalar() or 0
     
     no_show_count = db.query(Appointment).filter(Appointment.status == "no_show").count()
