@@ -91,3 +91,9 @@ final patientsProvider =
   final repository = ref.watch(patientsRepositoryProvider);
   return PatientsNotifier(repository);
 });
+
+final patientByIdProvider =
+    FutureProvider.family<PatientModel, int>((ref, id) async {
+  final repository = ref.watch(patientsRepositoryProvider);
+  return repository.getPatientById(id);
+});

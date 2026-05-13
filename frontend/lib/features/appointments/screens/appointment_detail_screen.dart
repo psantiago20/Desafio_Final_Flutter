@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../providers/appointments_provider.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
+import 'package:frontend/features/patients/providers/patients_provider.dart';
+import 'package:frontend/shared/models/patient_model.dart';
 
 class AppointmentDetailScreen extends ConsumerStatefulWidget {
   final AppointmentModel appointment;
@@ -22,6 +24,8 @@ class _AppointmentDetailScreenState
   final _symptomsCtrl = TextEditingController();
   final _diagnosisCtrl = TextEditingController();
   final _prescriptionCtrl = TextEditingController();
+  final _weightCtrl = TextEditingController();
+  final _heightCtrl = TextEditingController();
   bool _editing = false;
 
   @override
@@ -31,6 +35,9 @@ class _AppointmentDetailScreenState
     _symptomsCtrl.text = _appointment.symptoms ?? '';
     _diagnosisCtrl.text = _appointment.diagnosis ?? '';
     _prescriptionCtrl.text = _appointment.prescription ?? '';
+    // Weight and height might not be in the model yet, using placeholders or parsing from notes if needed
+    _weightCtrl.text = ''; 
+    _heightCtrl.text = '';
   }
 
   @override
@@ -38,6 +45,8 @@ class _AppointmentDetailScreenState
     _symptomsCtrl.dispose();
     _diagnosisCtrl.dispose();
     _prescriptionCtrl.dispose();
+    _weightCtrl.dispose();
+    _heightCtrl.dispose();
     super.dispose();
   }
 
@@ -129,24 +138,46 @@ class _AppointmentDetailScreenState
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Paciente #${_appointment.patientId}',
-                              style: GoogleFonts.dmSans(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                                color: AppColors.textPrimary,
+                        child: ref.watch(patientByIdProvider(_appointment.patientId)).when(
+                          data: (patient) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                patient.name,
+                                style: GoogleFonts.dmSans(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                  color: AppColors.textPrimary,
+                                ),
                               ),
-                            ),
-                            Text(
-                              typeLabel(_appointment.type),
-                              style: GoogleFonts.dmSans(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 13),
-                            ),
-                          ],
+                              Text(
+                                'Nascimento: ${patient.formattedDateOfBirth}',
+                                style: GoogleFonts.dmSans(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 13),
+                              ),
+                            ],
+                          ),
+                          loading: () => const Text('Carregando...'),
+                          error: (_, __) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Paciente #${_appointment.patientId}',
+                                style: GoogleFonts.dmSans(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              Text(
+                                typeLabel(_appointment.type),
+                                style: GoogleFonts.dmSans(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 13),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       Container(
@@ -219,6 +250,31 @@ class _AppointmentDetailScreenState
                           horizontal: 16, vertical: 8),
                     ),
                   ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Weight and Height small squares
+            Row(
+              children: [
+                Expanded(
+                  child: _SmallClinicalField(
+                    label: 'Peso',
+                    controller: _weightCtrl,
+                    unit: 'kg',
+                    icon: Icons.monitor_weight_outlined,
+                    enabled: _editing,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _SmallClinicalField(
+                    label: 'Altura',
+                    controller: _heightCtrl,
+                    unit: 'cm',
+                    icon: Icons.height_rounded,
+                    enabled: _editing,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -414,6 +470,88 @@ class _ClinicalField extends StatelessWidget {
               focusedBorder: InputBorder.none,
               disabledBorder: InputBorder.none,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallClinicalField extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final String unit;
+  final IconData icon;
+  final bool enabled;
+
+  const _SmallClinicalField({
+    required this.label,
+    required this.controller,
+    required this.unit,
+    required this.icon,
+    required this.enabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: enabled ? AppColors.primary : AppColors.border,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.dmSans(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  enabled: enabled,
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                    hintText: '--',
+                  ),
+                ),
+              ),
+              Text(
+                unit,
+                style: GoogleFonts.dmSans(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ],
       ),

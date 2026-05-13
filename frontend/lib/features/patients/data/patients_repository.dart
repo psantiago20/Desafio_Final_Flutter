@@ -16,4 +16,9 @@ class PatientsRepository {
         .map((e) => PatientModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  Future<PatientModel> getPatientById(int id) async {
+    final data = await ApiClient.get('${AppConstants.patientsEndpoint}/$id');
+    return PatientModel.fromJson(data as Map<String, dynamic>);
+  }
 }
