@@ -39,6 +39,10 @@ def list_appointments(
             # Se não encontrar o registro de paciente, retorna lista vazia
             return {"total": 0, "appointments": []}
     
+    # Se for médico e não especificou um doctor_id no filtro, filtra apenas os dele
+    if current_user.role == "doctor" and not doctor_id:
+        query = query.filter(Appointment.doctor_id == current_user.id)
+    
     if patient_id:
         query = query.filter(Appointment.patient_id == patient_id)
     if doctor_id:

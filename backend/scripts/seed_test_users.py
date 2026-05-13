@@ -370,22 +370,25 @@ def seed():
         print("Semeando agendamentos de teste...")
         now = datetime.now()
         
-        m_list = list(medicos.values())
+        # Pega o primeiro médico como o principal para os testes do dashboard
+        main_medico = list(medicos.values())[0]
         
         for i, p in enumerate(patients):
-            # Escolhe um médico de forma circular
-            m = m_list[i % len(m_list)]
+            m = main_medico # Vincula todos ao mesmo médico para ver no dashboard
             
-            # 1. Agendamento para HOJE (agora)
+            # 1. Agendamento para HOJE (horários variados)
+            # Stagger times: 08:00, 09:00, 10:00, etc.
+            apt_time = now.replace(hour=8 + i, minute=0, second=0, microsecond=0)
+            
             apt_today = Appointment(
                 patient_id=p.id,
                 doctor_id=m.user_id,
                 medico_id=m.id,
-                appointment_date=now.replace(minute=0, second=0, microsecond=0),
+                appointment_date=apt_time,
                 duration_minutes=30,
-                status=AppointmentStatus.CONFIRMED.value,
+                status=AppointmentStatus.CONFIRMED.value if i > 0 else AppointmentStatus.COMPLETED.value,
                 type=AppointmentType.CONSULTATION.value,
-                reason="Consulta de urgência / hoje",
+                reason=f"Consulta de rotina - {p.name}",
                 price=m.valor_consulta,
                 weight=p.weight,
                 height=p.height,
