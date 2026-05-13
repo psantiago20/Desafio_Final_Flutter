@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../core/theme/app_theme.dart';
-import '../../widgets/custom_app_bar.dart';
-import '../../features/appointments/providers/appointments_provider.dart';
-import '../../shared/models/appointment_model.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/custom_app_bar.dart';
+import '../../../features/appointments/providers/appointments_provider.dart';
+import '../../../shared/models/appointment_model.dart';
 
 class AgendaScreen extends ConsumerWidget {
   const AgendaScreen({super.key});

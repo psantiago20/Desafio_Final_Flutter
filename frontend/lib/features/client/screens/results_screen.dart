@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import '../../core/theme/app_theme.dart';
-import '../../widgets/custom_app_bar.dart';
-import '../../core/network/api_client.dart';
-import '../../core/constants/app_constants.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/custom_app_bar.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/constants/app_constants.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 
-/// 📊 Results Screen (Exams)
+
+/// Results Screen (Exams)
 /// Responsabilidade: flutter-frontend-agent
 /// Exibe lista de exames com status, resultados e alertas.
 class ResultsScreen extends ConsumerStatefulWidget {
@@ -82,7 +83,9 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Excluir Exame'),
-        content: const Text('Tem certeza que deseja remover este exame? Esta ação não pode ser desfeita.'),
+        content: const Text(
+          'Tem certeza que deseja remover este exame? Esta ação não pode ser desfeita.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -109,9 +112,9 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao remover exame: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao remover exame: $e')));
       }
     }
   }
@@ -305,7 +308,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       'hasAbnormalities': false,
     },
   ];
-
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
@@ -318,19 +320,19 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     final filteredExams = _exams;
 
     return Scaffold(
+      appBar: const CustomAppBar(subtitle: 'Seus Resultados'),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
-        child: _isLoading 
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
+        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
             ? Center(child: Text(_error!))
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+
                   const SizedBox(height: 16),
-                  
+
                   // Lista de Exames
                   Expanded(
                     child: ListView.builder(
@@ -353,30 +355,27 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
 
   Widget _buildMobile() {
     return Scaffold(
-      appBar: const CustomAppBar(
-        subtitle: 'Seus Resultados',
-      ),
+      appBar: const CustomAppBar(subtitle: 'Seus Resultados'),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
-        child: _isLoading 
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
+        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
             ? Center(child: Text(_error!))
             : ListView.builder(
                 padding: const EdgeInsets.all(16.0),
                 itemCount: _exams.length,
                 itemBuilder: (context, index) {
                   final exam = _exams[index];
-                  const isAvailable = true; // No novo backend, se veio na lista, está disponível ou processando
-                  
+
                   // Formatação de data
                   DateTime? date;
                   try {
                     date = DateTime.parse(exam['created_at'] as String);
                   } catch (_) {}
-                  final dateStr = date != null ? DateFormat('dd/MM/yyyy').format(date) : '—';
+                  final dateStr = date != null
+                      ? DateFormat('dd/MM/yyyy').format(date)
+                      : '—';
                   final title = exam['title'] as String? ?? 'Exame';
 
                   return Card(
@@ -405,17 +404,27 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                                   children: [
                                     Text(
                                       title,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
                                     Text(
                                       dateStr,
-                                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                                      style: const TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline, color: AppTheme.alertRed, size: 20),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: AppTheme.alertRed,
+                                  size: 20,
+                                ),
                                 onPressed: () => _deleteExam(exam['id'] as int),
                                 tooltip: 'Remover exame',
                               ),
@@ -425,7 +434,13 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Resultado Liberado', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                              const Text(
+                                'Resultado Liberado',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
                               TextButton.icon(
                                 onPressed: () => _showFilePopup(exam),
                                 icon: const Icon(Icons.visibility, size: 18),
@@ -456,8 +471,9 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     try {
       date = DateTime.parse(exam['created_at'] as String);
     } catch (_) {}
-    final dateStr =
-        date != null ? DateFormat('dd/MM/yyyy HH:mm').format(date) : '—';
+    final dateStr = date != null
+        ? DateFormat('dd/MM/yyyy HH:mm').format(date)
+        : '—';
     final title = exam['title'] as String? ?? 'Exame';
 
     return Card(
@@ -511,7 +527,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: AppTheme.alertRed),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: AppTheme.alertRed,
+                  ),
                   onPressed: () => _deleteExam(exam['id'] as int),
                   tooltip: 'Remover exame',
                 ),
@@ -530,5 +549,4 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       ),
     );
   }
-
 }

@@ -6,7 +6,7 @@ import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/features/auth/widgets/auth_header.dart';
 import 'package:frontend/features/auth/widgets/login_form.dart';
 import 'package:frontend/features/auth/widgets/register_form.dart';
-import 'package:frontend/features/auth/pages/otp_page.dart';
+import 'package:frontend/features/auth/screens/otp_page.dart';
 import 'package:frontend/features/auth/providers/auth_provider.dart';
 
 class AuthPage extends ConsumerStatefulWidget {

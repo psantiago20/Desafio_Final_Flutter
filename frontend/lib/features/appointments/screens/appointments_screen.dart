@@ -174,7 +174,7 @@ class _AppointmentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = statusColor(appointment.status);
-    final dateFmt = DateFormat('dd/MM/yyyy');
+    // final dateFmt = DateFormat('dd/MM/yyyy');
     final timeFmt = DateFormat('HH:mm');
 
     return GestureDetector(
