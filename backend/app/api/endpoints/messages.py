@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 
 from app.db.database import get_db
@@ -22,7 +22,7 @@ def list_messages(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(Message)
+    query = db.query(Message).options(joinedload(Message.patient))
     
     # Se for paciente, filtra apenas as suas mensagens
     if current_user.role == "patient":
@@ -31,7 +31,6 @@ def list_messages(
         if patient:
             query = query.filter(Message.patient_id == patient.id)
         else:
-            # Se é paciente mas não tem perfil (erro?), não retorna nada ou retorna vazio
             return {"total": 0, "messages": []}
     elif patient_id:
         query = query.filter(Message.patient_id == patient_id)
@@ -51,7 +50,7 @@ def get_message(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    message = db.query(Message).filter(Message.id == message_id).first()
+    message = db.query(Message).options(joinedload(Message.patient)).filter(Message.id == message_id).first()
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
     return message

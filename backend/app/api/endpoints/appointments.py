@@ -28,15 +28,18 @@ def list_appointments(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(Appointment)
+    from sqlalchemy.orm import joinedload
+    query = db.query(Appointment).options(
+        joinedload(Appointment.doctor),
+        joinedload(Appointment.medico)
+    )
     
     # Se for paciente, filtra apenas os seus agendamentos
     if current_user.role == "patient":
-        patient = db.query(Patient).filter(Patient.email == current_user.email).first()
+        patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
         if patient:
             query = query.filter(Appointment.patient_id == patient.id)
         else:
-            # Se não encontrar o registro de paciente, retorna lista vazia
             return {"total": 0, "appointments": []}
     
     if patient_id:
@@ -53,6 +56,18 @@ def list_appointments(
     total = query.count()
     appointments = query.order_by(Appointment.appointment_date.desc()).offset(skip).limit(limit).all()
     
+    # Adicionar nomes dinamicamente (Pydantic fará o resto se os atributos existirem)
+    for app in appointments:
+        app.doctor_name = app.doctor.full_name if app.doctor else f"Médico {app.doctor_id}"
+        app.medico_name = app.medico.nome_completo if app.medico else app.doctor_name
+        # Hack para o front-end antigo: já envia o tipo traduzido
+        if app.type == "consultation":
+            app.type = "Consulta"
+        elif app.type == "exam":
+            app.type = "Exame"
+        elif app.type == "return":
+            app.type = "Retorno"
+    
     return {"total": total, "appointments": appointments}
 
 
@@ -62,9 +77,25 @@ def get_appointment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    from sqlalchemy.orm import joinedload
+    appointment = db.query(Appointment).options(
+        joinedload(Appointment.doctor),
+        joinedload(Appointment.medico)
+    ).filter(Appointment.id == appointment_id).first()
+    
     if not appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    appointment.doctor_name = appointment.doctor.full_name if appointment.doctor else f"Médico {appointment.doctor_id}"
+    appointment.medico_name = appointment.medico.nome_completo if appointment.medico else appointment.doctor_name
+    
+    if appointment.type == "consultation":
+        appointment.type = "Consulta"
+    elif appointment.type == "exam":
+        appointment.type = "Exame"
+    elif appointment.type == "return":
+        appointment.type = "Retorno"
+    
     return appointment
 
 

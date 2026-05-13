@@ -143,6 +143,39 @@ TOOLS_DEFINITIONS = [
                 "required": []
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "agendar_consulta",
+            "description": (
+                "Realiza o agendamento de uma consulta no banco de dados. "
+                "Requer o ID do médico, a data/hora desejada e o CPF do paciente. "
+                "Se o CPF não for fornecido, a ferramenta tentará buscar no estado da conversa."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "medico_id": {
+                        "type": "integer",
+                        "description": "ID do médico para o agendamento"
+                    },
+                    "data_hora": {
+                        "type": "string",
+                        "description": "Data e hora no formato ISO (AAAA-MM-DD HH:MM)"
+                    },
+                    "cpf": {
+                        "type": "string",
+                        "description": "CPF do paciente (opcional se já coletado)"
+                    },
+                    "motivo": {
+                        "type": "string",
+                        "description": "Motivo da consulta (opcional)"
+                    }
+                },
+                "required": ["medico_id", "data_hora"]
+            }
+        }
     }
 ]
 
@@ -311,7 +344,6 @@ def buscar_medico(
         
         info = (
             f"**{m.nome_completo}** ({m.especialidade})\n"
-            f"- ID do Médico: {m.id}\n"
             f"- CRM: {m.crm}/{m.crm_estado}\n"
             f"- Status: Disponível para agendamentos\n"
             f"- Valor Consulta: {val} (Duração: {m.duracao_consulta_min} min)\n"
@@ -511,7 +543,7 @@ def buscar_agendamentos(db: Session, cpf: str) -> str:
 #  EXECUTOR DE TOOLS
 # ------------------------------------------------------------------ #
 
-def execute_tool(tool_name: str, arguments: dict, db: Session) -> str:
+def execute_tool(tool_name: str, arguments: dict, db: Session, wa_from: str = None) -> str:
     """
     Executa uma tool pelo nome e retorna o resultado como string.
     
@@ -531,6 +563,102 @@ def execute_tool(tool_name: str, arguments: dict, db: Session) -> str:
                 pergunta=arguments.get("pergunta", ""),
                 medico_id=arguments.get("medico_id")
             )
+        
+        elif tool_name == "agendar_consulta":
+            from app.services.conversation_state import conversation_manager
+            from app.models.patient import Patient
+            from app.models.appointment import Appointment
+            from app.models.medico import Medico
+            from datetime import datetime
+
+            medico_id = arguments.get("medico_id")
+            data_hora_str = arguments.get("data_hora")
+            cpf_arg = arguments.get("cpf")
+            motivo = arguments.get("motivo", "Consulta via WhatsApp")
+
+            # 1. Identificar Paciente (Prioridade: WhatsApp/Telefone)
+            patient = None
+            if wa_from:
+                wa_digits = "".join(c for c in wa_from if c.isdigit())
+                if len(wa_digits) >= 8:
+                    suffix = wa_digits[-8:]
+                    potential_patients = db.query(Patient).filter(
+                        (Patient.whatsapp.like(f"%{suffix}%")) | 
+                        (Patient.phone.like(f"%{suffix}%"))
+                    ).all()
+
+                    if potential_patients:
+                        # Priorizar o que NÃO tem "WhatsApp User" no nome e tem CPF
+                        for p in potential_patients:
+                            if p.name and "WhatsApp User" not in p.name:
+                                patient = p
+                                if p.cpf: break
+                        if not patient:
+                            patient = potential_patients[0]
+            
+            # 2. Se não achou por telefone, tentar pelo CPF (se fornecido ou já coletado)
+            if not patient:
+                cpf = cpf_arg or conversation_manager.get_cpf(wa_from)
+                if cpf:
+                    cpf_limpo = "".join(c for c in cpf if c.isdigit())
+                    patient = db.query(Patient).filter(Patient.cpf == cpf_limpo).first()
+
+            # 3. Se ainda não achou, pedir o CPF
+            if not patient:
+                conversation_manager.set_awaiting_cpf(wa_from, "agendamento")
+                from app.services.standard_messages import get_cpf_request_message
+                return get_cpf_request_message("agendamento")
+
+            # 4. Buscar médico
+            medico = db.query(Medico).filter(Medico.id == medico_id, Medico.ativo == True).first()
+            if not medico:
+                return "Médico não encontrado. Por favor, verifique o profissional selecionado."
+
+            # 5. Parse data
+            try:
+                formats = ["%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M"]
+                dt = None
+                for fmt in formats:
+                    try:
+                        dt = datetime.strptime(data_hora_str.split('.')[0].replace('Z', ''), fmt)
+                        break
+                    except: continue
+                
+                if not dt:
+                    dt = datetime.fromisoformat(data_hora_str.replace('Z', '+00:00'))
+            except:
+                return f"Não consegui entender a data '{data_hora_str}'. Por favor, use o formato AAAA-MM-DD HH:MM."
+
+                # 6. Criar agendamento
+            try:
+                # O model Appointment exige doctor_id (FK para User) e aceita medico_id (FK para Medico)
+                # Tentamos usar o user_id vinculado ao médico, ou um fallback seguro (ID 1)
+                
+                # Debug log to catch why it might be None
+                m_user_id = getattr(medico, "user_id", None)
+                logger.info(f"[agendar_consulta] Medico ID: {medico.id}, User ID in Medico: {m_user_id}")
+                
+                doctor_id_to_use = m_user_id or 1
+                
+                new_app = Appointment(
+                    patient_id=patient.id,
+                    doctor_id=doctor_id_to_use,
+                    medico_id=medico.id,
+                    appointment_date=dt,
+                    duration_minutes=medico.duracao_consulta_min or 30,
+                    status="pending",
+                    type="consultation",
+                    reason=motivo
+                )
+                db.add(new_app)
+                db.commit()
+                db.refresh(new_app)
+                
+                return f"✅ Consulta agendada com sucesso!\n\n🩺 **Médico:** {medico.nome_completo}\n📅 **Data:** {dt.strftime('%d/%m/%Y')}\n⏰ **Horário:** {dt.strftime('%H:%M')}\n👤 **Paciente:** {patient.name}\n\nTe enviamos uma confirmação em breve! ✨"
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Erro ao salvar agendamento: {e}")
+                return "Puxa, tive um probleminha técnico ao salvar sua consulta no sistema. 😅 Por favor, tente novamente em instantes ou fale com nossa recepção."
 
         elif tool_name == "buscar_medico":
             return buscar_medico(

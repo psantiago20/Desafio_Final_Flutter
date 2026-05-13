@@ -10,6 +10,7 @@ from app.models.message import Message
 from app.api.endpoints.auth import get_current_user
 from app.models.user import User
 from app.services.rag_service import rag_service
+from app.utils.phone_utils import find_patient_by_messaging_phone
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -39,9 +40,15 @@ async def chat_with_ia(
         if chat_message.patient_id:
             patient = db.query(Patient).filter(Patient.id == chat_message.patient_id).first()
             if patient:
-                wa_from = patient.whatsapp
-        
-        # Se não houver patient_id ou whatsapp, usar o ID do usuário logado como fallback para estado
+                wa_from = (
+                    patient.whatsapp
+                    or patient.phone
+                    or (current_user.phone if current_user.phone else None)
+                )
+
+        # Se não houver patient_id ou número, usar o ID do usuário logado como fallback para estado
+        if not wa_from:
+            wa_from = current_user.phone
         if not wa_from:
             wa_from = f"user_{current_user.id}"
 
@@ -83,8 +90,8 @@ async def chat_whatsapp_ia(
     """
     Endpoint legado ou de integração direta para simulação WhatsApp.
     """
-    patient = db.query(Patient).filter(Patient.whatsapp == wa_from).first()
-    
+    patient = find_patient_by_messaging_phone(db, wa_from)
+
     if not patient:
         patient = Patient(
             name=f"WhatsApp User {wa_from[-4:]}",

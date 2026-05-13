@@ -159,14 +159,12 @@ async def query_rag(
     try:
         from app.models.message import Message, MessageSource
         from app.models.patient import Patient
+        from app.utils.phone_utils import find_patient_by_messaging_phone
 
         # 1. Identificar o paciente
         patient = None
         if request.wa_from:
-            patient = db.query(Patient).filter(
-                (Patient.phone == request.wa_from) | 
-                (Patient.whatsapp == request.wa_from)
-            ).first()
+            patient = find_patient_by_messaging_phone(db, request.wa_from)
 
         # 2. Salvar mensagem do usuário no banco (se paciente identificado)
         if patient:
@@ -297,9 +295,9 @@ async def upload_exam(
         public_url = f"/static/exams/{unique_filename}"
         
         # 4. Procurar o paciente
-        patient = db.query(Patient).filter(
-            (Patient.phone == wa_from) | (Patient.whatsapp == wa_from) | (Patient.email == wa_from)
-        ).first()
+        from app.utils.phone_utils import find_patient_for_contact
+
+        patient = find_patient_for_contact(db, wa_from)
         
         if not patient:
             return {"status": "error", "message": "Paciente não encontrado."}

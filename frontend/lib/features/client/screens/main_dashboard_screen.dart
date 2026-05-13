@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../features/auth/providers/auth_provider.dart';
+import '../../../features/appointments/providers/appointments_live_sync.dart';
 import 'home_screen.dart';
 import 'agenda_screen.dart';
 import 'results_screen.dart';
@@ -37,6 +38,9 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(appointmentsLiveSyncProvider);
+    ref.watch(chatLiveSyncProvider);
+
     if (kIsWeb) {
       return _buildWebShell(context);
     }
