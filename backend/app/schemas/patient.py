@@ -19,6 +19,10 @@ class PatientBase(BaseModel):
     insurance_number: Optional[str] = None
     notes: Optional[str] = None
     tags: Optional[str] = None
+    blood_type: Optional[str] = None
+    allergies: Optional[str] = None
+    chronic_conditions: Optional[str] = None
+    medications: Optional[str] = None
 
 
 class PatientCreate(PatientBase):
@@ -41,6 +45,10 @@ class PatientUpdate(BaseModel):
     insurance_number: Optional[str] = None
     notes: Optional[str] = None
     tags: Optional[str] = None
+    blood_type: Optional[str] = None
+    allergies: Optional[str] = None
+    chronic_conditions: Optional[str] = None
+    medications: Optional[str] = None
     is_active: Optional[bool] = None
 
 

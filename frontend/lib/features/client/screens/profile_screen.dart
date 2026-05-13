@@ -2,17 +2,92 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/custom_app_bar.dart';
 import '../../../features/auth/providers/auth_provider.dart';
+import '../providers/patient_provider.dart';
+import '../../../shared/models/patient_model.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final _formKey = GlobalKey<FormState>();
+  bool _isEditing = false;
+  
+  late TextEditingController _nameController;
+  late TextEditingController _phoneController;
+  late TextEditingController _emailController;
+  DateTime? _selectedBirthDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _phoneController = TextEditingController();
+    _emailController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  void _toggleEdit(PatientModel? patient, dynamic user) {
+    if (!_isEditing) {
+      _nameController.text = patient?.name ?? user?.fullName ?? '';
+      _phoneController.text = patient?.phone ?? user?.phone ?? '';
+      _emailController.text = patient?.email ?? user?.email ?? '';
+      _selectedBirthDate = patient?.dateOfBirth;
+    }
+    setState(() {
+      _isEditing = !_isEditing;
+    });
+  }
+
+  Future<void> _saveProfile(PatientModel patient) async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        await ref.read(patientRepositoryProvider).updateProfile(patient.id, {
+          'name': _nameController.text,
+          'phone': _phoneController.text,
+          'email': _emailController.text,
+          'date_of_birth': _selectedBirthDate?.toIso8601String(),
+        });
+        
+        ref.invalidate(patientProfileProvider);
+        setState(() {
+          _isEditing = false;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Perfil atualizado com sucesso!')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro ao atualizar perfil: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
+    final patientAsync = ref.watch(patientProfileProvider);
 
     return Scaffold(
       appBar: kIsWeb ? null : const CustomAppBar(
@@ -23,7 +98,21 @@ class ProfileScreen extends ConsumerWidget {
         decoration: const BoxDecoration(
           gradient: AppTheme.backgroundGradient,
         ),
-        child: ListView(
+        child: patientAsync.when(
+          data: (patient) => _buildContent(context, user, patient),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => _buildContent(context, user, null, error: err.toString()),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, dynamic user, PatientModel? patient, {String? error}) {
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    
+    return Form(
+      key: _formKey,
+      child: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
           // Header do Perfil
@@ -66,14 +155,26 @@ class ProfileScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            user?.fullName ?? 'Usuário',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
+                          if (_isEditing)
+                            TextFormField(
+                              controller: _nameController,
+                              style: const TextStyle(color: Colors.white, fontSize: 18),
+                              decoration: const InputDecoration(
+                                labelText: 'Nome Completo',
+                                labelStyle: TextStyle(color: Colors.white70),
+                                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
+                                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white)),
+                              ),
+                            )
+                          else
+                            Text(
+                              patient?.name ?? user?.fullName ?? 'Usuário',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
                           const SizedBox(height: 4),
                           Text(
                             user?.role == 'doctor' ? 'Médico' : 'Paciente',
@@ -90,16 +191,51 @@ class ProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  child: TextButton(
-                    onPressed: () {},
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.white.withValues(alpha: 0.2),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text('Editar Perfil'),
+                  child: Row(
+                    children: [
+                      if (_isEditing) ...[
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => setState(() => _isEditing = false),
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.white.withValues(alpha: 0.1),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Cancelar'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => _saveProfile(patient!),
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: AppTheme.primaryBlue,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Salvar'),
+                          ),
+                        ),
+                      ] else
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => _toggleEdit(patient, user),
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.white.withValues(alpha: 0.2),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Editar Perfil'),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],
@@ -107,19 +243,71 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
+          if (error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text(
+                'Aviso: Algumas informações podem estar indisponíveis. ($error)',
+                style: const TextStyle(color: AppTheme.alertRed, fontSize: 12),
+              ),
+            ),
+
           // Informações Pessoais
           _buildSectionTitle('Informações Pessoais'),
           Card(
             margin: EdgeInsets.zero,
             child: Column(
               children: [
-                _buildInfoTile(Icons.mail_outline, 'E-mail', user?.email ?? '-'),
+                if (_isEditing) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: TextFormField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(labelText: 'E-mail'),
+                    ),
+                  ),
+                  const Divider(),
+                  _buildInfoTile(Icons.person_outline, 'Usuário', user?.username ?? '-'),
+                  const Divider(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: TextFormField(
+                      controller: _phoneController,
+                      decoration: const InputDecoration(labelText: 'Telefone'),
+                    ),
+                  ),
+                ] else ...[
+                  _buildInfoTile(Icons.mail_outline, 'E-mail', patient?.email ?? user?.email ?? '-'),
+                  const Divider(),
+                  _buildInfoTile(Icons.phone_outlined, 'Telefone', patient?.phone ?? user?.phone ?? '-'),
+                  const Divider(),
+                  _buildInfoTile(Icons.person_outline, 'Usuário', user?.username ?? '-'),
+                ],
                 const Divider(),
-                _buildInfoTile(Icons.person_outline, 'Usuário', user?.username ?? '-'),
-                const Divider(),
-                _buildInfoTile(Icons.phone_outlined, 'Telefone', user?.phone ?? '-'),
-                const Divider(),
-                _buildInfoTile(Icons.calendar_today_outlined, 'Data de Nascimento', '15/03/1985'),
+                if (_isEditing)
+                  ListTile(
+                    leading: const Icon(Icons.calendar_today_outlined),
+                    title: const Text('Data de Nascimento'),
+                    subtitle: Text(_selectedBirthDate != null ? dateFormat.format(_selectedBirthDate!) : 'Não informada'),
+                    trailing: const Icon(Icons.edit_outlined),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedBirthDate ?? DateTime(1990),
+                        firstDate: DateTime(1900),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) {
+                        setState(() => _selectedBirthDate = picked);
+                      }
+                    },
+                  )
+                else
+                  _buildInfoTile(
+                    Icons.calendar_today_outlined, 
+                    'Data de Nascimento', 
+                    patient?.dateOfBirth != null ? dateFormat.format(patient!.dateOfBirth!) : '-'
+                  ),
               ],
             ),
           ),
@@ -132,33 +320,20 @@ class ProfileScreen extends ConsumerWidget {
               margin: EdgeInsets.zero,
               child: Column(
                 children: [
-                  _buildInfoTile(Icons.favorite_border, 'Tipo Sanguíneo', 'O+', iconColor: AppTheme.alertRed),
+                  _buildInfoTile(Icons.favorite_border, 'Tipo Sanguíneo', patient?.bloodType ?? 'Não informado', iconColor: AppTheme.alertRed),
                   const Divider(),
-                  _buildInfoTile(Icons.description_outlined, 'Alergias', 'Penicilina, Pólen'),
+                  _buildInfoTile(Icons.description_outlined, 'Alergias', patient?.allergies ?? 'Nenhuma informada'),
                   const Divider(),
-                  _buildInfoTile(Icons.medical_information_outlined, 'Condições Crônicas', 'Hipertensão'),
+                  _buildInfoTile(Icons.medical_information_outlined, 'Condições Crônicas', patient?.chronicConditions ?? 'Nenhuma informada'),
                   const Divider(),
-                  _buildInfoTile(Icons.medication_outlined, 'Medicamentos em Uso', 'Losartana 50mg'),
+                  _buildInfoTile(Icons.medication_outlined, 'Medicamentos em Uso', patient?.medications ?? 'Nenhum informado'),
                 ],
               ),
             ),
             const SizedBox(height: 24),
           ],
 
-          // Estatísticas (se for paciente)
-          if (user?.role == 'patient') ...[
-            _buildSectionTitle('Estatísticas'),
-            Row(
-              children: [
-                Expanded(child: _buildStatCard('12', 'Consultas', AppTheme.primaryBlue)),
-                const SizedBox(width: 12),
-                Expanded(child: _buildStatCard('24', 'Exames', AppTheme.successGreen)),
-                const SizedBox(width: 12),
-                Expanded(child: _buildStatCard('8', 'Médicos', const Color(0xFF9333EA))),
-              ],
-            ),
-            const SizedBox(height: 24),
-          ],
+          // Estatísticas Removidas como solicitado
 
           // Configurações
           _buildSectionTitle('Configurações e Suporte'),
@@ -189,9 +364,8 @@ class ProfileScreen extends ConsumerWidget {
             width: double.infinity,
             child: TextButton.icon(
               onPressed: () {
-                // Logout Real
                 ref.read(authProvider.notifier).logout();
-                context.go('/'); // Volta para a Home (Landing Page)
+                context.go('/');
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Sessão encerrada com sucesso.')),
                 );
@@ -216,7 +390,6 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
         ],
-      ),
       ),
     );
   }
@@ -263,35 +436,6 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  static Widget _buildStatCard(String value, String label, Color color) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16.0),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildActionTile(IconData icon, String title, {VoidCallback? onTap}) {
     return InkWell(
       onTap: onTap ?? () {},
@@ -314,3 +458,4 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 }
+

@@ -42,6 +42,12 @@ class Patient(Base):
     blood_pressure = Column(String(20))
     glucose = Column(String(10))
     
+    # Informações de Saúde (Preenchidas pelo Médico)
+    blood_type = Column(String(5))
+    allergies = Column(Text)
+    chronic_conditions = Column(Text)
+    medications = Column(Text)
+    
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
