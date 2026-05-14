@@ -26,7 +26,12 @@ class ApiClient {
       };
 
   static Uri _uri(String path, [Map<String, dynamic>? queryParams]) {
-    final uri = Uri.parse('${AppConstants.baseUrl}$path');
+    final baseUrl = AppConstants.baseUrl.endsWith('/')
+        ? AppConstants.baseUrl.substring(0, AppConstants.baseUrl.length - 1)
+        : AppConstants.baseUrl;
+    final cleanPath = path.startsWith('/') ? path : '/$path';
+    final uri = Uri.parse('$baseUrl$cleanPath');
+    
     if (queryParams != null) {
       return uri.replace(
         queryParameters: queryParams.map((k, v) => MapEntry(k, v.toString())),
