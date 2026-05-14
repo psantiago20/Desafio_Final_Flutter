@@ -324,19 +324,30 @@ def seed_exams(db: Session, patients: list):
             )
             db.add(exam)
     else:
-        # Nomes de exames realistas para deixar o app bonito
-        nomes_exames = [
-            "Hemograma Completo", "Eletrocardiograma (ECG)", "Raio-X de Tórax", 
-            "Exame de Urina tipo I", "Glicemia de Jejum", "Perfil Lipídico", 
-            "Ultrassom Abdominal", "Ressonância Magnética", "Tomografia Computadorizada",
-            "Exame de Fezes", "TSH e T4 Livre", "Creatinina e Ureia",
-            "Vitamina D", "Ferritina", "Ácido Úrico"
-        ]
-        
         # Distribuir os arquivos encontrados entre os pacientes e COPIAR
+        summaries_dict = {
+            "Hemograma Completo": "Anemia leve identificada (Hb: 11.5). Sugere-se investigação de ferritina.",
+            "Eletrocardiograma (ECG)": "Os resultados estão dentro dos valores de referência.",
+            "Raio-X de Tórax": "Os resultados estão dentro dos valores de referência.",
+            "Exame de Urina tipo I": "Leucocitúria discreta. Possível infecção urinária inicial.",
+            "Glicemia de Jejum": "Glicemia elevada (110 mg/dL). Solicitar Hemoglobina Glicada.",
+            "Perfil Lipídico": "LDL elevado (160 mg/dL). Risco cardiovascular moderado.",
+            "Ultrassom Abdominal": "Os resultados estão dentro dos valores de referência.",
+            "Ressonância Magnética": "Hérnia de disco L4-L5 com compressão radicular leve.",
+            "Tomografia Computadorizada": "Os resultados estão dentro dos valores de referência.",
+            "Exame de Fezes": "Os resultados estão dentro dos valores de referência.",
+            "TSH e T4 Livre": "TSH elevado (6.5). Sugere hipotireoidismo subclínico.",
+            "Creatinina e Ureia": "Os resultados estão dentro dos valores de referência.",
+            "Vitamina D": "Vitamina D baixa (18 ng/mL). Necessária suplementação.",
+            "Ferritina": "Ferritina baixa (12 ng/mL). Estoques de ferro reduzidos.",
+            "Ácido Úrico": "Hiperuricemia (8.2 mg/dL). Risco de gota. Dieta sugerida."
+        }
+
         for i, file_name in enumerate(exam_files):
             patient = patients[i % len(patients)]
-            nome_exame = nomes_exames[i % len(nomes_exames)] # Escolhe um nome da lista
+            
+            # Usa o nome do arquivo (sem extensão) como título
+            nome_exame = os.path.splitext(file_name)[0].replace('_', ' ').replace('-', ' ').title()
             
             src_path = os.path.join(exams_dir, file_name)
             dst_path = os.path.join(static_exams_dir, file_name)
@@ -344,11 +355,15 @@ def seed_exams(db: Session, patients: list):
             try:
                 shutil.copy2(src_path, dst_path)
                 
+                # Tenta buscar um resumo conhecido, ou usa o padrão para resultados normais
+                # se não houver um mapeamento específico.
+                exam_summary = summaries_dict.get(nome_exame, "Os resultados estão dentro dos valores de referência.")
+
                 exam = Exam(
                     patient_id=patient.id,
-                    title=nome_exame, # Agora usa o nome real em vez do nome do arquivo
+                    title=nome_exame,
                     exam_url=f"/static/exams/{file_name}",
-                    summary=f"Exame de {nome_exame.lower()} importado para o sistema."
+                    summary=exam_summary
                 )
                 db.add(exam)
                 print(f"Exame '{nome_exame}' atribuído a {patient.name}.")

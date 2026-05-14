@@ -268,8 +268,11 @@ async def upload_exam(
             "Analise este exame médico e responda APENAS em formato JSON com os seguintes campos:\n"
             "{\n"
             "  \"title\": \"Nome curto do exame (ex: Hemograma Completo)\",\n"
-            "  \"summary\": \"Resumo de 2 frases sobre os resultados\"\n"
+            "  \"summary\": \"Resumo conciso dos resultados.\"\n"
             "}\n"
+            "REGRAS PARA O SUMMARY:\n"
+            "1. Se os resultados estiverem dentro da normalidade, o summary deve ser exatamente: 'Os resultados estão dentro dos valores de referência.'\n"
+            "2. Se houver alterações, descreva-as de forma muito breve em até 2 frases.\n"
             "Não use blocos de código markdown, apenas o JSON puro."
         )
         
@@ -332,10 +335,10 @@ async def upload_exam(
         )
         db.add(user_msg)
         
-        # Resposta da IA com o resumo
+        # Resposta da IA simplificada para o paciente
         ai_msg = Message(
             patient_id=patient.id,
-            content=f"Recebi seu exame! ✨\n\n*Título:* {exam_title}\n*Resumo:* {exam_summary}",
+            content="Recebi seu exame! 💌",
             source=MessageSource.SYSTEM.value,
             wa_from="isis_ia"
         )
