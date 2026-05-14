@@ -581,7 +581,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'SINAIS VITAIS RECENTES',
             style: TextStyle(
               fontSize: 10,
@@ -708,7 +708,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'SINAIS VITAIS RECENTES',
             style: TextStyle(
               fontSize: 10,
@@ -884,12 +884,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   childAspectRatio: 1.5,
                   children: [
                     _buildStatCard(
+                      context,
                       title: 'Próximas consultas',
                       value: stats.pendingAppointments.toString(),
                       icon: Icons.calendar_today,
                       iconColor: AppTheme.primaryBlue,
                     ),
                     _buildStatCard(
+                      context,
                       title: 'Exames prontos',
                       value: stats.completedAppointments.toString(),
                       icon: Icons.description_outlined,
@@ -1033,6 +1035,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
                   _buildActionCard(
+                    context,
                     title: 'Agendar',
                     icon: Icons.calendar_today,
                     color: AppTheme.primaryBlue,
@@ -1040,6 +1043,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     onTap: () => widget.onNavigate(1),
                   ),
                   _buildActionCard(
+                    context,
                     title: 'Resultados',
                     icon: Icons.description_outlined,
                     color: AppTheme.successGreen,
@@ -1047,6 +1051,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     onTap: () => widget.onNavigate(2),
                   ),
                   _buildActionCard(
+                    context,
                     title: 'Mensagens',
                     icon: Icons.chat_bubble_outline,
                     color: const Color(0xFF9333EA),
@@ -1054,6 +1059,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     onTap: () => widget.onNavigate(2),
                   ),
                   _buildActionCard(
+                    context,
                     title: 'Exames',
                     icon: Icons.description_outlined,
                     color: AppTheme.successGreen,
@@ -1069,8 +1075,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ),
     );
   }
-  }
-  Widget _buildStatCard({
+  Widget _buildStatCard(
+    BuildContext context, {
     required String title,
     required String value,
     required IconData icon,
@@ -1112,7 +1118,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildActionCard({
+  Widget _buildActionCard(
+    BuildContext context, {
     required String title,
     required IconData icon,
     required Color color,
@@ -1160,3 +1167,4 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
+}

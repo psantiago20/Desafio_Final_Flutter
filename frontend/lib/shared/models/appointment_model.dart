@@ -26,6 +26,7 @@ class PatientInfo {
 class AppointmentModel {
   final int id;
   final int patientId;
+  final int doctorId;
   final String? doctorNameFromApi;
   final String? medicoName;
   final DateTime appointmentDate;
