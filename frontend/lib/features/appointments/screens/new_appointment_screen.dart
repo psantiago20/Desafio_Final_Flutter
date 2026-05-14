@@ -299,10 +299,10 @@ class _NewAppointmentScreenState extends ConsumerState<NewAppointmentScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.cancelled.withOpacity(0.08),
+                    color: AppColors.cancelled.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                        color: AppColors.cancelled.withOpacity(0.3)),
+                        color: AppColors.cancelled.withValues(alpha: 0.3)),
                   ),
                   child: Text(_error!,
                       style: GoogleFonts.dmSans(

@@ -82,7 +82,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget _buildWeb(List<ChatMessage> messages, bool isLoading) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+        decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),
         child: Column(
           children: [
             Expanded(
@@ -122,9 +122,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Widget _buildMobile(List<ChatMessage> messages, bool isLoading) {
     return Scaffold(
-      appBar: const CustomAppBar(subtitle: 'Atendimento por IA'),
+      appBar: kIsWeb ? null : const CustomAppBar(subtitle: 'Atendimento por IA'),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+        decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),
         child: Column(
           children: [
             Expanded(
@@ -157,16 +157,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: AppTheme.surfaceWhite,
-                border: Border(top: BorderSide(color: AppTheme.borderGray)),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+        border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outline)),
               ),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.attach_file,
-                      color: AppTheme.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                     onPressed: _pickAndUploadExam,
                   ),
@@ -181,7 +181,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: AppTheme.backgroundGray,
+                        fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 20,
                           vertical: 10,
@@ -217,16 +217,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           right: isMe ? 0 : 40,
         ),
         decoration: BoxDecoration(
-          color: isMe ? AppTheme.primaryBlueDark : AppTheme.surfaceWhite,
+          color: isMe ? AppTheme.primaryBlueDark : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(24).copyWith(
             bottomRight: isMe ? const Radius.circular(0) : null,
             bottomLeft: !isMe ? const Radius.circular(0) : null,
           ),
-          border: isMe ? null : Border.all(color: AppTheme.borderGray),
+          border: isMe ? null : Border.all(color: Theme.of(context).colorScheme.outline),
         ),
         child: Text(
           message,
-          style: TextStyle(color: isMe ? Colors.white : AppTheme.textPrimary),
+          style: TextStyle(color: isMe ? Colors.white : Theme.of(context).colorScheme.onSurface),
         ),
       ),
     );
@@ -235,14 +235,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget _buildMessageInput() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: AppTheme.surfaceWhite,
-        border: Border(top: BorderSide(color: AppTheme.borderGray)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outline)),
       ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.attach_file, color: AppTheme.textSecondary),
+            icon: Icon(Icons.attach_file, color: Theme.of(context).colorScheme.onSurfaceVariant),
             onPressed: _pickAndUploadExam,
           ),
           Expanded(
@@ -251,13 +251,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               onSubmitted: (_) => _sendMessage(),
               decoration: InputDecoration(
                 hintText: 'Digite sua mensagem...',
-                hintStyle: const TextStyle(color: AppTheme.textTertiary),
+                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: AppTheme.backgroundGray,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 10,

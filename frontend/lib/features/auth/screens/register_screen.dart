@@ -52,7 +52,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           role: 'doctor',
         );
     if (ok && mounted) {
-      context.go('/dashboard');
+      // Redirecionamento automático via GoRouter
     }
   }
 
@@ -169,10 +169,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.cancelled.withOpacity(0.08),
+                      color: AppColors.cancelled.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                          color: AppColors.cancelled.withOpacity(0.3)),
+                          color: AppColors.cancelled.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [

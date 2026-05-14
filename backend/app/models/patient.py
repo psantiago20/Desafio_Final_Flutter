@@ -37,10 +37,13 @@ class Patient(Base):
     notes = Column(Text)
     tags = Column(Text)
     
-    # Signos Vitais (Recentes)
+    # Sinais Vitais (Recentes)
     heart_rate = Column(String(10))
     blood_pressure = Column(String(20))
     glucose = Column(String(10))
+    temperature = Column(String(10))
+    weight = Column(String(10))
+    height = Column(String(10))
     
     # Informações de Saúde (Preenchidas pelo Médico)
     blood_type = Column(String(5))

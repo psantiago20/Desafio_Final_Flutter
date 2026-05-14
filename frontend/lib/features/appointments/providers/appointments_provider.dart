@@ -11,12 +11,14 @@ class AppointmentFilters {
   final DateTime? dateFrom;
   final DateTime? dateTo;
   final int? doctorId;
+  final int? patientId;
 
   const AppointmentFilters({
     this.statusFilter,
     this.dateFrom,
     this.dateTo,
     this.doctorId,
+    this.patientId,
   });
 
   AppointmentFilters copyWith({
@@ -24,13 +26,16 @@ class AppointmentFilters {
     DateTime? dateFrom,
     DateTime? dateTo,
     int? doctorId,
+    int? patientId,
     bool clearStatus = false,
+    bool clearPatient = false,
   }) {
     return AppointmentFilters(
       statusFilter: clearStatus ? null : (statusFilter ?? this.statusFilter),
       dateFrom: dateFrom ?? this.dateFrom,
       dateTo: dateTo ?? this.dateTo,
       doctorId: doctorId ?? this.doctorId,
+      patientId: clearPatient ? null : (patientId ?? this.patientId),
     );
   }
 }
@@ -43,6 +48,7 @@ final appointmentsListProvider =
   final filters = ref.watch(appointmentFiltersProvider);
   return ref.read(appointmentsRepositoryProvider).getAppointments(
         doctorId: filters.doctorId,
+        patientId: filters.patientId,
         statusFilter: filters.statusFilter,
         dateFrom: filters.dateFrom,
         dateTo: filters.dateTo,

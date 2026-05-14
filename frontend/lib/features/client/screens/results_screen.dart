@@ -149,7 +149,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                 Expanded(
                   child: Text(
                     title, 
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -279,35 +279,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   }
 
 
-  final List<Map<String, dynamic>> _mockExams = [
-    {
-      'id': 1,
-      'name': 'Hemograma Completo',
-      'type': 'Análise Sanguínea',
-      'date': 'Enviado em 01/05',
-      'status': 'available',
-      'doctor': 'Avaliado por Dr. João Santos',
-      'hasAbnormalities': false,
-    },
-    {
-      'id': 3,
-      'name': 'Glicemia em Jejum',
-      'type': 'Análise Sanguínea',
-      'date': '2026-04-25',
-      'status': 'available',
-      'doctor': 'Dra. Maria Lima',
-      'hasAbnormalities': true,
-    },
-    {
-      'id': 4,
-      'name': 'Raio-X de Tórax',
-      'type': 'Imagem',
-      'date': '2026-05-03',
-      'status': 'pending',
-      'doctor': 'Dr. Carlos Souza',
-      'hasAbnormalities': false,
-    },
-  ];
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
@@ -320,8 +291,9 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     final filteredExams = _exams;
 
     return Scaffold(
+      appBar: kIsWeb ? null : const CustomAppBar(subtitle: 'Seus Resultados'),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+        decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
@@ -354,9 +326,9 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
 
   Widget _buildMobile() {
     return Scaffold(
-      appBar: const CustomAppBar(subtitle: 'Seus Resultados'),
+      appBar: kIsWeb ? null : const CustomAppBar(subtitle: 'Seus Resultados'),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+        decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
@@ -396,22 +368,22 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                                   color: AppTheme.successGreen,
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                              SizedBox(width: 16),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       title,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
                                       ),
                                     ),
                                     Text(
                                       dateStr,
-                                      style: const TextStyle(
-                                        color: AppTheme.textSecondary,
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -433,11 +405,11 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 'Resultado Liberado',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: AppTheme.textSecondary,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                               ),
                               TextButton.icon(
@@ -463,7 +435,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
 
   Widget _buildExamCard(Map<String, dynamic> exam) {
     final examUrl = exam['exam_url'] as String?;
-    final summary = exam['summary'] as String?;
     final hasFile = examUrl != null && examUrl.isNotEmpty;
 
     DateTime? date;
@@ -476,12 +447,12 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     final title = exam['title'] as String? ?? 'Exame';
 
     return Card(
-      color: AppTheme.surfaceWhite,
+      color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: AppTheme.borderGray,
+          color: Theme.of(context).colorScheme.outline,
           width: 1,
         ),
       ),
@@ -495,30 +466,30 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.backgroundGray,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.assignment,
-                    color: AppTheme.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
                       Text(
                         dateStr,
-                        style: const TextStyle(
-                          color: AppTheme.textSecondary,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 12,
                         ),
                       ),

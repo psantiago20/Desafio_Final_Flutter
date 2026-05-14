@@ -5,6 +5,7 @@ from datetime import datetime
 
 from app.db.database import get_db
 from app.models.appointment import Appointment
+from app.services.fcm_service import fcm_service
 from app.models.patient import Patient
 from app.schemas.appointment import (
     AppointmentCreate, AppointmentUpdate, AppointmentResponse,
@@ -42,6 +43,10 @@ def list_appointments(
             query = query.filter(Appointment.patient_id == patient.id)
         else:
             return {"total": 0, "appointments": []}
+    
+    # Se for médico e não especificou um doctor_id no filtro, filtra apenas os dele
+    if current_user.role == "doctor" and not doctor_id:
+        query = query.filter(Appointment.doctor_id == current_user.id)
     
     if patient_id:
         query = query.filter(Appointment.patient_id == patient_id)
@@ -121,6 +126,21 @@ def create_appointment(
     db.add(db_appointment)
     db.commit()
     db.refresh(db_appointment)
+    
+    # Send FCM notification to doctor
+    if doctor.fcm_token:
+        patient_name = patient.name or "A patient"
+        appt_date_str = db_appointment.appointment_date.strftime("%Y-%m-%d %H:%M")
+        fcm_service.send_notification(
+            token=doctor.fcm_token,
+            title="New Appointment Scheduled",
+            body=f"{patient_name} scheduled an appointment for {appt_date_str}.",
+            data={
+                "type": "appointment_created",
+                "appointment_id": str(db_appointment.id)
+            }
+        )
+        
     return db_appointment
 
 
@@ -139,6 +159,15 @@ def update_appointment(
     for key, value in update_data.items():
         setattr(db_appointment, key, value)
     
+    # Sincronizar sinais vitais com o registro do Paciente para o Dashboard
+    vital_signs = ["heart_rate", "blood_pressure", "glucose", "temperature", "weight", "height"]
+    if any(sign in update_data for sign in vital_signs):
+        patient = db.query(Patient).filter(Patient.id == db_appointment.patient_id).first()
+        if patient:
+            for sign in vital_signs:
+                if sign in update_data:
+                    setattr(patient, sign, update_data[sign])
+    
     db.commit()
     db.refresh(db_appointment)
     return db_appointment
@@ -155,12 +184,30 @@ def update_appointment_status(
     if not db_appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
     
+    old_status = db_appointment.status
     db_appointment.status = status_update.status
     if status_update.status == "completed":
         db_appointment.completed_at = datetime.utcnow()
     
     db.commit()
     db.refresh(db_appointment)
+    
+    # Send FCM notification to doctor if status changed to cancelled
+    if status_update.status == "cancelled" and old_status != "cancelled":
+        db.refresh(db_appointment.doctor)
+        if db_appointment.doctor and db_appointment.doctor.fcm_token:
+            patient_name = db_appointment.patient.name if db_appointment.patient else "A patient"
+            appt_date_str = db_appointment.appointment_date.strftime("%Y-%m-%d %H:%M")
+            fcm_service.send_notification(
+                token=db_appointment.doctor.fcm_token,
+                title="Appointment Canceled",
+                body=f"The appointment with {patient_name} on {appt_date_str} has been canceled.",
+                data={
+                    "type": "appointment_cancelled",
+                    "appointment_id": str(db_appointment.id)
+                }
+            )
+            
     return db_appointment
 
 
@@ -174,6 +221,25 @@ def delete_appointment(
     if not db_appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
     
+    # Keep details before deleting to send notification
+    doctor = db_appointment.doctor
+    patient_name = db_appointment.patient.name if db_appointment.patient else "A patient"
+    appt_date_str = db_appointment.appointment_date.strftime("%Y-%m-%d %H:%M")
+    appt_id_str = str(db_appointment.id)
+    
     db.delete(db_appointment)
     db.commit()
+    
+    # Send FCM notification to doctor
+    if doctor and doctor.fcm_token:
+        fcm_service.send_notification(
+            token=doctor.fcm_token,
+            title="Appointment Deleted",
+            body=f"The appointment with {patient_name} on {appt_date_str} has been deleted.",
+            data={
+                "type": "appointment_deleted",
+                "appointment_id": appt_id_str
+            }
+        )
+        
     return None

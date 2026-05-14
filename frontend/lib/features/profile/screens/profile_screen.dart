@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/features/auth/providers/auth_provider.dart';
+import 'package:frontend/shared/widgets/custom_app_bar.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -18,7 +19,7 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Meu Perfil')),
+      appBar: const CustomAppBar(subtitle: 'Meu Perfil', showProfileButton: false),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -52,7 +53,7 @@ class ProfileScreen extends ConsumerWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(

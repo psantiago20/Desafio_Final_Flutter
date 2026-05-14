@@ -1,5 +1,8 @@
+import 'package:intl/intl.dart';
+
 class PatientModel {
   final int id;
+  final int? userId;
   final String name;
   final String? email;
   final String phone;
@@ -13,21 +16,24 @@ class PatientModel {
   final String? rg;
   final String? insurance;
   final String? insuranceNumber;
+  final String? cep;
+  final String? preferenciaNotificacao;
   final String? notes;
   final String? tags;
+  final String? heartRate;
+  final String? bloodPressure;
+  final String? glucose;
   final String? bloodType;
   final String? allergies;
   final String? chronicConditions;
   final String? medications;
-  final String? heartRate;
-  final String? bloodPressure;
-  final String? glucose;
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   PatientModel({
     required this.id,
+    this.userId,
     required this.name,
     this.email,
     required this.phone,
@@ -41,15 +47,17 @@ class PatientModel {
     this.rg,
     this.insurance,
     this.insuranceNumber,
+    this.cep,
+    this.preferenciaNotificacao,
     this.notes,
     this.tags,
+    this.heartRate,
+    this.bloodPressure,
+    this.glucose,
     this.bloodType,
     this.allergies,
     this.chronicConditions,
     this.medications,
-    this.heartRate,
-    this.bloodPressure,
-    this.glucose,
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
@@ -58,6 +66,7 @@ class PatientModel {
   factory PatientModel.fromJson(Map<String, dynamic> json) {
     return PatientModel(
       id: json['id'] as int,
+      userId: json['user_id'] as int?,
       name: json['name'] as String,
       email: json['email'] as String?,
       phone: json['phone'] as String,
@@ -71,16 +80,18 @@ class PatientModel {
       rg: json['rg'] as String?,
       insurance: json['insurance'] as String?,
       insuranceNumber: json['insurance_number'] as String?,
+      cep: json['cep'] as String?,
+      preferenciaNotificacao: json['preferencia_notificacao'] as String?,
       notes: json['notes'] as String?,
       tags: json['tags'] as String?,
+      heartRate: json['heart_rate'] as String?,
+      bloodPressure: json['blood_pressure'] as String?,
+      glucose: json['glucose'] as String?,
       bloodType: json['blood_type'] as String?,
       allergies: json['allergies'] as String?,
       chronicConditions: json['chronic_conditions'] as String?,
       medications: json['medications'] as String?,
-      heartRate: json['heart_rate'] as String?,
-      bloodPressure: json['blood_pressure'] as String?,
-      glucose: json['glucose'] as String?,
-      isActive: json['is_active'] as bool,
+      isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -89,6 +100,7 @@ class PatientModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'user_id': userId,
       'name': name,
       'email': email,
       'phone': phone,
@@ -102,18 +114,25 @@ class PatientModel {
       'rg': rg,
       'insurance': insurance,
       'insurance_number': insuranceNumber,
+      'cep': cep,
+      'preferencia_notificacao': preferenciaNotificacao,
       'notes': notes,
       'tags': tags,
+      'heart_rate': heartRate,
+      'blood_pressure': bloodPressure,
+      'glucose': glucose,
       'blood_type': bloodType,
       'allergies': allergies,
       'chronic_conditions': chronicConditions,
       'medications': medications,
-      'heart_rate': heartRate,
-      'blood_pressure': bloodPressure,
-      'glucose': glucose,
       'is_active': isActive,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
+  }
+
+  String get formattedDateOfBirth {
+    if (dateOfBirth == null) return 'Não informada';
+    return DateFormat('dd/MM/yyyy').format(dateOfBirth!);
   }
 }

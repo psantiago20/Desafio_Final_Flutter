@@ -7,6 +7,8 @@ import '../providers/appointments_provider.dart';
 import '../providers/appointments_live_sync.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
+import 'package:frontend/shared/widgets/custom_app_bar.dart';
+import 'package:frontend/features/patients/providers/patients_provider.dart';
 
 class AppointmentsScreen extends ConsumerWidget {
   const AppointmentsScreen({super.key});
@@ -28,8 +30,9 @@ class AppointmentsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Consultas'),
+      appBar: CustomAppBar(
+        subtitle: 'Gerenciamento de Consultas',
+        showProfileButton: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded),
@@ -167,17 +170,17 @@ class AppointmentsScreen extends ConsumerWidget {
   }
 }
 
-class _AppointmentTile extends StatelessWidget {
+class _AppointmentTile extends ConsumerWidget {
   final AppointmentModel appointment;
   final VoidCallback onTap;
 
   const _AppointmentTile({required this.appointment, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final color = statusColor(appointment.status);
-    // final dateFmt = DateFormat('dd/MM/yyyy');
     final timeFmt = DateFormat('HH:mm');
+    final patientAsync = ref.watch(patientByIdProvider(appointment.patientId));
 
     return GestureDetector(
       onTap: onTap,
@@ -195,7 +198,7 @@ class _AppointmentTile extends StatelessWidget {
               width: 52,
               padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
+                color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -228,12 +231,23 @@ class _AppointmentTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    appointment.patientName ?? 'Paciente #${appointment.patientId}',
-                    style: GoogleFonts.dmSans(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
+                  patientAsync.when(
+                    data: (patient) => Text(
+                      patient.name,
+                      style: GoogleFonts.dmSans(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    loading: () => const Text('Carregando...'),
+                    error: (_, __) => Text(
+                      'Paciente #${appointment.patientId}',
+                      style: GoogleFonts.dmSans(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -290,7 +304,7 @@ class _AppointmentTile extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
+                    color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
