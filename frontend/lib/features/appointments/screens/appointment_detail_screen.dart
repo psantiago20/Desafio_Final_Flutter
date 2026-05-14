@@ -245,7 +245,16 @@ class _AppointmentDetailScreenState
               currentStatus: _appointment.status,
               onUpdate: _updateStatus,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
+
+            // Ferramentas
+            Text('Ferramentas',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 10),
+            _ToolActions(
+              patientId: _appointment.patientId,
+            ),
+            const SizedBox(height: 24),
 
             // Anotações clínicas
             Row(
@@ -454,6 +463,46 @@ class _StatusActions extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+class _ToolActions extends StatelessWidget {
+  final int patientId;
+
+  const _ToolActions({required this.patientId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        GestureDetector(
+          onTap: () {
+            context.push('/patients/$patientId/exams');
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.border,
+              ),
+            ),
+            child: Text(
+              'Exames do paciente',
+              style: GoogleFonts.dmSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
