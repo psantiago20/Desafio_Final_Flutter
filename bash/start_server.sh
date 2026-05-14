@@ -14,8 +14,8 @@ echo -e "${BLUE}====================================================${NC}"
 echo -e "${GREEN}      OmniConnect - Inicializando Servidor Backend${NC}"
 echo -e "${BLUE}====================================================${NC}"
 
-# Caminho base do projeto
-PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
+# Caminho base do projeto (um nível acima da pasta bash/)
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BACKEND_DIR="$PROJECT_ROOT/backend"
 
 # 1. Parar serviços antigos (evita erro de porta já em uso)

@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/theme/theme_provider.dart';
+import '../../../shared/widgets/app_logo.dart';
 
 class LandingPage extends ConsumerStatefulWidget {
   const LandingPage({super.key});
@@ -52,10 +54,14 @@ class _LandingPageState extends ConsumerState<LandingPage> {
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryColor = Color(0xFF003D9B);
-    const Color secondaryColor = Color(0xFF006C4D);
-    const Color backgroundColor = Color(0xFFF7F9FB);
-    const Color onSurfaceVariantColor = Color(0xFF434654);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+    final Color primaryColor = isDark ? colorScheme.primary : const Color(0xFF003D9B);
+    final Color secondaryColor = const Color(0xFF006C4D);
+    final Color backgroundColor = isDark ? const Color(0xFF111827) : const Color(0xFFF7F9FB);
+    final Color onSurfaceVariantColor = isDark ? colorScheme.onSurfaceVariant : const Color(0xFF434654);
+    final Color cardColor = isDark ? const Color(0xFF1F2937) : Colors.white;
+    final Color sectionBgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF2F4F6);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -98,24 +104,23 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                         vertical: 8,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF86F8C8),
-                                        borderRadius: BorderRadius.circular(
-                                          999,
-                                        ),
+                                        color: isDark ? const Color(0xFF065F46) : const Color(0xFF86F8C8),
+                                        borderRadius: BorderRadius.circular(999),
+                                        border: isDark ? Border.all(color: const Color(0xFF6EE7B7).withOpacity(0.4), width: 1) : null,
                                       ),
-                                      child: const Row(
+                                      child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Icon(
                                             Icons.verified,
                                             size: 16,
-                                            color: secondaryColor,
+                                            color: isDark ? const Color(0xFF6EE7B7) : secondaryColor,
                                           ),
-                                          SizedBox(width: 8),
+                                          const SizedBox(width: 8),
                                           Text(
                                             'EXCELÊNCIA EM SAÚDE DIGITAL',
                                             style: TextStyle(
-                                              color: secondaryColor,
+                                              color: isDark ? const Color(0xFF6EE7B7) : secondaryColor,
                                               fontWeight: FontWeight.bold,
                                               fontSize: 10,
                                               letterSpacing: 1.2,
@@ -130,7 +135,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                       textAlign: isMobile
                                           ? TextAlign.center
                                           : TextAlign.start,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontFamily: 'Manrope',
                                         fontSize: 56,
                                         fontWeight: FontWeight.w800,
@@ -144,7 +149,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                       textAlign: isMobile
                                           ? TextAlign.center
                                           : TextAlign.start,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 18,
                                         color: onSurfaceVariantColor,
                                         height: 1.6,
@@ -195,9 +200,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                           onPressed: () =>
                                               _scrollTo(_specialtiesKey),
                                           style: TextButton.styleFrom(
-                                            backgroundColor: const Color(
-                                              0xFFECEEF0,
-                                            ),
+                                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 32,
                                               vertical: 20,
@@ -247,7 +250,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                 Container(
                   key: _specialtiesKey,
                   width: double.infinity,
-                  color: const Color(0xFFF2F4F6),
+                  color: sectionBgColor,
                   padding: const EdgeInsets.symmetric(
                     vertical: 80,
                     horizontal: 24,
@@ -257,7 +260,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                       constraints: const BoxConstraints(maxWidth: 1200),
                       child: Column(
                         children: [
-                          const Align(
+                          Align(
                             alignment: Alignment.centerLeft,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,7 +274,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                     color: primaryColor,
                                   ),
                                 ),
-                                SizedBox(height: 12),
+                                const SizedBox(height: 12),
                                 Text(
                                   'Cuidado especializado em cada batimento, pensamento e fase da vida.',
                                   style: TextStyle(
@@ -296,6 +299,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                         'Atendimento humanizado e foco em prevenção para cuidar da sua saúde de forma integral.',
                                     color: const Color(0xFFDAE2FF),
                                     iconColor: primaryColor,
+                                    isDark: isDark,
                                     width: constraints.maxWidth > 900
                                         ? (constraints.maxWidth - 48) / 3
                                         : constraints.maxWidth,
@@ -307,6 +311,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                         'Especialista em arritmias e saúde do coração com monitoramento avançado.',
                                     color: const Color(0xFF86F8C8),
                                     iconColor: secondaryColor,
+                                    isDark: isDark,
                                     width: constraints.maxWidth > 900
                                         ? (constraints.maxWidth - 48) / 3
                                         : constraints.maxWidth,
@@ -318,6 +323,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                         'Diagnóstico preciso e tratamentos inovadores para o sistema nervoso.',
                                     color: const Color(0xFFFFDBCF),
                                     iconColor: const Color(0xFF7B2600),
+                                    isDark: isDark,
                                     width: constraints.maxWidth > 900
                                         ? (constraints.maxWidth - 48) / 3
                                         : constraints.maxWidth,
@@ -370,13 +376,13 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
+                                    Text(
                                       'Tecnologia a seu favor',
                                       style: TextStyle(
                                         fontFamily: 'Manrope',
                                         fontSize: 40,
                                         fontWeight: FontWeight.w800,
-                                        color: primaryColor,
+                                        color: Theme.of(context).colorScheme.primary,
                                         height: 1.1,
                                       ),
                                     ),
@@ -416,7 +422,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                 Container(
                   key: _teamKey,
                   width: double.infinity,
-                  color: backgroundColor,
+                  color: isDark ? const Color(0xFF111827) : const Color(0xFFF7F9FB),
                   padding: const EdgeInsets.symmetric(
                     vertical: 80,
                     horizontal: 24,
@@ -426,7 +432,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                       constraints: const BoxConstraints(maxWidth: 1200),
                       child: Column(
                         children: [
-                          const Text(
+                          Text(
                             'Corpo Clínico',
                             style: TextStyle(
                               fontFamily: 'Manrope',
@@ -436,12 +442,12 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          const Text(
+                          Text(
                             'Conheça os especialistas dedicados a transformar sua jornada de saúde em um caminho de bem-estar.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 18,
-                              color: onSurfaceVariantColor,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                           const SizedBox(height: 64),
@@ -501,7 +507,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
               child: Container(
                 height: 70,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
+                  color: isDark ? const Color(0xFF1F2937).withOpacity(0.95) : Colors.white.withOpacity(0.9),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
@@ -523,47 +529,35 @@ class _LandingPageState extends ConsumerState<LandingPage> {
                             duration: const Duration(milliseconds: 500),
                             curve: Curves.easeOut,
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF0052CC),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.health_and_safety,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              const Text(
-                                'Sua Consulta',
-                                style: TextStyle(
-                                  fontFamily: 'Manrope',
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF0052CC),
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                            ],
-                          ),
+                          child: const AppLogo(iconSize: 24, fontSize: 22),
                         ),
                         LayoutBuilder(
                           builder: (context, constraints) {
-                            if (MediaQuery.of(context).size.width < 900) {
-                              return IconButton(
-                                icon: const Icon(
-                                  Icons.menu,
-                                  color: onSurfaceVariantColor,
-                                ),
-                                onPressed: () {},
+                            final themeNotifier = ref.read(themeProvider.notifier);
+                            final themeMode = ref.watch(themeProvider);
+                            final isMobileWidth = MediaQuery.of(context).size.width < 900;
+                            final toggleBtn = IconButton(
+                              icon: Icon(
+                                themeMode == ThemeMode.dark ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                                color: onSurfaceVariantColor,
+                              ),
+                              tooltip: themeMode == ThemeMode.dark ? 'Modo Claro' : 'Modo Escuro',
+                              onPressed: () => themeNotifier.toggleTheme(),
+                            );
+                            if (isMobileWidth) {
+                              return Row(
+                                children: [
+                                  toggleBtn,
+                                  IconButton(
+                                    icon: Icon(Icons.menu, color: onSurfaceVariantColor),
+                                    onPressed: () {},
+                                  ),
+                                ],
                               );
                             }
                             return Row(
                               children: [
+                                toggleBtn,
                                 _buildNavItem(
                                   'Painel',
                                   isActive: true,
@@ -616,7 +610,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
-            color: isActive ? const Color(0xFF0052CC) : const Color(0xFF434654),
+            color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ),
@@ -630,12 +624,15 @@ class _LandingPageState extends ConsumerState<LandingPage> {
     required Color color,
     required Color iconColor,
     required double width,
+    bool isDark = false,
   }) {
+    final effectiveCardBg = Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface;
+    final effectiveIconBg = isDark ? color.withOpacity(0.35) : color;
     return Container(
       width: width,
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: effectiveCardBg,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -651,7 +648,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color,
+              color: effectiveIconBg,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: iconColor, size: 32),
@@ -659,18 +656,18 @@ class _LandingPageState extends ConsumerState<LandingPage> {
           const SizedBox(height: 24),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF191C1E),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 12),
           Text(
             description,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
-              color: Color(0xFF434654),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               height: 1.5,
             ),
           ),
@@ -701,10 +698,10 @@ class _LandingPageState extends ConsumerState<LandingPage> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF003D9B).withOpacity(0.05),
+            color: Theme.of(context).colorScheme.primary.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.15 : 0.05),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(Icons.check, color: Color(0xFF003D9B), size: 24),
+          child: Icon(Icons.check, color: Theme.of(context).colorScheme.primary, size: 24),
         ),
         const SizedBox(width: 20),
         Expanded(
@@ -713,18 +710,18 @@ class _LandingPageState extends ConsumerState<LandingPage> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF191C1E),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 description,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
-                  color: Color(0xFF434654),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.5,
                 ),
               ),
@@ -747,7 +744,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
           height: 180,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 4),
+            border: Border.all(color: Theme.of(context).colorScheme.surface, width: 4),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
@@ -761,19 +758,19 @@ class _LandingPageState extends ConsumerState<LandingPage> {
         const SizedBox(height: 24),
         Text(
           name,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF191C1E),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           specialty.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF003D9B),
+            color: Theme.of(context).colorScheme.primary,
             letterSpacing: 1.5,
           ),
         ),
@@ -803,7 +800,6 @@ class _LoginModalState extends ConsumerState<LoginModal> {
         .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
     if (ok && mounted) {
       Navigator.pop(context); // Fecha o modal
-      context.go('/dashboard');
     }
   }
 
@@ -821,7 +817,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
           maxHeight: isMobile ? double.infinity : 650,
         ),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
@@ -897,7 +893,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF8E9199),
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             letterSpacing: 1.2,
                           ),
                         ),
@@ -908,7 +904,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                             hintText: 'Digite seu usuário',
                             prefixIcon: const Icon(Icons.person_outline),
                             filled: true,
-                            fillColor: const Color(0xFFF7F9FB),
+                            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
@@ -924,7 +920,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF8E9199),
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             letterSpacing: 1.2,
                           ),
                         ),
@@ -946,7 +942,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                               ),
                             ),
                             filled: true,
-                            fillColor: const Color(0xFFF7F9FB),
+                            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
@@ -1134,7 +1130,7 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
         child: Container(
           padding: const EdgeInsets.all(48),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(32),
           ),
           child: Column(
@@ -1174,7 +1170,7 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
           maxHeight: MediaQuery.of(context).size.height * 0.9,
         ),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
@@ -1436,11 +1432,11 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
           padding: const EdgeInsets.symmetric(vertical: 24),
           decoration: BoxDecoration(
             color: isSelected
-                ? primaryColor.withOpacity(0.05)
-                : const Color(0xFFF7F9FB),
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected ? primaryColor : const Color(0xFFE0E3E5),
+              color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outline,
               width: 2,
             ),
           ),
@@ -1448,7 +1444,7 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
             children: [
               Icon(
                 icon,
-                color: isSelected ? primaryColor : const Color(0xFF8E9199),
+                color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 32,
               ),
               const SizedBox(height: 12),
@@ -1457,7 +1453,7 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
                 style: GoogleFonts.manrope(
                   fontSize: 16,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                  color: isSelected ? primaryColor : const Color(0xFF434654),
+                  color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -1475,7 +1471,7 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
         style: GoogleFonts.inter(
           fontSize: 11,
           fontWeight: FontWeight.bold,
-          color: const Color(0xFF8E9199),
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           letterSpacing: 1.2,
         ),
       ),
@@ -1511,7 +1507,7 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
               )
             : null,
         filled: true,
-        fillColor: const Color(0xFFF7F9FB),
+        fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,

@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:frontend/features/profile/screens/profile_screen.dart';
+import 'package:frontend/features/client/screens/main_dashboard_screen.dart';
+import 'dart:ui';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/core/theme/theme_provider.dart';
+import 'package:frontend/shared/widgets/main_shell.dart';
+import 'package:frontend/shared/widgets/app_logo.dart';
 import '../../core/theme/app_theme.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -19,31 +26,44 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.8),
       elevation: 0,
-      iconTheme: const IconThemeData(color: AppTheme.primaryBlueDark),
-      // Botão hambúrguer para abrir Drawer
+      flexibleSpace: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(color: Colors.transparent),
+        ),
+      ),
+      iconTheme: IconThemeData(color: Theme.of(context).colorScheme.primary),
       leading: Builder(
         builder: (context) => IconButton(
-          icon: const Icon(Icons.menu, color: AppTheme.primaryBlueDark),
+          icon: Icon(Icons.menu, color: Theme.of(context).colorScheme.primary),
           onPressed: () {
-            Scaffold.of(context).openDrawer();
+            if (MainShell.scaffoldKey.currentState != null) {
+              MainShell.scaffoldKey.currentState?.openDrawer();
+            } else if (MainDashboardScreen.scaffoldKey.currentState != null) {
+              MainDashboardScreen.scaffoldKey.currentState?.openDrawer();
+            } else {
+              Scaffold.of(context).openDrawer();
+            }
           },
         ),
       ),
       title: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Image.asset('assets/images/suaConsulta.png', height: 32, width: 32),
+          const AppLogo(showText: false, iconSize: 22),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
+              Text(
                 'Sua Consulta',
                 style: TextStyle(
-                  color: AppTheme.primaryBlueDark,
+                  color: Theme.of(context).brightness == Brightness.dark 
+                      ? Colors.white 
+                      : Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                   letterSpacing: 0.5,
@@ -51,10 +71,11 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               Text(
                 subtitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: AppTheme.primaryBlue,
-                  fontWeight: FontWeight.w400,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 1.0,
                 ),
               ),
             ],
@@ -63,10 +84,22 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       actions: [
         ...?actions,
+        Consumer(
+          builder: (context, ref, child) {
+            final isDark = ref.watch(themeProvider) == ThemeMode.dark;
+            return IconButton(
+              icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+              color: Theme.of(context).colorScheme.primary,
+              onPressed: () {
+                ref.read(themeProvider.notifier).toggleTheme();
+              },
+            );
+          },
+        ),
         if (showProfileButton)
           IconButton(
             icon: const Icon(Icons.person_outline),
-            color: AppTheme.primaryBlueDark,
+            color: Theme.of(context).colorScheme.primary,
             onPressed: () {
               Navigator.push(
                 context,

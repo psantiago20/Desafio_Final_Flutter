@@ -40,12 +40,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     }
     final ok = await ref.read(authProvider.notifier).login(username, password);
     if (ok && mounted) {
-      final role = ref.read(authProvider).user?.role;
-      if (role == 'doctor') {
-        context.go('/dashboard');
-      } else {
-        context.go('/client');
-      }
+      // O redirect do GoRouter lidará com o redirecionamento automático baseado no novo estado
     }
   }
 

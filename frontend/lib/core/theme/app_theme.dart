@@ -20,6 +20,17 @@ class AppTheme {
     end: Alignment.bottomCenter,
   );
   
+  static LinearGradient getBackgroundGradient(BuildContext context) {
+    if (Theme.of(context).brightness == Brightness.dark) {
+      return const LinearGradient(
+        colors: [Color(0xFF111827), Color(0xFF0D1117)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      );
+    }
+    return backgroundGradient;
+  }
+  
   static const Color successGreen = Color(0xFF16A34A); // green-600
   static const Color successGreenLight = Color(0xFFDCFCE7); // green-100
   
@@ -69,6 +80,9 @@ class AppTheme {
         primary: primaryBlue,
         secondary: successGreen,
         surface: surfaceWhite,
+        onSurface: textPrimary,
+        surfaceContainerHighest: backgroundGray,
+        onSurfaceVariant: textSecondary,
         error: alertRed,
       ),
       textTheme: _manropeTextTheme,
@@ -95,6 +109,73 @@ class AppTheme {
       ),
       dividerTheme: const DividerThemeData(
         color: borderGray,
+        thickness: 1,
+        space: 1,
+      ),
+    );
+  }
+
+  static ThemeData get darkTheme {
+    return ThemeData(
+      primaryColor: const Color(0xFF8AB4F8), // --color-primary
+      scaffoldBackgroundColor: const Color(0xFF111827), // Slate 900 - fundo base
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent, // Glassmorphism background is handled by CustomAppBar
+        elevation: 0,
+        centerTitle: false,
+        iconTheme: IconThemeData(color: Color(0xFF8AB4F8)),
+        titleTextStyle: TextStyle(
+          color: Color(0xFF8AB4F8),
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0,
+        ),
+      ),
+      colorScheme: const ColorScheme.dark(
+        primary: Color(0xFF8AB4F8),
+        onPrimary: Color(0xFF002D6D),
+        primaryContainer: Color(0xFFD3E3FD), // --color-primary-fixed
+        secondary: successGreen,
+        surface: Color(0xFF1F2937), // Slate 800 - superfície de cards
+        onSurface: Color(0xFFF9FAFB), // quase branco - texto principal
+        surfaceContainerHighest: Color(0xFF374151), // Slate 700 - seções de destaque
+        onSurfaceVariant: Color(0xFFD1D5DB), // cinza médio - texto secundário
+        error: alertRed,
+      ),
+      textTheme: GoogleFonts.manropeTextTheme(
+        const TextTheme(
+          displayLarge:  TextStyle(color: Color(0xFFF9FAFB), fontSize: 32, fontWeight: FontWeight.bold),
+          headlineMedium: TextStyle(color: Color(0xFFF3F4F6), fontSize: 24, fontWeight: FontWeight.w700),
+          titleLarge:  TextStyle(color: Color(0xFFF3F4F6), fontSize: 20, fontWeight: FontWeight.w600),
+          titleMedium: TextStyle(color: Color(0xFFE5E7EB), fontSize: 16, fontWeight: FontWeight.w500),
+          bodyLarge:   TextStyle(color: Color(0xFFE5E7EB), fontSize: 16),
+          bodyMedium:  TextStyle(color: Color(0xFFD1D5DB), fontSize: 14),
+          bodySmall:   TextStyle(color: Color(0xFF9CA3AF), fontSize: 12), // Gray 400 — hint text
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryBlue,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          elevation: 0,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: const Color(0xFF1F2937), // Slate 800 - cards visíveis sobre o fundo Slate 900
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: Color(0xFF374151), width: 1), // Slate 700
+        ),
+        margin: const EdgeInsets.symmetric(vertical: 8),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFF2D3748),
         thickness: 1,
         space: 1,
       ),

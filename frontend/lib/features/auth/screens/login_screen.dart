@@ -31,7 +31,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         .read(authProvider.notifier)
         .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
     if (ok && mounted) {
-      context.go('/dashboard');
+      // Redirecionamento automático via GoRouter
     }
   }
 

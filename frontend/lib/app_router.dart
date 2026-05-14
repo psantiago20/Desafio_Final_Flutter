@@ -11,6 +11,9 @@ import 'features/appointments/screens/appointments_screen.dart';
 import 'features/appointments/screens/appointment_detail_screen.dart';
 import 'features/appointments/screens/new_appointment_screen.dart';
 import 'features/profile/screens/profile_screen.dart';
+import 'features/patients/screens/patients_screen.dart';
+import 'features/patients/screens/patient_appointments_screen.dart';
+import 'shared/models/patient_model.dart';
 import 'shared/models/appointment_model.dart';
 import 'shared/widgets/main_shell.dart';
 import 'features/client/screens/main_dashboard_screen.dart' as client_screens;
@@ -21,25 +24,27 @@ final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
   // Watch only navigation-relevant state to prevent unnecessary router recreation
-  // This ensures the router doesn't rebuild when isLoading or error changes
-  ref.watch(authProvider.select((s) => s.user?.id));
-  ref.watch(authProvider.select((s) => s.user?.role));
+  final authState = ref.watch(authProvider.select((s) => (
+    userId: s.user?.id,
+    role: s.user?.role,
+    isAuthenticated: s.user != null,
+  )));
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: kIsWeb
         ? '/'
-        : (ref.read(authProvider).isAuthenticated
-              ? (ref.read(authProvider).user?.role == 'admin'
+        : (authState.isAuthenticated
+              ? (authState.role == 'admin'
                     ? '/management-v1'
-                    : (ref.read(authProvider).user?.role == 'doctor'
+                    : (authState.role == 'doctor'
                           ? '/dashboard'
                           : '/client'))
               : '/login'),
 
     redirect: (context, state) {
-      final authState = ref.read(authProvider);
       final isAuthenticated = authState.isAuthenticated;
+      final role = authState.role;
       final isAuthRoute =
           state.matchedLocation == '/login' ||
           state.matchedLocation == '/register';
@@ -53,8 +58,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
 
         if (isAuthenticated) {
-          final isAdmin = authState.user?.role == 'admin';
-          final isDoctor = authState.user?.role == 'doctor';
+          final isAdmin = role == 'admin';
+          final isDoctor = role == 'doctor';
           if (isAuthRoute || isHomeRoute) {
             if (isAdmin) return '/management-v1';
             return isDoctor ? '/dashboard' : '/client';
@@ -65,8 +70,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (!isAuthenticated && !isAuthRoute) return '/login';
 
         if (isAuthenticated) {
-          final isAdmin = authState.user?.role == 'admin';
-          final isDoctor = authState.user?.role == 'doctor';
+          final isAdmin = role == 'admin';
+          final isDoctor = role == 'doctor';
           if (isAuthRoute || isHomeRoute) {
             if (isAdmin) return '/management-v1';
             return isDoctor ? '/dashboard' : '/client';
@@ -81,7 +86,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Proteção Global para a Rota de Admin
       if (state.matchedLocation == '/management-v1') {
         if (!isAuthenticated) return '/';
-        if (authState.user?.role != 'admin') return '/';
+        if (role != 'admin') return '/';
       }
 
       return null;
@@ -106,6 +111,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/appointments',
             builder: (_, _) => const AppointmentsScreen(),
+          ),
+          GoRoute(
+            path: '/patients',
+            builder: (_, _) => const PatientsScreen(),
+            routes: [
+              GoRoute(
+                path: 'appointments',
+                builder: (context, state) {
+                  final patient = state.extra as PatientModel;
+                  return PatientAppointmentsScreen(patient: patient);
+                },
+              ),
+            ],
           ),
           GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
         ],

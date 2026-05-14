@@ -18,6 +18,9 @@ class AppConstants {
   static const String todayAppointmentsEndpoint = '/api/dashboard/appointments/today';
   static const String upcomingAppointmentsEndpoint = '/api/dashboard/appointments/upcoming';
 
+  // Patients
+  static const String patientsEndpoint = '/api/patients';
+
   // Storage keys
   static const String tokenKey = 'auth_token';
   static const String userKey = 'auth_user';
