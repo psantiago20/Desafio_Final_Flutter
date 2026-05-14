@@ -18,6 +18,8 @@ import uuid
 import shutil
 import json
 import base64
+import mimetypes
+from pypdf import PdfReader
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.messages import HumanMessage
 from app.core.config import settings
@@ -236,76 +238,111 @@ async def upload_exam(
     db: Session = Depends(get_db)
 ):
     """
-    Recebe um exame médico em formato de imagem, passa pela IA Vision,
+    Recebe um exame médico em formato de imagem ou PDF, passa pela IA,
     e anexa o resumo à próxima consulta do paciente.
     """
     try:
-        # 1. Preparar diretório
+        # 1. Preparar diretório e identificar tipo de arquivo
+        import mimetypes, uuid, os, json
+        from pypdf import PdfReader
+        from langchain_nvidia_ai_endpoints import ChatNVIDIA
+        from langchain_core.messages import HumanMessage
+        
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         exams_dir = os.path.join(base_dir, "static", "exams")
         os.makedirs(exams_dir, exist_ok=True)
+        
+        content = await file.read()
+        mime_type, _ = mimetypes.guess_type(file.filename)
+        is_pdf = mime_type == "application/pdf" or file.filename.lower().endswith(".pdf")
         
         # 2. Salvar o arquivo físico
         ext = os.path.splitext(file.filename)[1]
         unique_filename = f"{uuid.uuid4()}{ext}"
         file_path = os.path.join(exams_dir, unique_filename)
         
-        content = await file.read()
         with open(file_path, "wb") as buffer:
             buffer.write(content)
             
-        # 3. IA Vision: Analisar a imagem de verdade usando LLaMA 3.2 Vision
-        import base64
-        from langchain_nvidia_ai_endpoints import ChatNVIDIA
-        from langchain_core.messages import HumanMessage
+        # 3. Análise IA (Vision para Imagem, Text para PDF)
+        exam_title = f"Exame: {file.filename}"
+        exam_summary = "Análise automática indisponível."
 
-        print(f"[VISION] Analisando exame: {file.filename}")
-        encoded_image = base64.b64encode(content).decode("utf-8")
-        
-        vision_model = ChatNVIDIA(model="meta/llama-3.2-11b-vision-instruct", nvidia_api_key=settings.NVIDIA_API_KEY)
-        
-        prompt = (
-            "Analise este exame médico e responda APENAS em formato JSON com os seguintes campos:\n"
-            "{\n"
-            "  \"title\": \"Nome curto do exame (ex: Hemograma Completo)\",\n"
-            "  \"summary\": \"Resumo conciso dos resultados.\"\n"
-            "}\n"
-            "REGRAS PARA O SUMMARY:\n"
-            "1. Se os resultados estiverem dentro da normalidade, o summary deve ser exatamente: 'Os resultados estão dentro dos valores de referência.'\n"
-            "2. Se houver alterações, descreva-as de forma muito breve em até 2 frases.\n"
-            "Não use blocos de código markdown, apenas o JSON puro."
-        )
-        
-        message = HumanMessage(
-            content=[
-                {"type": "text", "text": prompt},
-                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded_image}"}},
-            ]
-        )
-        
         try:
-            response = vision_model.invoke([message])
-            logger.info(f"[VISION] Resposta da IA: {response.content}")
-            clean_content = response.content.replace("```json", "").replace("```", "").strip()
-            ai_data = json.loads(clean_content)
-            exam_title = ai_data.get("title", "Exame Médico")
-            exam_summary = ai_data.get("summary", "Análise realizada via IA Vision.")
-        except Exception as vision_err:
-            logger.error(f"[VISION ERROR] Falha na análise: {str(vision_err)}")
-            exam_title = f"Exame: {file.filename}"
-            exam_summary = "O exame foi recebido, mas a análise automática falhou."
+            if is_pdf:
+                # Lógica para PDF: Extração de Texto
+                from io import BytesIO
+                reader = PdfReader(BytesIO(content))
+                text_content = ""
+                for page in reader.pages:
+                    text_content += page.extract_text() + "\n"
+                
+                if not text_content.strip():
+                    exam_summary = "O PDF parece ser uma imagem digitalizada. Por favor, envie uma foto nítida do exame para análise."
+                else:
+                    llm = ChatNVIDIA(model="meta/llama-3.1-70b-instruct", nvidia_api_key=settings.NVIDIA_API_KEY)
+                    prompt = (
+                        "Analise o texto deste exame médico e retorne APENAS um JSON.\n"
+                        "REGRAS PARA O 'summary':\n"
+                        "1. Se estiver TUDO NORMAL: o summary deve ser EXATAMENTE 'Os resultados estão dentro dos valores de referência.' e nada mais.\n"
+                        "2. Se houver ALTERAÇÃO: cite apenas o dado alterado de forma direta (ex: 'Hemoglobina baixa: 10 g/dL').\n"
+                        f"TEXTO: {text_content[:4000]}\n\n"
+                        "FORMATO JSON:\n"
+                        "{\n"
+                        "  \"title\": \"Nome do exame\",\n"
+                        "  \"summary\": \"\"\n"
+                        "}"
+                    )
+                    response = llm.invoke(prompt)
+                    clean_content = response.content.replace("```json", "").replace("```", "").strip()
+                    ai_data = json.loads(clean_content)
+                    exam_title = ai_data.get("title", exam_title)
+                    exam_summary = ai_data.get("summary", exam_summary)
+            else:
+                # Lógica para Imagem: Vision
+                import base64
+                encoded_image = base64.b64encode(content).decode("utf-8")
+                vision_model = ChatNVIDIA(model="meta/llama-3.2-11b-vision-instruct", nvidia_api_key=settings.NVIDIA_API_KEY)
+                
+                prompt = (
+                    "Analise este exame médico e responda APENAS em formato JSON.\n"
+                    "REGRAS PARA O 'summary':\n"
+                    "1. Se estiver TUDO NORMAL: o summary deve ser EXATAMENTE 'Os resultados estão dentro dos valores de referência.' e nada mais.\n"
+                    "2. Se houver ALTERAÇÃO: cite apenas o dado alterado de forma direta (ex: 'Glicemia elevada: 115 mg/dL').\n"
+                    "FORMATO JSON:\n"
+                    "{\n"
+                    "  \"title\": \"Nome do exame\",\n"
+                    "  \"summary\": \"\"\n"
+                    "}"
+                )
+                
+                message = HumanMessage(
+                    content=[
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:{mime_type or 'image/png'};base64,{encoded_image}"}},
+                    ]
+                )
+                response = vision_model.invoke([message])
+                clean_content = response.content.replace("```json", "").replace("```", "").strip()
+                ai_data = json.loads(clean_content)
+                exam_title = ai_data.get("title", exam_title)
+                exam_summary = ai_data.get("summary", exam_summary)
+
+        except Exception as ai_err:
+            logger.error(f"[AI ERROR] Falha na análise: {str(ai_err)}")
+            exam_summary = "Análise automática indisponível."
 
         public_url = f"/static/exams/{unique_filename}"
         
         # 4. Procurar o paciente
         from app.utils.phone_utils import find_patient_for_contact
-
         patient = find_patient_for_contact(db, wa_from)
         
         if not patient:
             return {"status": "error", "message": "Paciente não encontrado."}
 
-        # 5. Salvar registro no banco
+        # 5. Salvar registro no banco e no chat
+        from app.models.exam import Exam
         new_exam = Exam(
             patient_id=patient.id,
             title=exam_title,
@@ -314,35 +351,20 @@ async def upload_exam(
         )
         db.add(new_exam)
 
-        # Opcional: Tenta vincular à consulta mais recente se existir
-        next_app = db.query(Appointment).filter(
-            Appointment.patient_id == patient.id
-        ).order_by(Appointment.appointment_date.desc()).first()
-            
-        if next_app:
-            next_app.exam_url = public_url
-            next_app.exam_summary = exam_summary
-            
-        # 6. Salvar mensagens no histórico do chat (Persistência Permanente)
         from app.models.message import Message, MessageSource
-        
-        # Mensagem do usuário enviando o arquivo
-        user_msg = Message(
+        db.add(Message(
             patient_id=patient.id,
             content=f"Enviando exame: {file.filename}",
             source=MessageSource.APP.value,
             wa_from=wa_from
-        )
-        db.add(user_msg)
+        ))
         
-        # Resposta da IA simplificada para o paciente
-        ai_msg = Message(
+        db.add(Message(
             patient_id=patient.id,
             content="Recebi seu exame! 💌",
             source=MessageSource.SYSTEM.value,
             wa_from="isis_ia"
-        )
-        db.add(ai_msg)
+        ))
 
         db.commit()
         return {
