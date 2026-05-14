@@ -19,6 +19,7 @@ import 'shared/widgets/main_shell.dart';
 import 'features/client/screens/main_dashboard_screen.dart' as client_screens;
 import 'features/landing/screens/landing_page.dart';
 import 'features/admin/screens/admin_dashboard_screen.dart';
+import 'features/client/screens/results_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -144,6 +145,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/client',
         builder: (_, _) => const client_screens.MainDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/patients/:id/exams',
+        builder: (context, state) {
+          final patientId = int.parse(state.pathParameters['id']!);
+          return ResultsScreen(patientId: patientId);
+        },
       ),
       GoRoute(
         path: '/management-v1',

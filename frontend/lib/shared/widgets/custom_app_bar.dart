@@ -14,6 +14,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget>? actions;
   final PreferredSizeWidget? bottom;
   final bool showProfileButton;
+  final Widget? leading;
 
   const CustomAppBar({
     super.key,
@@ -21,6 +22,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
     this.bottom,
     this.showProfileButton = true,
+    this.leading,
   });
 
   @override
@@ -35,7 +37,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       iconTheme: IconThemeData(color: Theme.of(context).colorScheme.primary),
-      leading: Builder(
+      leading: leading ?? Builder(
         builder: (context) => IconButton(
           icon: Icon(Icons.menu, color: Theme.of(context).colorScheme.primary),
           onPressed: () {

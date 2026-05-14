@@ -7,6 +7,7 @@ import '../../../core/constants/app_constants.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 
 
 
@@ -14,7 +15,8 @@ import 'package:url_launcher/url_launcher.dart';
 /// Responsabilidade: flutter-frontend-agent
 /// Exibe lista de exames com status, resultados e alertas.
 class ResultsScreen extends ConsumerStatefulWidget {
-  const ResultsScreen({super.key});
+  final int? patientId;
+  const ResultsScreen({super.key, this.patientId});
 
   @override
   ConsumerState<ResultsScreen> createState() => _ResultsScreenState();
@@ -37,7 +39,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       _error = null;
     });
     try {
-      final data = await ApiClient.get(AppConstants.examsEndpoint);
+      final endpoint = widget.patientId != null 
+          ? '${AppConstants.examsEndpoint}?patient_id=${widget.patientId}'
+          : AppConstants.examsEndpoint;
+      final data = await ApiClient.get(endpoint);
       final list = (data as Map<String, dynamic>)['exams'] as List;
       final allExams = list.cast<Map<String, dynamic>>();
 
@@ -291,7 +296,15 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     final filteredExams = _exams;
 
     return Scaffold(
-      appBar: kIsWeb ? null : const CustomAppBar(subtitle: 'Seus Resultados'),
+      appBar: kIsWeb ? null : CustomAppBar(
+        subtitle: 'Seus Resultados',
+        leading: widget.patientId != null 
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () => context.pop(),
+            )
+          : null,
+      ),
       body: Container(
         decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),
         child: _isLoading
@@ -326,7 +339,15 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
 
   Widget _buildMobile() {
     return Scaffold(
-      appBar: kIsWeb ? null : const CustomAppBar(subtitle: 'Seus Resultados'),
+      appBar: kIsWeb ? null : CustomAppBar(
+        subtitle: 'Seus Resultados',
+        leading: widget.patientId != null 
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () => context.pop(),
+            )
+          : null,
+      ),
       body: Container(
         decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),
         child: _isLoading
