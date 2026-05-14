@@ -4,53 +4,29 @@ tailwind.config = {
     theme: {
         extend: {
             colors: {
-                "outline": "#737685",
-                "surface-container-high": "#e6e8ea",
-                "surface-container-highest": "#e0e3e5",
-                "on-tertiary-fixed": "#380d00",
-                "on-primary-fixed": "#001848",
-                "surface-variant": "#e0e3e5",
-                "on-error-container": "#93000a",
-                "secondary": "#006c4d",
-                "secondary-fixed": "#86f8c8",
-                "on-tertiary-container": "#ffc6b2",
-                "on-secondary": "#ffffff",
-                "background": "#f7f9fb",
-                "tertiary": "#7b2600",
-                "surface-container-lowest": "#ffffff",
-                "surface-container": "#eceef0",
-                "error-container": "#ffdad6",
-                "on-primary-container": "#c4d2ff",
-                "error": "#ba1a1a",
-                "secondary-fixed-dim": "#69dbad",
-                "on-tertiary-fixed-variant": "#812800",
-                "tertiary-fixed-dim": "#ffb59b",
-                "surface-container-low": "#f2f4f6",
-                "secondary-container": "#86f8c8",
-                "on-surface": "#191c1e",
-                "surface-bright": "#f7f9fb",
-                "on-primary-fixed-variant": "#0040a2",
-                "on-background": "#191c1e",
-                "inverse-primary": "#b2c5ff",
-                "on-error": "#ffffff",
-                "inverse-surface": "#2d3133",
-                "primary-fixed-dim": "#b2c5ff",
-                "on-secondary-container": "#007352",
-                "on-surface-variant": "#434654",
-                "primary-container": "#0052cc",
-                "on-tertiary": "#ffffff",
-                "primary-fixed": "#dae2ff",
-                "surface-tint": "#0c56d0",
-                "inverse-on-surface": "#eff1f3",
-                "tertiary-container": "#a33500",
-                "tertiary-fixed": "#ffdbcf",
-                "primary": "#003d9b",
-                "on-primary": "#ffffff",
-                "on-secondary-fixed": "#002115",
-                "surface": "#f7f9fb",
-                "on-secondary-fixed-variant": "#005139",
-                "outline-variant": "#c3c6d6",
-                "surface-dim": "#d8dadc"
+                "primary": "var(--color-primary)",
+                "primary-fixed": "var(--color-primary-fixed)",
+                "on-primary": "var(--color-on-primary)",
+                "on-primary-fixed": "var(--color-on-primary-fixed)",
+                "surface": "var(--color-surface)",
+                "on-surface": "var(--color-on-surface)",
+                "surface-variant": "var(--color-surface-variant)",
+                "on-surface-variant": "var(--color-on-surface-variant)",
+                "background": "var(--color-background)",
+                "on-background": "var(--color-on-background)",
+                "outline": "var(--color-outline)",
+                "outline-variant": "var(--color-outline-variant)",
+                "surface-container-lowest": "var(--color-surface-container-lowest)",
+                "surface-container-low": "var(--color-surface-container-low)",
+                "surface-container": "var(--color-surface-container)",
+                "surface-container-highest": "var(--color-surface-container-highest)",
+                "error": "var(--color-error)",
+                "on-error": "var(--color-on-error)",
+                // Compatibilidade retroativa para classes que não foram mapeadas
+                "secondary": "#4E8EA2",
+                "secondary-container": "#6EA2B3",
+                "tertiary": "#7BBDE8",
+                "error-container": "#FEE2E2",
             },
             borderRadius: {
                 "DEFAULT": "0.25rem",
@@ -68,6 +44,39 @@ tailwind.config = {
         }
     }
 };
+
+// ─── Theme Toggle Logic ────────────────────────────────────────────────────────
+function toggleTheme() {
+    const htmlEl = document.documentElement;
+    const isDark = htmlEl.classList.toggle('dark');
+    const themeIcon = document.getElementById('theme-icon');
+    
+    if (isDark) {
+        htmlEl.classList.remove('light');
+        localStorage.setItem('theme', 'dark');
+        if(themeIcon) themeIcon.textContent = 'light_mode';
+    } else {
+        htmlEl.classList.add('light');
+        localStorage.setItem('theme', 'light');
+        if(themeIcon) themeIcon.textContent = 'dark_mode';
+    }
+}
+
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    const htmlEl = document.documentElement;
+    
+    if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        htmlEl.classList.add('dark');
+        htmlEl.classList.remove('light');
+    } else {
+        htmlEl.classList.add('light');
+        htmlEl.classList.remove('dark');
+    }
+}
+
+// Inicializar tema imediatamente
+initTheme();
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 const TABS = ['chat', 'calendar', 'dashboard'];
@@ -358,6 +367,12 @@ function setupUploadZone() {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+    // Definir ícone inicial do tema
+    const themeIcon = document.getElementById('theme-icon');
+    if (themeIcon) {
+        themeIcon.textContent = document.documentElement.classList.contains('dark') ? 'light_mode' : 'dark_mode';
+    }
+
     // Default tab
     switchTab('chat');
 

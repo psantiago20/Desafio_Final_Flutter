@@ -14,8 +14,15 @@ fi
 
 echo "🚀 Iniciando Flutter no Chrome e no macOS em terminais separados..."
 
-# Abre uma nova janela do Terminal para o Chrome
-osascript -e "tell app \"Terminal\" to do script \"cd '$PWD' && flutter run -d chrome\""
-
-# Executa o macOS nesta janela atual para manter o controle interativo
-flutter run -d macos
+# Inicia no Chrome em background (ou foreground dependendo do OS)
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    echo "🐧 Detectado Linux (Ubuntu). Iniciando Flutter apenas no Chrome..."
+    flutter run -d chrome
+else
+    # Inicia no Chrome em background
+    flutter run -d chrome &
+    # Inicia no macOS
+    flutter run -d macos
+    # Aguarda os processos finalizarem
+    wait
+fi

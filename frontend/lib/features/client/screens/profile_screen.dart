@@ -95,8 +95,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         showProfileButton: false,
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
+        decoration: BoxDecoration(
+          gradient: AppTheme.getBackgroundGradient(context),
         ),
         child: patientAsync.when(
           data: (patient) => _buildContent(context, user, patient),
@@ -158,7 +158,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           if (_isEditing)
                             TextFormField(
                               controller: _nameController,
-                              style: const TextStyle(color: Colors.white, fontSize: 18),
+                              style: TextStyle(color: Colors.white, fontSize: 18),
                               decoration: const InputDecoration(
                                 labelText: 'Nome Completo',
                                 labelStyle: TextStyle(color: Colors.white70),
@@ -169,7 +169,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           else
                             Text(
                               patient?.name ?? user?.fullName ?? 'Usuário',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
@@ -248,7 +248,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               padding: const EdgeInsets.only(bottom: 16),
               child: Text(
                 'Aviso: Algumas informações podem estar indisponíveis. ($error)',
-                style: const TextStyle(color: AppTheme.alertRed, fontSize: 12),
+                style: TextStyle(color: AppTheme.alertRed, fontSize: 12),
               ),
             ),
 
@@ -382,11 +382,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          const Center(
+          SizedBox(height: 24),
+          Center(
             child: Text(
               'Sua Consulta v1.0.0',
-              style: TextStyle(color: AppTheme.textTertiary, fontSize: 12),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12),
             ),
           ),
         ],
@@ -399,10 +399,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: AppTheme.textPrimary,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
     );
@@ -413,20 +413,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       padding: const EdgeInsets.all(16.0),
       child: Row(
         children: [
-          Icon(icon, size: 24, color: iconColor ?? AppTheme.textTertiary),
-          const SizedBox(width: 16),
+          Icon(icon, size: 24, color: iconColor ?? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+          SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                  style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.textPrimary),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurface),
                 ),
               ],
             ),
@@ -443,15 +443,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            Icon(icon, size: 24, color: AppTheme.textTertiary),
-            const SizedBox(width: 16),
+            Icon(icon, size: 24, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+            SizedBox(width: 16),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.textPrimary),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurface),
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+            Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
           ],
         ),
       ),

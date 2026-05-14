@@ -15,6 +15,7 @@ class PatientInfo(BaseModel):
 class AppointmentBase(BaseModel):
     patient_id: int
     doctor_id: int
+    medico_id: Optional[int] = None
     appointment_date: datetime
     duration_minutes: int = 30
     type: str = "consultation"
@@ -52,6 +53,8 @@ class AppointmentResponse(AppointmentBase):
     id: int
     status: str
     patient: Optional[PatientInfo] = None
+    doctor_name: Optional[str] = None
+    medico_name: Optional[str] = None
     symptoms: Optional[str] = None
     diagnosis: Optional[str] = None
     prescription: Optional[str] = None

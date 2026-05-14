@@ -3,6 +3,16 @@ from datetime import datetime
 from typing import Optional
 
 
+class PatientInfo(BaseModel):
+    id: int
+    name: str
+    phone: str
+    whatsapp: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class MessageBase(BaseModel):
     patient_id: int
     content: str
@@ -30,6 +40,7 @@ class MessageResponse(MessageBase):
     is_delivered: bool
     meta: Optional[str] = None
     created_at: datetime
+    patient: PatientInfo
 
     class Config:
         from_attributes = True

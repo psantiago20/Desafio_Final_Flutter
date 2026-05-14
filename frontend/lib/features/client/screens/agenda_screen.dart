@@ -13,19 +13,19 @@ class AgendaScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (kIsWeb) {
-      return _buildWeb(ref);
+      return _buildWeb(context, ref);
     }
     return _buildMobile(context, ref);
   }
 
-  Widget _buildWeb(WidgetRef ref) {
+  Widget _buildWeb(BuildContext context, WidgetRef ref) {
     final appointmentsAsync = ref.watch(appointmentsListProvider);
     final filters = ref.watch(appointmentFiltersProvider);
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
+        decoration: BoxDecoration(
+          gradient: AppTheme.getBackgroundGradient(context),
         ),
         child: Column(
           children: [
@@ -35,11 +35,11 @@ class AgendaScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: Row(
                 children: [
-                  _buildFilterChip(ref, 'Próximas', 'confirmed', filters.statusFilter == 'confirmed'),
+                  _buildFilterChip(context, ref, 'Próximas', 'confirmed', filters.statusFilter == 'confirmed'),
                   const SizedBox(width: 8),
-                  _buildFilterChip(ref, 'Realizadas', 'completed', filters.statusFilter == 'completed'),
+                  _buildFilterChip(context, ref, 'Realizadas', 'completed', filters.statusFilter == 'completed'),
                   const SizedBox(width: 8),
-                  _buildFilterChip(ref, 'Todas', null, filters.statusFilter == null),
+                  _buildFilterChip(context, ref, 'Todas', null, filters.statusFilter == null),
                 ],
               ),
             ),
@@ -73,7 +73,7 @@ class AgendaScreen extends ConsumerWidget {
     final appointmentsAsync = ref.watch(appointmentsListProvider);
 
     return Scaffold(
-      appBar: const CustomAppBar(
+      appBar: kIsWeb ? null : const CustomAppBar(
         subtitle: 'Minhas Consultas',
         actions: [
           Icon(Icons.add_circle, color: AppTheme.primaryBlue, size: 32),
@@ -81,8 +81,8 @@ class AgendaScreen extends ConsumerWidget {
         ],
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
+        decoration: BoxDecoration(
+          gradient: AppTheme.getBackgroundGradient(context),
         ),
         child: appointmentsAsync.when(
           data: (appointments) {
@@ -104,41 +104,49 @@ class AgendaScreen extends ConsumerWidget {
                       children: [
                         Container(
                           width: 50, height: 50,
-                          decoration: BoxDecoration(color: AppTheme.primaryBlueLight, borderRadius: BorderRadius.circular(12)),
+                          decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(
-                                DateFormat('MMM', 'pt_BR').format(apt.appointmentDate).toUpperCase(), 
-                                style: const TextStyle(color: AppTheme.primaryBlue, fontSize: 10, fontWeight: FontWeight.bold)
-                              ),
-                              Text(
-                                DateFormat('dd').format(apt.appointmentDate), 
-                                style: const TextStyle(color: AppTheme.primaryBlue, fontSize: 18, fontWeight: FontWeight.bold)
-                              ),
+                  Text(
+                    DateFormat('MMM', 'pt_BR').format(apt.appointmentDate).toUpperCase(), 
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).colorScheme.primary, 
+                      fontSize: 10, 
+                      fontWeight: FontWeight.bold
+                    )
+                  ),
+                  Text(
+                    DateFormat('dd').format(apt.appointmentDate), 
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).colorScheme.primary, 
+                      fontSize: 18, 
+                      fontWeight: FontWeight.bold
+                    )
+                  ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(apt.type.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                              Text(apt.doctorName, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-                              const SizedBox(height: 4),
+                              Text(typeLabel(apt.type).toUpperCase(), style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+                              Text(apt.doctorName, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),
+                              SizedBox(height: 4),
                               Row(
                                 children: [
-                                  const Icon(Icons.access_time, size: 14, color: AppTheme.textTertiary),
-                                  const SizedBox(width: 4),
-                                  Text(DateFormat('HH:mm').format(apt.appointmentDate), style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary)),
+                                  Icon(Icons.access_time, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                                  SizedBox(width: 4),
+                                  Text(DateFormat('HH:mm').format(apt.appointmentDate), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
                                 ],
                               ),
                             ],
                           ),
                         ),
                         if (isUpcoming)
-                          const Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                          Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                       ],
                     ),
                   ),
@@ -153,7 +161,7 @@ class AgendaScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilterChip(WidgetRef ref, String label, String? value, bool isSelected) {
+  Widget _buildFilterChip(BuildContext context, WidgetRef ref, String label, String? value, bool isSelected) {
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
@@ -167,28 +175,30 @@ class AgendaScreen extends ConsumerWidget {
       selectedColor: AppTheme.primaryBlue,
       checkmarkColor: Colors.white,
       labelStyle: TextStyle(
-        color: isSelected ? Colors.white : AppTheme.textSecondary,
+        color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
-      backgroundColor: AppTheme.surfaceWhite,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: isSelected ? AppTheme.primaryBlue : AppTheme.borderGray,
+          color: isSelected ? AppTheme.primaryBlue : Theme.of(context).colorScheme.outline,
         ),
       ),
     );
   }
 
   Widget _buildAppointmentCard(BuildContext context, AppointmentModel apt) {
-    final isUpcoming = apt.status == 'confirmed' || apt.status == 'pending';
+    final isUpcoming = (apt.status == 'confirmed' || apt.status == 'pending') && apt.appointmentDate.isAfter(DateTime.now());
+    final isPast = apt.appointmentDate.isBefore(DateTime.now()) || apt.status == 'completed' || apt.status == 'cancelled';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12.0),
+      color: isPast ? Colors.grey.shade50 : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.0),
         side: BorderSide(
-          color: isUpcoming ? AppTheme.primaryBlueLight : AppTheme.borderGray,
+          color: isUpcoming ? Theme.of(context).colorScheme.primary.withOpacity(0.12) : Theme.of(context).colorScheme.outline,
           width: 1,
         ),
       ),
@@ -202,7 +212,7 @@ class AgendaScreen extends ConsumerWidget {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: AppTheme.primaryBlueLight,
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -210,16 +220,16 @@ class AgendaScreen extends ConsumerWidget {
                 children: [
                   Text(
                     DateFormat('MMM', 'pt_BR').format(apt.appointmentDate).toUpperCase(),
-                    style: const TextStyle(
-                      color: AppTheme.primaryBlue,
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFE0F2FE) : Theme.of(context).colorScheme.primary,
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
                     DateFormat('dd').format(apt.appointmentDate),
-                    style: const TextStyle(
-                      color: AppTheme.primaryBlue,
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFE0F2FE) : Theme.of(context).colorScheme.primary,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -239,11 +249,11 @@ class AgendaScreen extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          apt.type.toUpperCase(),
-                          style: const TextStyle(
+                          typeLabel(apt.type).toUpperCase(),
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
-                            color: AppTheme.textPrimary,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -252,49 +262,51 @@ class AgendaScreen extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: isUpcoming ? AppTheme.primaryBlueLight : AppTheme.backgroundGray,
+                          color: isUpcoming ? Theme.of(context).colorScheme.primary.withOpacity(0.12) : Theme.of(context).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          apt.status == 'confirmed' ? 'Confirmada' : (apt.status == 'completed' ? 'Realizada' : apt.status),
+                          statusLabel(apt.status),
                           style: TextStyle(
                             fontSize: 10,
-                            color: isUpcoming ? AppTheme.primaryBlueDark : AppTheme.textSecondary,
+                            color: isUpcoming 
+                                ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFFE0F2FE) : Theme.of(context).colorScheme.primary) 
+                                : Theme.of(context).colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(
                     apt.doctorName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.access_time, size: 14, color: AppTheme.textTertiary),
-                      const SizedBox(width: 4),
+                      Icon(Icons.access_time, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                      SizedBox(width: 4),
                       Text(
                         DateFormat('HH:mm').format(apt.appointmentDate),
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textTertiary),
+                        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  const Row(
+                  SizedBox(height: 4),
+                  Row(
                     children: [
-                      Icon(Icons.location_on_outlined, size: 14, color: AppTheme.textTertiary),
+                      Icon(Icons.location_on_outlined, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                       SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           'Unidade Principal',
-                          style: TextStyle(fontSize: 12, color: AppTheme.textTertiary),
+                          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -304,15 +316,15 @@ class AgendaScreen extends ConsumerWidget {
                   
                   // Botões de Ação
                   if (isUpcoming) ...[
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     Row(
                       children: [
                         Expanded(
                           child: TextButton(
                             onPressed: () {},
                             style: TextButton.styleFrom(
-                              backgroundColor: AppTheme.primaryBlueLight,
-                              foregroundColor: AppTheme.primaryBlueDark,
+                              backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.12),
+                            foregroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFE0F2FE) : Theme.of(context).colorScheme.primary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -322,7 +334,28 @@ class AgendaScreen extends ConsumerWidget {
                         ),
                         const SizedBox(width: 8),
                         TextButton(
-                          onPressed: () {},
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Cancelar Consulta'),
+                                content: const Text('Tem certeza que deseja cancelar esta consulta?'),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Não')),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, true), 
+                                    style: TextButton.styleFrom(foregroundColor: AppTheme.alertRed),
+                                    child: const Text('Sim, cancelar'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            
+                            if (confirm == true) {
+                              await ref.read(appointmentActionsProvider.notifier).updateStatus(apt.id, 'cancelled');
+                              ref.invalidate(appointmentsListProvider);
+                            }
+                          },
                           style: TextButton.styleFrom(
                             backgroundColor: AppTheme.alertRedLight,
                             foregroundColor: AppTheme.alertRed,

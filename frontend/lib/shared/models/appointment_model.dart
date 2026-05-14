@@ -26,7 +26,8 @@ class PatientInfo {
 class AppointmentModel {
   final int id;
   final int patientId;
-  final int doctorId;
+  final String? doctorNameFromApi;
+  final String? medicoName;
   final DateTime appointmentDate;
   final int durationMinutes;
   final String type;
@@ -55,6 +56,8 @@ class AppointmentModel {
     required this.id,
     required this.patientId,
     required this.doctorId,
+    this.doctorNameFromApi,
+    this.medicoName,
     required this.appointmentDate,
     required this.durationMinutes,
     required this.type,
@@ -85,6 +88,8 @@ class AppointmentModel {
       id: json['id'] as int,
       patientId: json['patient_id'] as int,
       doctorId: json['doctor_id'] as int,
+      doctorNameFromApi: json['doctor_name'] as String?,
+      medicoName: json['medico_name'] as String?,
       appointmentDate: DateTime.parse(json['appointment_date'] as String),
       durationMinutes: json['duration_minutes'] as int? ?? 30,
       type: json['type'] as String? ?? 'consultation',
@@ -134,6 +139,8 @@ class AppointmentModel {
       id: id,
       patientId: patientId,
       doctorId: doctorId,
+      doctorNameFromApi: doctorNameFromApi,
+      medicoName: medicoName,
       appointmentDate: appointmentDate,
       durationMinutes: durationMinutes,
       type: type,
@@ -159,8 +166,7 @@ class AppointmentModel {
     );
   }
 
-  // Temporary getter to fix UI compilation until the backend provides the doctor's name
-  String get doctorName => 'Médico $doctorId';
+  String get doctorName => medicoName ?? doctorNameFromApi ?? 'Médico $doctorId';
 
   String get patientName => patient?.name ?? 'Paciente #$patientId';
   String get patientDob {

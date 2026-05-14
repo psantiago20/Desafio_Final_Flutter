@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:go_router/go_router.dart';
+import 'package:frontend/app_router.dart';
 import 'package:frontend/core/network/api_client.dart';
 
 class NotificationService {
@@ -11,6 +13,27 @@ class NotificationService {
   
   // A global key to show SnackBars from anywhere in the app (even outside widgets)
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
+  void _handleNotificationClick(Map<String, dynamic> data) {
+    if (data.isEmpty) return;
+    
+    final type = data['type'];
+    final context = rootNavigatorKey.currentContext;
+    if (context == null) return;
+    
+    switch (type) {
+      case 'appointment_created':
+      case 'appointment_cancelled':
+      case 'appointment_deleted':
+        context.go('/appointments');
+        break;
+      case 'chat_message':
+        // TODO: Update route to the future chat screen when implemented
+        // For now, fallback to dashboard
+        context.go('/dashboard');
+        break;
+    }
+  }
 
   Future<void> init() async {
     // 1. Request Permission from the user
@@ -58,10 +81,32 @@ class NotificationService {
               duration: const Duration(seconds: 4),
               behavior: SnackBarBehavior.floating,
               backgroundColor: Colors.blueAccent,
+              action: SnackBarAction(
+                label: 'Ver',
+                textColor: Colors.white,
+                onPressed: () {
+                  _handleNotificationClick(message.data);
+                },
+              ),
             ),
           );
         }
       });
+
+      // 5. Handle Background Message Taps
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        print('Notification tapped in background: ${message.data}');
+        _handleNotificationClick(message.data);
+      });
+
+      // 6. Handle Terminated Message Taps
+      RemoteMessage? initialMessage = await _messaging.getInitialMessage();
+      if (initialMessage != null) {
+        print('App launched from terminated state via notification: ${initialMessage.data}');
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _handleNotificationClick(initialMessage.data);
+        });
+      }
     } else {
       debugPrint('User declined notification permission');
     }
