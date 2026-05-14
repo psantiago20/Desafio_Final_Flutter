@@ -20,6 +20,8 @@ import 'features/client/screens/main_dashboard_screen.dart' as client_screens;
 import 'features/landing/screens/landing_page.dart';
 import 'features/admin/screens/admin_dashboard_screen.dart';
 
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   // Watch only navigation-relevant state to prevent unnecessary router recreation
   final authState = ref.watch(authProvider.select((s) => (
@@ -29,6 +31,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   )));
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: kIsWeb
         ? '/'
         : (authState.isAuthenticated

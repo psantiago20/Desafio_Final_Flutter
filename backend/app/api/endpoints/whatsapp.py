@@ -11,6 +11,7 @@ from app.models.patient import Patient
 from app.models.message import Message
 from app.core.config import settings
 from app.services.whatsapp_service import wa_service
+from app.utils.phone_utils import find_patient_by_messaging_phone, ensure_canonical_whatsapp
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -139,8 +140,8 @@ async def handle_webhook(request: Request, background_tasks: BackgroundTasks, db
             text_data = msg_data.get("text", {})
             content = text_data.get("body", "")
 
-            # Salvar no banco
-            patient = db.query(Patient).filter(Patient.whatsapp == wa_from).first()
+            # Salvar no banco (mesmo paciente do app se o telefone cadastrado bater)
+            patient = find_patient_by_messaging_phone(db, wa_from)
             if not patient:
                 # Criar paciente básico se não existir
                 patient = Patient(
@@ -151,6 +152,8 @@ async def handle_webhook(request: Request, background_tasks: BackgroundTasks, db
                 db.add(patient)
                 db.commit()
                 db.refresh(patient)
+            else:
+                ensure_canonical_whatsapp(db, patient, wa_from)
 
             # Criar mensagem
             message = Message(
@@ -349,7 +352,7 @@ async def send_whatsapp_message(
 
         
         # Salvar mensagem no banco
-        patient = db.query(Patient).filter(Patient.whatsapp == request.to).first()
+        patient = find_patient_by_messaging_phone(db, request.to)
         if not patient:
             # Criar paciente básico se não existir
             patient = Patient(
@@ -360,6 +363,8 @@ async def send_whatsapp_message(
             db.add(patient)
             db.commit()
             db.refresh(patient)
+        else:
+            ensure_canonical_whatsapp(db, patient, to_clean)
 
         wa_msg_id = result.get("messages", [{}])[0].get("id") if result.get("messages") else None
         msg = Message(
@@ -407,7 +412,7 @@ async def send_whatsapp_template(
         logger.info(f"Result from WhatsApp API: {result}")
         
         # Salvar mensagem no banco
-        patient = db.query(Patient).filter(Patient.whatsapp == request.to).first()
+        patient = find_patient_by_messaging_phone(db, request.to)
         logger.info(f"Patient found: {patient}")
         
         if patient:
@@ -456,7 +461,7 @@ async def chat_direct(
     doctor_id = request.doctor_id
     
     # Same logic as webhook for saving the user's message
-    patient = db.query(Patient).filter(Patient.whatsapp == wa_from).first()
+    patient = find_patient_by_messaging_phone(db, wa_from)
 
     if not patient:
         patient = Patient(
@@ -467,6 +472,8 @@ async def chat_direct(
         db.add(patient)
         db.commit()
         db.refresh(patient)
+    else:
+        ensure_canonical_whatsapp(db, patient, wa_from)
 
     db_message = Message(
         patient_id=patient.id,

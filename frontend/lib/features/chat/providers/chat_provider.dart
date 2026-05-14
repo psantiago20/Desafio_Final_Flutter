@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/phone_utils.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class ChatMessage {
@@ -11,7 +12,7 @@ class ChatMessage {
   final bool isMe;
   final DateTime? timestamp;
 
-  ChatMessage({
+  const ChatMessage({
     required this.text,
     required this.isMe,
     this.timestamp,
@@ -66,11 +67,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       final List<ChatMessage> loadedMessages = [];
       for (var m in msgs.reversed) {
-        final source = m['source'];
+        final source = m['source'] as String?;
+        DateTime? ts;
+        final rawTs = m['created_at'];
+        if (rawTs is String) {
+          try {
+            ts = DateTime.parse(rawTs);
+          } catch (_) {}
+        }
         loadedMessages.add(
           ChatMessage(
-            text: m['content'],
+            text: m['content'] as String,
             isMe: source == 'app' || source == 'whatsapp',
+            timestamp: ts,
           ),
         );
       }
@@ -93,18 +102,34 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
     try {
       final authState = ref.read(authProvider);
-      final waFrom = authState.user?.phone ?? '5511999999999';
+      final waFrom = canonicalWaFrom(authState.user?.phone);
+      if (waFrom.isEmpty) {
+        state = state.copyWith(
+          messages: [
+            ...state.messages,
+            const ChatMessage(
+              text:
+                  'Cadastre seu telefone no perfil para sincronizar o chat com o WhatsApp.',
+              isMe: false,
+            ),
+          ],
+          isLoading: false,
+        );
+        return;
+      }
 
       final response = await ApiClient.post('/api/rag/query', {
         'query': text,
         'wa_from': waFrom,
+        'source': 'app',
       });
 
-      final aiMessage = ChatMessage(text: response['response'], isMe: false);
+      final aiMessage = ChatMessage(text: response['response'] as String, isMe: false);
       state = state.copyWith(
         messages: [...state.messages, aiMessage],
         isLoading: false,
       );
+      await fetchMessages();
     } catch (e) {
       final errorMessage = ChatMessage(
         text: 'Erro de conexão: Não foi possível contatar o assistente virtual.',
@@ -126,7 +151,21 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
     try {
       final authState = ref.read(authProvider);
-      final waFrom = authState.user?.phone ?? '5511999999999';
+      final waFrom = canonicalWaFrom(authState.user?.phone);
+      if (waFrom.isEmpty) {
+        state = state.copyWith(
+          messages: [
+            ...state.messages,
+            ChatMessage(
+              text:
+                  'Cadastre seu telefone no perfil para sincronizar o envio de exames com o WhatsApp.',
+              isMe: false,
+            ),
+          ],
+          isLoading: false,
+        );
+        return;
+      }
 
       final url = Uri.parse('${AppConstants.baseUrl}/api/rag/upload-exam');
       var request = http.MultipartRequest('POST', url);
@@ -148,6 +187,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           messages: [...state.messages, aiMessage],
           isLoading: false,
         );
+        await fetchMessages();
       } else {
         final errorMessage = ChatMessage(
           text: 'Erro ao enviar o exame. Tente novamente.',

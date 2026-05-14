@@ -86,26 +86,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         child: Column(
           children: [
             Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(16.0),
-                itemCount: messages.length + (isLoading ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == messages.length && isLoading) {
-                    return const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          vertical: 16.0,
-                          horizontal: 8.0,
+              child: RefreshIndicator(
+                onRefresh: () =>
+                    ref.read(chatProvider.notifier).fetchMessages(),
+                child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: messages.length + (isLoading ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == messages.length && isLoading) {
+                      return const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: 16.0,
+                            horizontal: 8.0,
+                          ),
+                          child: CircularProgressIndicator(),
                         ),
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-                  final msg = messages[index];
-                  return _buildMessageBubble(msg.text, msg.isMe);
-                },
+                      );
+                    }
+                    final msg = messages[index];
+                    return _buildMessageBubble(msg.text, msg.isMe);
+                  },
+                ),
               ),
             ),
             _buildMessageInput(),
@@ -123,26 +128,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         child: Column(
           children: [
             Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(16.0),
-                itemCount: messages.length + (isLoading ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == messages.length && isLoading) {
-                    return const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          vertical: 16.0,
-                          horizontal: 8.0,
+              child: RefreshIndicator(
+                onRefresh: () =>
+                    ref.read(chatProvider.notifier).fetchMessages(),
+                child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: messages.length + (isLoading ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == messages.length && isLoading) {
+                      return const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: 16.0,
+                            horizontal: 8.0,
+                          ),
+                          child: CircularProgressIndicator(),
                         ),
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-                  final msg = messages[index];
-                  return _buildMessageBubble(msg.text, msg.isMe);
-                },
+                      );
+                    }
+                    final msg = messages[index];
+                    return _buildMessageBubble(msg.text, msg.isMe);
+                  },
+                ),
               ),
             ),
             Container(

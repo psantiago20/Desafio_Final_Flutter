@@ -132,7 +132,7 @@ class AgendaScreen extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(apt.type.toUpperCase(), style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+                              Text(typeLabel(apt.type).toUpperCase(), style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
                               Text(apt.doctorName, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),
                               SizedBox(height: 4),
                               Row(
@@ -189,10 +189,12 @@ class AgendaScreen extends ConsumerWidget {
   }
 
   Widget _buildAppointmentCard(BuildContext context, AppointmentModel apt) {
-    final isUpcoming = apt.status == 'confirmed' || apt.status == 'pending';
+    final isUpcoming = (apt.status == 'confirmed' || apt.status == 'pending') && apt.appointmentDate.isAfter(DateTime.now());
+    final isPast = apt.appointmentDate.isBefore(DateTime.now()) || apt.status == 'completed' || apt.status == 'cancelled';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12.0),
+      color: isPast ? Colors.grey.shade50 : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.0),
         side: BorderSide(
@@ -247,7 +249,7 @@ class AgendaScreen extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          apt.type.toUpperCase(),
+                          typeLabel(apt.type).toUpperCase(),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -264,7 +266,7 @@ class AgendaScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          apt.status == 'confirmed' ? 'Confirmada' : (apt.status == 'completed' ? 'Realizada' : apt.status),
+                          statusLabel(apt.status),
                           style: TextStyle(
                             fontSize: 10,
                             color: isUpcoming 
@@ -332,7 +334,28 @@ class AgendaScreen extends ConsumerWidget {
                         ),
                         const SizedBox(width: 8),
                         TextButton(
-                          onPressed: () {},
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Cancelar Consulta'),
+                                content: const Text('Tem certeza que deseja cancelar esta consulta?'),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Não')),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, true), 
+                                    style: TextButton.styleFrom(foregroundColor: AppTheme.alertRed),
+                                    child: const Text('Sim, cancelar'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            
+                            if (confirm == true) {
+                              await ref.read(appointmentActionsProvider.notifier).updateStatus(apt.id, 'cancelled');
+                              ref.invalidate(appointmentsListProvider);
+                            }
+                          },
                           style: TextButton.styleFrom(
                             backgroundColor: AppTheme.alertRedLight,
                             foregroundColor: AppTheme.alertRed,

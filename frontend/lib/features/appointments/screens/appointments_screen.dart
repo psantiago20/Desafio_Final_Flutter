@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../providers/appointments_provider.dart';
+import '../providers/appointments_live_sync.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
-import 'package:frontend/shared/widgets/custom_app_bar.dart';
 
 class AppointmentsScreen extends ConsumerWidget {
   const AppointmentsScreen({super.key});
@@ -22,14 +22,14 @@ class AppointmentsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(appointmentsLiveSyncProvider);
     final filters = ref.watch(appointmentFiltersProvider);
     final appointmentsAsync = ref.watch(appointmentsListProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: CustomAppBar(
-        subtitle: 'Consultas',
-        showProfileButton: false,
+      appBar: AppBar(
+        title: const Text('Consultas'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded),
