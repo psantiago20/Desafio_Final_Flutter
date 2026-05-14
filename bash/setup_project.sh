@@ -83,10 +83,23 @@ for i in {1..30}; do
     fi
 done
 
-# 7. Criar tabelas e Injetar Seeds
-echo -e "${BLUE}🗄️ Configurando banco de dados (tabelas e seeds)...${NC}"
-# Usamos PYTHONPATH=. para que o Python encontre o pacote 'app' dentro do container
-docker compose exec backend bash -c "PYTHONPATH=. python scripts/create_tables.py"
+# 7. Configurar Banco de Dados
+echo -e "\n${BLUE}🗄️ Configurando banco de dados...${NC}"
+
+# Pergunta se o usuário quer resetar o banco
+echo -e "${YELLOW}Deseja realizar uma instalação LIMPA do banco de dados?${NC}"
+echo -e "⚠️ Isso apagará todas as tabelas e dados existentes. (y/N)"
+read -t 10 -r reset_db || reset_db="n"
+
+if [[ "$reset_db" =~ ^[Yy]$ ]]; then
+    echo -e "${BLUE}🧹 Resetando banco de dados (Clean Install)...${NC}"
+    docker compose exec backend bash -c "PYTHONPATH=. python scripts/reset_db.py"
+else
+    echo -e "${BLUE}🔄 Verificando/Atualizando tabelas existentes...${NC}"
+    docker compose exec backend bash -c "PYTHONPATH=. python scripts/create_tables.py"
+fi
+
+echo -e "${BLUE}🌱 Injetando dados de teste (Seeds)...${NC}"
 docker compose exec backend bash -c "PYTHONPATH=. python scripts/seed_test_users.py"
 
 
