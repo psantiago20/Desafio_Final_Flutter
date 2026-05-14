@@ -113,7 +113,7 @@ class _RecentSearches extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.person_search_rounded, size: 64, color: AppColors.textHint.withOpacity(0.5)),
+            Icon(Icons.person_search_rounded, size: 64, color: AppColors.textHint.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(
               'Pesquise seus pacientes',
@@ -206,7 +206,7 @@ class _SearchResults extends StatelessWidget {
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             leading: CircleAvatar(
-              backgroundColor: AppColors.primary.withOpacity(0.1),
+              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
               child: Text(
                 patient.name.substring(0, 1).toUpperCase(),
                 style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),

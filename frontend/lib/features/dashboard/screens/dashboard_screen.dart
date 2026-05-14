@@ -47,7 +47,7 @@ class DashboardScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryBlue.withOpacity(0.3),
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -57,7 +57,7 @@ class DashboardScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Olá, ${user?.displayName.startsWith('Dr.') == true ? user?.displayName.split(' ').sublist(0, 2).join(' ') : 'Dr. ' + (user?.displayName.split(' ').first ?? '')}',
+                      'Olá, ${user?.displayName.startsWith('Dr.') == true ? user?.displayName.split(' ').sublist(0, 2).join(' ') : 'Dr. ${user?.displayName.split(' ').first ?? ''}'}',
                       style: GoogleFonts.manrope(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
@@ -70,7 +70,7 @@ class DashboardScreen extends ConsumerWidget {
                           .format(DateTime.now()),
                       style: GoogleFonts.manrope(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -227,7 +227,7 @@ class _StatCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -317,7 +317,7 @@ class _AppointmentCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
+                    color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -384,9 +384,9 @@ class _ErrorCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cancelled.withOpacity(0.06),
+        color: AppColors.cancelled.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.cancelled.withOpacity(0.2)),
+        border: Border.all(color: AppColors.cancelled.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [

@@ -103,7 +103,7 @@ class HomeScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(32),
                         boxShadow: [
                           BoxShadow(
-                            color: primaryColor.withOpacity(0.3),
+                            color: primaryColor.withValues(alpha: 0.3),
                             blurRadius: 30,
                             offset: const Offset(0, 10),
                           ),
@@ -124,7 +124,7 @@ class HomeScreen extends ConsumerWidget {
                           Text(
                             'Aqui está um resumo da sua saúde hoje.',
                             style: GoogleFonts.inter(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               fontSize: 18,
                             ),
                           ),
@@ -265,7 +265,7 @@ class HomeScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 40,
             offset: const Offset(0, 4),
           ),
@@ -280,7 +280,7 @@ class HomeScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.05),
+                  color: color.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 28),
@@ -504,13 +504,13 @@ class HomeScreen extends ConsumerWidget {
                 ? Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      _buildBar(40, color.withOpacity(0.2)),
+                      _buildBar(40, color.withValues(alpha: 0.2)),
                       const SizedBox(width: 8),
-                      _buildBar(30, color.withOpacity(0.2)),
+                      _buildBar(30, color.withValues(alpha: 0.2)),
                       const SizedBox(width: 8),
                       _buildBar(70, color),
                       const SizedBox(width: 8),
-                      _buildBar(35, color.withOpacity(0.2)),
+                      _buildBar(35, color.withValues(alpha: 0.2)),
                     ],
                   )
                 : Center(
@@ -519,14 +519,14 @@ class HomeScreen extends ConsumerWidget {
                       children: [
                         Icon(
                           Icons.inbox_outlined,
-                          color: color.withOpacity(0.3),
+                          color: color.withValues(alpha: 0.3),
                           size: 32,
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Nenhum dado encontrado',
                           style: TextStyle(
-                            color: color.withOpacity(0.5),
+                            color: color.withValues(alpha: 0.5),
                             fontSize: 11,
                           ),
                         ),
@@ -663,7 +663,7 @@ class HomeScreen extends ConsumerWidget {
         ),
         Icon(
           icon,
-          color: const Color(0xFF006C4D).withOpacity(hasValue ? 0.4 : 0.15),
+          color: const Color(0xFF006C4D).withValues(alpha: hasValue ? 0.4 : 0.15),
         ),
       ],
     );
@@ -675,7 +675,7 @@ class HomeScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFFFF3E0),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFFB74D).withOpacity(0.4)),
+        border: Border.all(color: const Color(0xFFFFB74D).withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
@@ -702,7 +702,7 @@ class HomeScreen extends ConsumerWidget {
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'SINAIS VITAIS RECENTES',
             style: TextStyle(
               fontSize: 10,
@@ -711,14 +711,14 @@ class HomeScreen extends ConsumerWidget {
               color: Color(0xFF434654),
             ),
           ),
-          const SizedBox(height: 24),
-          const Icon(
+          SizedBox(height: 24),
+          Icon(
             Icons.cloud_off_outlined,
             color: Color(0xFF9E9E9E),
             size: 36,
           ),
-          const SizedBox(height: 12),
-          const Text(
+          SizedBox(height: 12),
+          Text(
             'Informações indisponíveis no momento.',
             style: TextStyle(color: Color(0xFF616161), fontSize: 13),
           ),
@@ -740,7 +740,7 @@ class HomeScreen extends ConsumerWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10),
         ],
       ),
       child: Row(
@@ -757,9 +757,9 @@ class HomeScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF86F8C8).withOpacity(0.3),
+        color: const Color(0xFF86F8C8).withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF006C4D).withOpacity(0.1)),
+        border: Border.all(color: const Color(0xFF006C4D).withValues(alpha: 0.1)),
       ),
       child: const Row(
         children: [
@@ -827,7 +827,7 @@ class HomeScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryBlue.withOpacity(0.3),
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -848,7 +848,7 @@ class HomeScreen extends ConsumerWidget {
                     Text(
                       'Bem-vinda ao seu portal de saúde',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 14,
                       ),
                     ),
@@ -1112,7 +1112,7 @@ class HomeScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.05),
+              color: color.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),

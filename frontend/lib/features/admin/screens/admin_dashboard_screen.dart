@@ -307,10 +307,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       decoration: BoxDecoration(
-        color: _surfaceLowest.withOpacity(0.9),
+        color: _surfaceLowest.withValues(alpha: 0.9),
         boxShadow: [
           BoxShadow(
-            color: _textColor.withOpacity(0.06),
+            color: _textColor.withValues(alpha: 0.06),
             blurRadius: 40,
             offset: const Offset(0, 4),
           ),
@@ -367,7 +367,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   icon: const Icon(Icons.logout, size: 20),
                   label: const Text('Sair'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _errorColor.withOpacity(0.1),
+                    backgroundColor: _errorColor.withValues(alpha: 0.1),
                     foregroundColor: _errorColor,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(
@@ -409,7 +409,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         color: _surfaceLowest,
         boxShadow: [
           BoxShadow(
-            color: _textColor.withOpacity(0.04),
+            color: _textColor.withValues(alpha: 0.04),
             blurRadius: 40,
             offset: const Offset(10, 0),
           ),
@@ -428,7 +428,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: _primaryColor.withOpacity(0.1),
+                  color: _primaryColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(Icons.admin_panel_settings, color: _primaryColor),
@@ -540,14 +540,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     return Container(
       height: 70,
       decoration: BoxDecoration(
-        color: _surfaceLowest.withOpacity(0.9),
+        color: _surfaceLowest.withValues(alpha: 0.9),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
         ),
         boxShadow: [
           BoxShadow(
-            color: _textColor.withOpacity(0.06),
+            color: _textColor.withValues(alpha: 0.06),
             blurRadius: 40,
             offset: const Offset(0, -4),
           ),
@@ -861,7 +861,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: _textColor.withOpacity(0.04),
+                  color: _textColor.withValues(alpha: 0.04),
                   blurRadius: 40,
                   offset: const Offset(0, 4),
                 ),
@@ -896,7 +896,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     vertical: 16,
                   ),
                   decoration: BoxDecoration(
-                    color: _surfaceLow.withOpacity(0.5),
+                    color: _surfaceLow.withValues(alpha: 0.5),
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(24),
                       bottomRight: Radius.circular(24),
@@ -919,7 +919,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                             onPressed: () {},
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(
-                                color: _outlineColor.withOpacity(0.5),
+                                color: _outlineColor.withValues(alpha: 0.5),
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -983,7 +983,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         boxShadow: [
           if (bgColor != _surfaceLowest)
             BoxShadow(
-              color: bgColor.withOpacity(0.4),
+              color: bgColor.withValues(alpha: 0.4),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -998,7 +998,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: textColor.withOpacity(0.6),
+              color: textColor.withValues(alpha: 0.6),
               letterSpacing: 1.5,
             ),
           ),

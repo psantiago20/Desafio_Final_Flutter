@@ -73,8 +73,8 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
             height: 70,
             padding: const EdgeInsets.symmetric(horizontal: 48),
             decoration: BoxDecoration(
-              color: surfaceColor.withOpacity(0.8),
-              border: Border(bottom: BorderSide(color: Colors.black.withOpacity(0.05))),
+              color: surfaceColor.withValues(alpha: 0.8),
+              border: Border(bottom: BorderSide(color: Colors.black.withValues(alpha: 0.05))),
             ),
             child: Row(
               children: [
