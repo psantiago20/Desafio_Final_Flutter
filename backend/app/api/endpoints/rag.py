@@ -283,13 +283,14 @@ async def upload_exam(
                     llm = ChatNVIDIA(model="meta/llama-3.1-70b-instruct", nvidia_api_key=settings.NVIDIA_API_KEY)
                     prompt = (
                         "Analise o texto deste exame médico e retorne APENAS um JSON.\n"
-                        "REGRAS PARA O 'summary':\n"
-                        "1. Se estiver TUDO NORMAL: o summary deve ser EXATAMENTE 'Os resultados estão dentro dos valores de referência.' e nada mais.\n"
-                        "2. Se houver ALTERAÇÃO: cite apenas o dado alterado de forma direta (ex: 'Hemoglobina baixa: 10 g/dL').\n"
-                        f"TEXTO: {text_content[:4000]}\n\n"
+                        "REGRAS CRÍTICAS PARA O CAMPO 'summary':\n"
+                        "1. Se todos os valores estiverem NORMAIS: O campo 'summary' deve ser EXATAMENTE 'Os resultados estão dentro dos valores de referência.' e ABSOLUTAMENTE MAIS NADA.\n"
+                        "2. Se houver ALTERAÇÕES: Liste APENAS os dados alterados (ex: 'Glicemia: 120 mg/dL'). NÃO mencione valores que estão normais.\n"
+                        "3. Proibido usar saudações ou textos explicativos.\n"
+                        f"TEXTO DO EXAME: {text_content[:4000]}\n\n"
                         "FORMATO JSON:\n"
                         "{\n"
-                        "  \"title\": \"Nome do exame\",\n"
+                        "  \"title\": \"Nome curto do exame\",\n"
                         "  \"summary\": \"\"\n"
                         "}"
                     )
@@ -305,13 +306,14 @@ async def upload_exam(
                 vision_model = ChatNVIDIA(model="meta/llama-3.2-11b-vision-instruct", nvidia_api_key=settings.NVIDIA_API_KEY)
                 
                 prompt = (
-                    "Analise este exame médico e responda APENAS em formato JSON.\n"
-                    "REGRAS PARA O 'summary':\n"
-                    "1. Se estiver TUDO NORMAL: o summary deve ser EXATAMENTE 'Os resultados estão dentro dos valores de referência.' e nada mais.\n"
-                    "2. Se houver ALTERAÇÃO: cite apenas o dado alterado de forma direta (ex: 'Glicemia elevada: 115 mg/dL').\n"
+                    "Analise a imagem deste exame médico e retorne APENAS um JSON.\n"
+                    "REGRAS CRÍTICAS PARA O CAMPO 'summary':\n"
+                    "1. Se todos os valores estiverem NORMAIS: O campo 'summary' deve ser EXATAMENTE 'Os resultados estão dentro dos valores de referência.' e ABSOLUTAMENTE MAIS NADA.\n"
+                    "2. Se houver ALTERAÇÕES: Liste APENAS os dados alterados (ex: 'Hemoglobina: 9.0 g/dL'). NÃO mencione valores que estão normais.\n"
+                    "3. Proibido usar saudações ou textos explicativos.\n"
                     "FORMATO JSON:\n"
                     "{\n"
-                    "  \"title\": \"Nome do exame\",\n"
+                    "  \"title\": \"Nome curto do exame\",\n"
                     "  \"summary\": \"\"\n"
                     "}"
                 )
