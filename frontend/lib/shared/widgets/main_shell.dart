@@ -8,7 +8,7 @@ class MainShell extends ConsumerWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
   
-  static final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  static final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
   int _currentIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
@@ -24,34 +24,8 @@ class MainShell extends ConsumerWidget {
     final currentIndex = _currentIndex(context);
 
     return Scaffold(
-      key: _scaffoldKey,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: AppTheme.primaryBlueDark),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
-        title: Row(
-          children: [
-            Image.asset('assets/images/suaConsulta.png', height: 32),
-            const SizedBox(width: 12),
-            const Text(
-              'Sua Consulta',
-              style: TextStyle(
-                color: AppTheme.primaryBlueDark,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: AppColors.textSecondary),
-            onPressed: () => ref.read(authProvider.notifier).logout(),
-          ),
-        ],
-      ),
+      key: scaffoldKey,
+      backgroundColor: Colors.transparent,
       drawer: _buildDrawer(context, ref),
       body: child,
       bottomNavigationBar: Container(

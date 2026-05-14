@@ -15,23 +15,26 @@
 <body class="bg-surface text-on-surface min-h-screen">
 
     <!-- ═══════════════════════════════════════ TOP APP BAR ══════════════════════════════════════ -->
-    <header class="fixed top-0 w-full z-50 bg-[#f7f9fb]/80 backdrop-blur-lg shadow-[0_4px_40px_rgba(25,28,30,0.06)]">
+    <header class="fixed top-0 w-full z-50 bg-[#F9FAFB]/90 dark:bg-[#2D3748]/90 backdrop-blur-lg shadow-[0_4px_40px_rgba(25,28,30,0.06)] border-b border-outline-variant/15">
         <div class="flex justify-between items-center px-6 h-16 w-full max-w-7xl mx-auto">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-[#003d9b] rounded-[10px] p-1.5 flex items-center justify-center">
+                <div class="w-10 h-10 bg-primary rounded-[10px] p-1.5 flex items-center justify-center">
                     <img src="icons/Logo-_2_.svg" alt="Logo Sua Consulta" class="w-full h-full object-contain brightness-0 invert"/>
                 </div>
                 <div class="flex flex-col">
-                    <span class="font-['Manrope'] font-extrabold text-[#0052CC] tracking-tighter leading-none">Sua Consulta</span>
+                    <span class="font-['Manrope'] font-extrabold text-primary tracking-tighter leading-none">Sua Consulta</span>
                     <span class="text-[10px] text-on-surface-variant font-semibold tracking-wider">ÁREA DO PACIENTE</span>
                 </div>
             </div>
             <div class="flex items-center gap-4">
-                <button class="p-2 rounded-full hover:bg-[#f2f4f6] transition-colors">
-                    <span class="material-symbols-outlined text-[#434654]">search</span>
+                <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-surface-container-low transition-colors" title="Alternar Modo Escuro">
+                    <span id="theme-icon" class="material-symbols-outlined text-on-surface-variant">dark_mode</span>
                 </button>
-                <button class="p-2 rounded-full hover:bg-[#f2f4f6] transition-colors relative">
-                    <span class="material-symbols-outlined text-[#434654]">notifications</span>
+                <button class="p-2 rounded-full hover:bg-surface-container-low transition-colors">
+                    <span class="material-symbols-outlined text-on-surface-variant">search</span>
+                </button>
+                <button class="p-2 rounded-full hover:bg-surface-container-low transition-colors relative">
+                    <span class="material-symbols-outlined text-on-surface-variant">notifications</span>
                     <span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
                 </button>
                 <div class="w-9 h-9 rounded-full bg-primary-fixed flex items-center justify-center border-2 border-primary">
@@ -119,7 +122,7 @@
                     <button
                         id="send-btn"
                         onclick="sendChatMessage()"
-                        class="w-11 h-11 flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-[#003d9b] to-[#0052cc] text-white rounded-2xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                        class="w-11 h-11 flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-primary to-secondary text-white rounded-2xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
                     >
                         <span class="material-symbols-outlined text-xl">send</span>
                     </button>
@@ -154,7 +157,7 @@
                 <h3 class="text-sm font-bold text-on-surface mb-3">Próximas Consultas</h3>
                 <div class="space-y-3">
                     <div class="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl">
-                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#003d9b] to-[#0052cc] flex items-center justify-center text-white flex-shrink-0">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white flex-shrink-0">
                             <span class="material-symbols-outlined text-base">medical_services</span>
                         </div>
                         <div class="flex-1 min-w-0">
@@ -189,29 +192,29 @@
     </main>
 
     <!-- ═══════════════════════════════════════ BOTTOM NAV (mobile) ═══════════════════════════════ -->
-    <nav class="fixed bottom-0 left-0 w-full z-50 rounded-t-[24px] bg-[#f7f9fb]/80 backdrop-blur-lg shadow-[0_-4px_40px_rgba(25,28,30,0.06)] md:hidden">
+    <nav class="fixed bottom-0 left-0 w-full z-50 rounded-t-[24px] bg-[#F9FAFB]/90 dark:bg-[#2D3748]/90 backdrop-blur-lg shadow-[0_-4px_40px_rgba(25,28,30,0.06)] border-t border-outline-variant/15 md:hidden">
         <div class="flex justify-around items-center w-full px-4 pt-2 pb-3 h-20">
 
             <button data-tab="dashboard" onclick="switchTab('dashboard')"
-                class="flex flex-col items-center justify-center text-[#434654] px-5 py-2 hover:bg-[#f2f4f6]/50 rounded-xl transition-all">
+                class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-container-low/50 rounded-xl transition-all">
                 <span class="material-symbols-outlined">grid_view</span>
                 <span class="font-['Inter'] text-[10px] font-medium uppercase tracking-widest mt-1">Dashboard</span>
             </button>
 
             <button data-tab="calendar" onclick="switchTab('calendar')"
-                class="flex flex-col items-center justify-center text-[#434654] px-5 py-2 hover:bg-[#f2f4f6]/50 rounded-xl transition-all">
+                class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-container-low/50 rounded-xl transition-all">
                 <span class="material-symbols-outlined">calendar_today</span>
                 <span class="font-['Inter'] text-[10px] font-medium uppercase tracking-widest mt-1">Calendário</span>
             </button>
 
             <button data-tab="chat" onclick="switchTab('chat')"
-                class="flex flex-col items-center justify-center bg-gradient-to-br from-[#003d9b] to-[#0052cc] text-white rounded-[12px] px-5 py-2 scale-90 transition-all duration-200">
+                class="flex flex-col items-center justify-center bg-gradient-to-br from-primary to-secondary text-white rounded-[12px] px-5 py-2 scale-90 transition-all duration-200">
                 <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;">chat</span>
                 <span class="font-['Inter'] text-[10px] font-medium uppercase tracking-widest mt-1">Chat</span>
             </button>
 
             <button data-tab="chat" onclick="switchTab('chat')"
-                class="flex flex-col items-center justify-center text-[#434654] px-5 py-2 hover:bg-[#f2f4f6]/50 rounded-xl transition-all">
+                class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-container-low/50 rounded-xl transition-all">
                 <span class="material-symbols-outlined">upload_file</span>
                 <span class="font-['Inter'] text-[10px] font-medium uppercase tracking-widest mt-1">Arquivos</span>
             </button>

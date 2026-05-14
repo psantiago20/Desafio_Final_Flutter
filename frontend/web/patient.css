@@ -2,6 +2,56 @@
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
+:root {
+  /* Cores Light Mode baseadas no DESIGN_SYSTEM.md */
+  --color-primary: #0A4174;
+  --color-primary-fixed: #BDD8E9;
+  --color-on-primary: #ffffff;
+  --color-on-primary-fixed: #001D39;
+  --color-surface: #ffffff;
+  --color-on-surface: #111827;
+  --color-surface-variant: #F9FAFB;
+  --color-on-surface-variant: #4B5563;
+  --color-background: #F0F4F8;
+  --color-on-background: #111827;
+  --color-outline: #6B7280;
+  --color-outline-variant: #E5E7EB;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #F9FAFB;
+  --color-surface-container: #F0F4F8;
+  --color-surface-container-highest: #E5E7EB;
+  --color-error: #EF4444;
+  --color-on-error: #ffffff;
+  --bg-timeline-card: #ffffff;
+  --bg-timeline-card-user: #f8fafc;
+  --border-timeline: #eceef0;
+}
+
+.dark {
+  /* Cores Dark Mode */
+  --color-primary: #7BBDE8;
+  --color-primary-fixed: #0A4174;
+  --color-on-primary: #001D39;
+  --color-on-primary-fixed: #ffffff;
+  --color-surface: #1E1E1E;
+  --color-on-surface: #F9FAFB;
+  --color-surface-variant: #121212;
+  --color-on-surface-variant: #D1D5DB;
+  --color-background: #121212;
+  --color-on-background: #F9FAFB;
+  --color-outline: #9CA3AF;
+  --color-outline-variant: #374151;
+  --color-surface-container-lowest: #1E1E1E;
+  --color-surface-container-low: #2D3748;
+  --color-surface-container: #4A5568;
+  --color-surface-container-highest: #718096;
+  --color-error: #EF4444;
+  --color-on-error: #ffffff;
+  --bg-timeline-card: #2D3748;
+  --bg-timeline-card-user: #1E1E1E;
+  --border-timeline: #4A5568;
+}
+
 body {
     font-family: 'Inter', sans-serif;
     min-height: max(884px, 100dvh);
@@ -70,15 +120,15 @@ h1, h2, h3 {
 
 .timeline-card {
     flex: 1;
-    background: #ffffff;
-    border: 1px solid #eceef0;
+    background: var(--bg-timeline-card);
+    border: 1px solid var(--border-timeline);
     border-radius: 16px;
     padding: 1rem;
     box-shadow: 0 2px 12px rgba(25, 28, 30, 0.04);
 }
 
 .timeline-card.user-card {
-    background: #f8fafc;
+    background: var(--bg-timeline-card-user);
 }
 
 .timeline-header {
@@ -92,7 +142,7 @@ h1, h2, h3 {
     font-family: 'Manrope', sans-serif;
     font-weight: 800;
     font-size: 0.875rem;
-    color: #191c1e;
+    color: var(--color-on-surface);
 }
 
 .timeline-time {
@@ -106,7 +156,7 @@ h1, h2, h3 {
 .timeline-content {
     font-size: 0.8125rem;
     line-height: 1.5;
-    color: #434654;
+    color: var(--color-on-surface-variant);
 }
 
 .timeline-content.is-message {

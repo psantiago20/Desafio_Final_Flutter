@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import '../providers/patients_provider.dart';
 import '../../../shared/models/patient_model.dart';
+import '../../../shared/widgets/custom_app_bar.dart';
 
 class PatientsScreen extends ConsumerStatefulWidget {
   const PatientsScreen({super.key});
@@ -34,18 +35,7 @@ class _PatientsScreenState extends ConsumerState<PatientsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text(
-          'Pacientes',
-          style: GoogleFonts.dmSerifDisplay(
-            color: AppColors.textPrimary,
-            fontSize: 24,
-          ),
-        ),
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        centerTitle: false,
-      ),
+      appBar: const CustomAppBar(subtitle: 'Pacientes', showProfileButton: false),
       body: Column(
         children: [
           // Search Bar

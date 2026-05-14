@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/utils/token_storage.dart';
 import 'package:frontend/app_router.dart';
 import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/core/theme/theme_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:intl/date_symbol_data_local.dart';
@@ -49,6 +50,8 @@ class OmniConnectApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'OmniConnect',
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ref.watch(themeProvider),
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       scaffoldMessengerKey: NotificationService().scaffoldMessengerKey,

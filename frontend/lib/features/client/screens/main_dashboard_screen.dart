@@ -3,7 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../features/auth/providers/auth_provider.dart';
+import '../../../shared/widgets/app_logo.dart';
 import 'home_screen.dart';
 import 'agenda_screen.dart';
 import 'results_screen.dart';
@@ -12,6 +14,8 @@ import 'profile_screen.dart';
 
 class MainDashboardScreen extends ConsumerStatefulWidget {
   const MainDashboardScreen({super.key});
+
+  static final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   ConsumerState<MainDashboardScreen> createState() => _MainDashboardScreenState();
@@ -44,9 +48,10 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
   }
 
   Widget _buildWebShell(BuildContext context) {
-    const Color surfaceColor = Color(0xFFF7F9FB);
-    const Color primaryContainer = Color(0xFF0052CC);
-    const Color onSurfaceVariant = Color(0xFF434654);
+    final surfaceColor = Theme.of(context).colorScheme.surface;
+    final primaryContainer = Theme.of(context).colorScheme.primary;
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+    final isDark = ref.watch(themeProvider) == ThemeMode.dark;
 
     final authState = ref.watch(authProvider);
     final user = authState.user;
@@ -73,8 +78,8 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
             height: 70,
             padding: const EdgeInsets.symmetric(horizontal: 48),
             decoration: BoxDecoration(
-              color: surfaceColor.withOpacity(0.8),
-              border: Border(bottom: BorderSide(color: Colors.black.withOpacity(0.05))),
+              color: surfaceColor.withOpacity(0.95),
+              border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.2))),
             ),
             child: Row(
               children: [
@@ -82,27 +87,16 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
                   onTap: () => _navigate(0),
                   child: Row(
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: const BoxDecoration(
-                          color: primaryContainer,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            initials, 
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
-                          ),
-                        ),
-                      ),
+                      const AppLogo(showText: false, iconSize: 28),
                       const SizedBox(width: 16),
                       Text(
                         'Sua Consulta',
                         style: GoogleFonts.manrope(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
-                          color: primaryContainer,
+                          color: Theme.of(context).brightness == Brightness.dark 
+                              ? Colors.white 
+                              : primaryContainer,
                         ),
                       ),
                     ],
@@ -114,8 +108,14 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
                 _buildWebNavLink('Exames', isActive: _currentIndex == 3, onTap: () => _navigate(3)),
                 _buildWebNavLink('Mensagens', isActive: _currentIndex == 2, onTap: () => _navigate(2)),
                 const SizedBox(width: 24),
-                IconButton(icon: const Icon(Icons.notifications_none, color: onSurfaceVariant), onPressed: () => _navigate(4)),
+                IconButton(icon: const Icon(Icons.notifications_none), color: onSurfaceVariant, onPressed: () => _navigate(4)),
                 IconButton(icon: Icon(Icons.settings_outlined, color: _currentIndex == 5 ? primaryContainer : onSurfaceVariant), onPressed: () => _navigate(5)),
+                const SizedBox(width: 16),
+                IconButton(
+                  icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+                  color: primaryContainer,
+                  onPressed: () => ref.read(themeProvider.notifier).toggleTheme(),
+                ),
               ],
             ),
           ),
@@ -143,7 +143,7 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
               style: GoogleFonts.manrope(
                 fontSize: 15,
                 fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                color: isActive ? const Color(0xFF0052CC) : const Color(0xFF434654),
+                color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             if (isActive)
@@ -151,7 +151,7 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
                 margin: const EdgeInsets.only(top: 4),
                 width: 20,
                 height: 2,
-                color: const Color(0xFF0052CC),
+                color: Theme.of(context).colorScheme.primary,
               ),
           ],
         ),
@@ -161,6 +161,7 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
 
   Widget _buildMobileShell(BuildContext context) {
     return Scaffold(
+      key: MainDashboardScreen.scaffoldKey,
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
@@ -168,8 +169,8 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: _navigate,
-        backgroundColor: AppTheme.surfaceWhite,
-        indicatorColor: AppTheme.primaryBlueDark,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        indicatorColor: Theme.of(context).colorScheme.primary,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
@@ -200,4 +201,6 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
       ),
     );
   }
+
+
 }
