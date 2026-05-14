@@ -66,83 +66,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildMainContent(bool isDesktop, String name, AsyncValue<DashboardStats> statsAsync, AsyncValue<List<AppointmentModel>> todayAsync) {
     if (_selectedNavIndex == 1) {
-      return Stack(
-        children: [
-          const AppointmentsScreen(),
-          if (!isDesktop)
-            Positioned(
-              bottom: 0, left: 0, right: 0,
-              child: _buildBottomNav(),
-            ),
-        ],
-      );
+      return const AppointmentsScreen();
     }
     if (_selectedNavIndex == 2) {
-      return Stack(
-        children: [
-          const PatientsScreen(),
-          if (!isDesktop)
-            Positioned(
-              bottom: 0, left: 0, right: 0,
-              child: _buildBottomNav(),
-            ),
-        ],
-      );
+      return const PatientsScreen();
     }
     if (_selectedNavIndex == 3) {
-      return Stack(
-        children: [
-          const DoctorMessagesScreen(),
-          if (!isDesktop)
-            Positioned(
-              bottom: 0, left: 0, right: 0,
-              child: _buildBottomNav(),
-            ),
-        ],
-      );
+      return const DoctorMessagesScreen();
     }
     if (_selectedNavIndex == 4) {
-      return Stack(
-        children: [
-          const ProntuariosScreen(),
-          if (!isDesktop)
-            Positioned(
-              bottom: 0, left: 0, right: 0,
-              child: _buildBottomNav(),
-            ),
-        ],
-      );
+      return const ProntuariosScreen();
     }
     if (_selectedNavIndex == 5) {
-      return Stack(
-        children: [
-          const ProfileScreen(),
-          if (!isDesktop)
-            Positioned(
-              bottom: 0, left: 0, right: 0,
-              child: _buildBottomNav(),
-            ),
-        ],
-      );
+      return const ProfileScreen();
     }
     if (_selectedNavIndex != 0) {
-      return Stack(
-        children: [
-          Scaffold(
-            backgroundColor: _bg,
-            body: Center(
-              child: Text(
-                'Página em desenvolvimento',
-                style: GoogleFonts.manrope(fontSize: 24, color: _onSurfaceVariant),
-              ),
-            ),
+      return Scaffold(
+        backgroundColor: _bg,
+        body: Center(
+          child: Text(
+            'Página em desenvolvimento',
+            style: GoogleFonts.manrope(fontSize: 24, color: _onSurfaceVariant),
           ),
-          if (!isDesktop)
-            Positioned(
-              bottom: 0, left: 0, right: 0,
-              child: _buildBottomNav(),
-            ),
-        ],
+        ),
       );
     }
 
@@ -161,7 +107,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   top: 88, // Space for Topbar
                   left: isDesktop ? 40 : 24,
                   right: isDesktop ? 40 : 24,
-                  bottom: isDesktop ? 32 : 100, // Space for bottom nav
+                  bottom: 32,
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
@@ -181,13 +127,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ),
         _buildTopBar(isDesktop, name),
-        if (!isDesktop)
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: _buildBottomNav(),
-          ),
       ],
     );
   }
@@ -930,86 +869,5 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
     );
   }
-
-  Widget _buildBottomNav() {
-    return Container(
-      height: 80,
-      decoration: BoxDecoration(
-        color: _bg.withOpacity(0.8),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F191C1E),
-            blurRadius: 40,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildBottomNavItem(0, Icons.grid_view, 'Painel'),
-          _buildBottomNavItem(1, Icons.calendar_today, 'Agenda'),
-          _buildBottomNavItem(2, Icons.group, 'Pacientes'),
-          _buildBottomNavItem(3, Icons.chat, 'Chat'),
-          _buildBottomNavItem(4, Icons.description, 'Prontuários'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNavItem(int index, IconData icon, String label) {
-    final isActive = _selectedNavIndex == index;
-    if (isActive) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_primary, _primaryContainer],
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              label.toUpperCase(),
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-                letterSpacing: 1,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    return InkWell(
-      onTap: () => setState(() => _selectedNavIndex = index),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: _onSurfaceVariant, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            label.toUpperCase(),
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: _onSurfaceVariant,
-              letterSpacing: 1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
+
