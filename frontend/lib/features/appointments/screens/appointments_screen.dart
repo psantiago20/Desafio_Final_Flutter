@@ -229,7 +229,7 @@ class _AppointmentTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Paciente #${appointment.patientId}',
+                    appointment.patientName ?? 'Paciente #${appointment.patientId}',
                     style: GoogleFonts.dmSans(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,

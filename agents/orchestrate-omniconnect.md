@@ -352,7 +352,7 @@ session_rules:
     - Se source='app' E query for saudacao (oi, ola, bom dia, etc.):
       - clear_conversation() automatico
       - retorna resposta fixa sem chamar a LLM (zero latencia de alucinacao)
-    - Implementado em: rag_service.get_rag_response() linhas 521-526
+    - Implementado em: rag_service.get_rag_response()
 
   endpoints_de_teste:
     - POST /api/webhooks/chat-direct { new_session: true } -> reset + nova conversa

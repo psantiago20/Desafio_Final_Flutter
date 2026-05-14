@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 class ChatMessage(BaseModel):
     message: str
     patient_id: Optional[int] = None
+    source: Optional[str] = None
 
 class ChatResponse(BaseModel):
     response: str
@@ -55,22 +56,40 @@ async def chat_with_ia(
         # Obter resposta do RAG
         response_text = await rag_service.get_rag_response(
             query=chat_message.message,
-            wa_to=None, # Aqui poderíamos identificar o médico do usuário se necessário
+            wa_to=None,
             db=db,
-            wa_from=wa_from
+            wa_from=wa_from,
+            source=chat_message.source if chat_message.source else current_user.role,
+            user_name=current_user.full_name,
+            user_id=current_user.id
         )
 
-        # Salvar mensagem no histórico se houver paciente
-        if chat_message.patient_id:
-            db_message = Message(
-                patient_id=chat_message.patient_id,
-                content=chat_message.message,
-                message_type="text",
-                source="app",
-                is_delivered=True
-            )
-            db.add(db_message)
-            db.commit()
+        # Salvar mensagem no histórico
+        target_patient_id = chat_message.patient_id or 15 # ID 15 é a Isis (Assistente)
+        
+        # Salvar mensagem do usuário
+        db_message = Message(
+            patient_id=target_patient_id,
+            sender_id=current_user.id,
+            content=chat_message.message,
+            message_type="text",
+            source="app",
+            is_delivered=True
+        )
+        db.add(db_message)
+        
+        # Salvar resposta da IA
+        ai_message = Message(
+            patient_id=target_patient_id,
+            receiver_id=current_user.id,
+            content=response_text,
+            message_type="text",
+            source="system",
+            is_delivered=True,
+            wa_from="isis_ia"
+        )
+        db.add(ai_message)
+        db.commit()
 
         return ChatResponse(
             response=response_text,

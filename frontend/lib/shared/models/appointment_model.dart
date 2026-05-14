@@ -4,6 +4,8 @@ import 'package:frontend/core/theme/app_theme.dart';
 class AppointmentModel {
   final int id;
   final int patientId;
+  final int doctorId;
+  final String? patientName;
   final String? doctorNameFromApi;
   final String? medicoName;
   final DateTime appointmentDate;
@@ -27,6 +29,7 @@ class AppointmentModel {
     required this.id,
     required this.patientId,
     required this.doctorId,
+    this.patientName,
     this.doctorNameFromApi,
     this.medicoName,
     required this.appointmentDate,
@@ -52,6 +55,7 @@ class AppointmentModel {
       id: json['id'] as int,
       patientId: json['patient_id'] as int,
       doctorId: json['doctor_id'] as int,
+      patientName: json['patient_name'] as String?,
       doctorNameFromApi: json['doctor_name'] as String?,
       medicoName: json['medico_name'] as String?,
       appointmentDate: DateTime.parse(json['appointment_date'] as String),
@@ -88,6 +92,7 @@ class AppointmentModel {
       id: id,
       patientId: patientId,
       doctorId: doctorId,
+      patientName: patientName,
       doctorNameFromApi: doctorNameFromApi,
       medicoName: medicoName,
       appointmentDate: appointmentDate,

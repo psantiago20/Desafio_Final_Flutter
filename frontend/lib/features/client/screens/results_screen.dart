@@ -320,7 +320,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     final filteredExams = _exams;
 
     return Scaffold(
-      appBar: const CustomAppBar(subtitle: 'Seus Resultados'),
       body: Container(
         decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
         child: _isLoading

@@ -31,7 +31,8 @@ def list_appointments(
     from sqlalchemy.orm import joinedload
     query = db.query(Appointment).options(
         joinedload(Appointment.doctor),
-        joinedload(Appointment.medico)
+        joinedload(Appointment.medico),
+        joinedload(Appointment.patient)
     )
     
     # Se for paciente, filtra apenas os seus agendamentos
@@ -60,6 +61,7 @@ def list_appointments(
     for app in appointments:
         app.doctor_name = app.doctor.full_name if app.doctor else f"Médico {app.doctor_id}"
         app.medico_name = app.medico.nome_completo if app.medico else app.doctor_name
+        app.patient_name = app.patient.name if app.patient else f"Paciente #{app.patient_id}"
         # Hack para o front-end antigo: já envia o tipo traduzido
         if app.type == "consultation":
             app.type = "Consulta"
@@ -80,7 +82,8 @@ def get_appointment(
     from sqlalchemy.orm import joinedload
     appointment = db.query(Appointment).options(
         joinedload(Appointment.doctor),
-        joinedload(Appointment.medico)
+        joinedload(Appointment.medico),
+        joinedload(Appointment.patient)
     ).filter(Appointment.id == appointment_id).first()
     
     if not appointment:
@@ -88,6 +91,7 @@ def get_appointment(
     
     appointment.doctor_name = appointment.doctor.full_name if appointment.doctor else f"Médico {appointment.doctor_id}"
     appointment.medico_name = appointment.medico.nome_completo if appointment.medico else appointment.doctor_name
+    appointment.patient_name = appointment.patient.name if appointment.patient else f"Paciente #{appointment.patient_id}"
     
     if appointment.type == "consultation":
         appointment.type = "Consulta"

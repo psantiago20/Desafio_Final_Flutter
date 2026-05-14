@@ -133,7 +133,7 @@ class _AppointmentDetailScreenState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Paciente #${_appointment.patientId}',
+                              _appointment.patientName ?? 'Paciente #${_appointment.patientId}',
                               style: GoogleFonts.dmSans(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 16,

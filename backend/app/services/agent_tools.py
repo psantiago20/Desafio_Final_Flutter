@@ -176,6 +176,71 @@ TOOLS_DEFINITIONS = [
                 "required": ["medico_id", "data_hora"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "cancelar_consulta",
+            "description": (
+                "Cancela o agendamento de uma consulta no banco de dados. "
+                "Requer a data/hora original da consulta. "
+                "Se o CPF não for fornecido, a ferramenta tentará buscar no estado da conversa."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "data_hora": {
+                        "type": "string",
+                        "description": "Data e hora originais do agendamento (AAAA-MM-DD HH:MM)"
+                    },
+                    "cpf": {
+                        "type": "string",
+                        "description": "CPF do paciente (opcional se já coletado)"
+                    }
+                },
+                "required": ["data_hora"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "buscar_consultas_medico",
+            "description": (
+                "Busca as próximas consultas (agendamentos) de um médico. "
+                "Use quando o médico perguntar sobre sua agenda, próximas consultas ou compromissos."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "medico_id": {
+                        "type": "integer",
+                        "description": "ID do médico para buscar consultas"
+                    }
+                },
+                "required": ["medico_id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "buscar_info_paciente",
+            "description": (
+                "Busca informações de um paciente e seus exames pelo nome ou CPF. "
+                "Use quando o médico pedir informações sobre um paciente ou exames dele."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_ou_cpf": {
+                        "type": "string",
+                        "description": "Nome ou CPF do paciente"
+                    }
+                },
+                "required": ["nome_ou_cpf"]
+            }
+        }
     }
 ]
 
@@ -539,6 +604,91 @@ def buscar_agendamentos(db: Session, cpf: str) -> str:
     return json.dumps(resultado, ensure_ascii=False)
 
 
+def buscar_consultas_medico(db: Session, medico_id: int) -> str:
+    """
+    Busca as próximas consultas (agendamentos) de um médico.
+    """
+    from app.models.appointment import Appointment
+    from app.models.patient import Patient
+    from app.models.medico import Medico
+    from datetime import datetime
+    
+    agora = datetime.utcnow()
+    try:
+        # Buscar nome do médico
+        medico = db.query(Medico).filter(Medico.id == medico_id).first()
+        nome_medico = medico.nome_completo if medico else f"ID: {medico_id}"
+
+        agendamentos = db.query(Appointment, Patient).join(Patient).filter(
+            Appointment.medico_id == medico_id,
+            Appointment.appointment_date >= agora,
+            Appointment.status.in_(["pending", "confirmed"])
+        ).order_by(Appointment.appointment_date.asc()).limit(20).all()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro ao buscar consultas do médico: {e}")
+        return "Erro ao buscar consultas do médico."
+
+    if not agendamentos:
+        return "Nenhum agendamento futuro encontrado."
+
+    resultado = f"Próximas consultas do médico {nome_medico}:\n"
+    seen = set()
+    for ag, patient in agendamentos:
+        # Dedup por data, paciente e motivo
+        key = (ag.appointment_date, patient.name, ag.reason)
+        if key not in seen:
+            resultado += f"- {ag.appointment_date.strftime('%d/%m/%Y %H:%M')} | Paciente: {patient.name} | Motivo: {ag.reason or 'Não informado'}\n"
+            seen.add(key)
+        
+    return resultado
+
+
+def buscar_info_paciente(db: Session, nome_ou_cpf: str) -> str:
+    """
+    Busca informações de um paciente e seus exames pelo nome ou CPF.
+    """
+    from app.models.patient import Patient
+    from app.models.exam import Exam
+    
+    try:
+        # Limpar CPF se for o caso
+        cpf_limpo = "".join(c for c in nome_ou_cpf if c.isdigit())
+        
+        query = db.query(Patient)
+        if len(cpf_limpo) == 11:
+            query = query.filter(Patient.cpf == cpf_limpo)
+        else:
+            query = query.filter(Patient.name.ilike(f"%{nome_ou_cpf}%"))
+            
+        patient = query.first()
+        
+        if not patient:
+            return f"Paciente '{nome_ou_cpf}' não encontrado."
+            
+        res = f"Informações do Paciente:\n"
+        res += f"Nome: {patient.name}\n"
+        res += f"CPF: {patient.cpf or 'Não informado'}\n"
+        res += f"Telefone: {patient.phone or 'Não informado'}\n"
+        
+        # Buscar exames
+        exams = db.query(Exam).filter(Exam.patient_id == patient.id).all()
+        if exams:
+            res += "\nExames:\n"
+            for ex in exams:
+                res += f"- {ex.title} ({ex.created_at.strftime('%d/%m/%Y')})\n"
+                if ex.summary:
+                    res += f"  Resumo: {ex.summary}\n"
+        else:
+            res += "\nNenhum exame encontrado."
+            
+        return res
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro ao buscar info do paciente: {e}")
+        return "Erro ao buscar informações do paciente."
+
+
 # ------------------------------------------------------------------ #
 #  EXECUTOR DE TOOLS
 # ------------------------------------------------------------------ #
@@ -574,11 +724,28 @@ def execute_tool(tool_name: str, arguments: dict, db: Session, wa_from: str = No
             medico_id = arguments.get("medico_id")
             data_hora_str = arguments.get("data_hora")
             cpf_arg = arguments.get("cpf")
+            patient_name = arguments.get("patient_name")
+            patient_id = arguments.get("patient_id")
             motivo = arguments.get("motivo", "Consulta via WhatsApp")
 
-            # 1. Identificar Paciente (Prioridade: WhatsApp/Telefone)
+            # 0. Identificar Paciente por ID
             patient = None
-            if wa_from:
+            if patient_id:
+                patient = db.query(Patient).filter(Patient.id == patient_id).first()
+                if patient and wa_from:
+                    conversation_manager.set_pending_patient_id(wa_from, patient.id)
+            
+            # Se não encontrou por ID passado, tenta recuperar do estado
+            recovered_from_state = False
+            if not patient and wa_from:
+                saved_id = conversation_manager.get_pending_patient_id(wa_from)
+                if saved_id:
+                    patient = db.query(Patient).filter(Patient.id == saved_id).first()
+                    if patient:
+                        recovered_from_state = True
+
+            # 1. Identificar Paciente (Prioridade: WhatsApp/Telefone)
+            if not patient and wa_from:
                 wa_digits = "".join(c for c in wa_from if c.isdigit())
                 if len(wa_digits) >= 8:
                     suffix = wa_digits[-8:]
@@ -603,11 +770,67 @@ def execute_tool(tool_name: str, arguments: dict, db: Session, wa_from: str = No
                     cpf_limpo = "".join(c for c in cpf if c.isdigit())
                     patient = db.query(Patient).filter(Patient.cpf == cpf_limpo).first()
 
+            # 2.5 Se não achou por CPF, tentar pelo Nome (se fornecido)
+            if not patient and patient_name:
+                patients = db.query(Patient).filter(Patient.name.ilike(f"%{patient_name}%")).all()
+                if len(patients) == 1:
+                    patient = patients[0]
+                elif len(patients) > 1:
+                    # Múltiplos encontrados! Retorna lista para o usuário escolher.
+                    lista_pacientes = []
+                    for p in patients:
+                        cpf_mask = f"***.{p.cpf[3:6]}.{p.cpf[6:9]}-**" if p.cpf and len(p.cpf) >= 9 else "Não informado"
+                        lista_pacientes.append(f"- **{p.name}** (ID: {p.id}, CPF: {cpf_mask})")
+                    lista_str = "\n".join(lista_pacientes)
+                    return f"Encontrei múltiplos pacientes com o nome '{patient_name}'. Por favor, confirme qual deles informando o ID ou CPF:\n{lista_str}"
+
             # 3. Se ainda não achou, pedir o CPF
             if not patient:
+                if wa_from and wa_from.startswith("user_"):
+                    return f"Não encontrei um paciente cadastrado com o CPF {cpf_arg or 'fornecido'}. Por favor, verifique o CPF ou cadastre o paciente primeiro no menu Prontuários."
+                
                 conversation_manager.set_awaiting_cpf(wa_from, "agendamento")
                 from app.services.standard_messages import get_cpf_request_message
                 return get_cpf_request_message("agendamento")
+
+            # 0.1 Forçar Confirmação para Médicos (Agora que temos o paciente)
+            if wa_from and wa_from.startswith("user_"):
+                # Etapa 1: Confirmar Paciente (Apenas se buscou por nome puro!)
+                if not patient_id and not cpf_arg and not recovered_from_state:
+                    if not conversation_manager.is_awaiting_patient_confirmation(wa_from):
+                        conversation_manager.set_awaiting_patient_confirmation(wa_from, True)
+                        cpf_mask = f"***.{patient.cpf[3:6]}.{patient.cpf[6:9]}-**" if patient.cpf and len(patient.cpf) >= 9 else "Não informado"
+                        return f"Encontrei o paciente **{patient.name}** (CPF: {cpf_mask}). Confirma que é para ele?"
+                    else:
+                        conversation_manager.set_awaiting_patient_confirmation(wa_from, False)
+
+                # Etapa 2: Pedir Data se não houver
+                if not data_hora_str or data_hora_str.strip() == "" or any(c.isalpha() for c in data_hora_str.replace('Z', '').replace('T', '')):
+                    return f"Para qual data e horário deseja agendar para **{patient.name}**?"
+
+                if not conversation_manager.is_awaiting_confirmation(wa_from):
+                    conversation_manager.set_awaiting_confirmation(wa_from, True)
+                    
+                    # Formatar data para padrão brasileiro
+                    data_hora_br = data_hora_str
+                    try:
+                        dt = None
+                        for fmt in ["%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M"]:
+                            try:
+                                dt = datetime.strptime(data_hora_str.split('.')[0].replace('Z', ''), fmt)
+                                break
+                            except: continue
+                        
+                        if not dt:
+                            dt = datetime.fromisoformat(data_hora_str.replace('Z', '+00:00'))
+                            
+                        data_hora_br = dt.strftime("%d/%m/%Y às %H:%M")
+                    except:
+                        pass
+                        
+                    return f"Posso agendar para o paciente **{patient.name}** no dia **{data_hora_br}**? Se preferir outra data ou horário, por favor me avise. Para confirmar esta, diga 'sim' ou 'ok'."
+                else:
+                    conversation_manager.set_awaiting_confirmation(wa_from, False)
 
             # 4. Buscar médico
             medico = db.query(Medico).filter(Medico.id == medico_id, Medico.ativo == True).first()
@@ -646,7 +869,7 @@ def execute_tool(tool_name: str, arguments: dict, db: Session, wa_from: str = No
                     medico_id=medico.id,
                     appointment_date=dt,
                     duration_minutes=medico.duracao_consulta_min or 30,
-                    status="pending",
+                    status="confirmed",
                     type="consultation",
                     reason=motivo
                 )
@@ -654,11 +877,96 @@ def execute_tool(tool_name: str, arguments: dict, db: Session, wa_from: str = No
                 db.commit()
                 db.refresh(new_app)
                 
-                return f"✅ Consulta agendada com sucesso!\n\n🩺 **Médico:** {medico.nome_completo}\n📅 **Data:** {dt.strftime('%d/%m/%Y')}\n⏰ **Horário:** {dt.strftime('%H:%M')}\n👤 **Paciente:** {patient.name}\n\nTe enviamos uma confirmação em breve! ✨"
+                if wa_from:
+                    conversation_manager.clear_pending_patient_id(wa_from)
+                
+                return f"✅ Consulta agendada com sucesso!\n\n🩺 **Médico:** {medico.nome_completo}\n📅 **Data:** {dt.strftime('%d/%m/%Y')}\n⏰ **Horário:** {dt.strftime('%H:%M')}\n👤 **Paciente:** {patient.name} ✨"
             except Exception as e:
                 db.rollback()
                 logger.error(f"Erro ao salvar agendamento: {e}")
                 return "Puxa, tive um probleminha técnico ao salvar sua consulta no sistema. 😅 Por favor, tente novamente em instantes ou fale com nossa recepção."
+
+        elif tool_name == "cancelar_consulta":
+            from app.services.conversation_state import conversation_manager
+            from app.models.patient import Patient
+            from app.models.appointment import Appointment
+            from datetime import datetime, timedelta
+
+            data_hora_str = arguments.get("data_hora")
+            cpf_arg = arguments.get("cpf")
+
+            # 1. Identificar Paciente (Prioridade: WhatsApp/Telefone)
+            patient = None
+            if wa_from:
+                wa_digits = "".join(c for c in wa_from if c.isdigit())
+                if len(wa_digits) >= 8:
+                    suffix = wa_digits[-8:]
+                    potential_patients = db.query(Patient).filter(
+                        (Patient.whatsapp.like(f"%{suffix}%")) | 
+                        (Patient.phone.like(f"%{suffix}%"))
+                    ).all()
+
+                    if potential_patients:
+                        for p in potential_patients:
+                            if p.name and "WhatsApp User" not in p.name:
+                                patient = p
+                                if p.cpf: break
+                        if not patient:
+                            patient = potential_patients[0]
+            
+            # 2. Se não achou por telefone, tentar pelo CPF
+            if not patient:
+                cpf = cpf_arg or conversation_manager.get_cpf(wa_from)
+                if cpf:
+                    cpf_limpo = "".join(c for c in cpf if c.isdigit())
+                    patient = db.query(Patient).filter(Patient.cpf == cpf_limpo).first()
+
+            if not patient:
+                conversation_manager.set_awaiting_cpf(wa_from, "cancelamento")
+                from app.services.standard_messages import get_cpf_request_message
+                return get_cpf_request_message("cancelamento")
+
+            # 3. Parse data
+            try:
+                formats = ["%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M"]
+                dt = None
+                for fmt in formats:
+                    try:
+                        dt = datetime.strptime(data_hora_str.split('.')[0].replace('Z', ''), fmt)
+                        break
+                    except: continue
+                
+                if not dt:
+                    dt = datetime.fromisoformat(data_hora_str.replace('Z', '+00:00'))
+            except:
+                return f"Não consegui entender a data '{data_hora_str}'. Por favor, use o formato AAAA-MM-DD HH:MM."
+
+            # 4. Encontrar e cancelar agendamento
+            # Usaremos um intervalo de +/- 15 minutos em torno da data informada para ser seguro
+            try:
+                start_dt = dt - timedelta(minutes=15)
+                end_dt = dt + timedelta(minutes=15)
+                
+                appointment = db.query(Appointment).filter(
+                    Appointment.patient_id == patient.id,
+                    Appointment.appointment_date >= start_dt,
+                    Appointment.appointment_date <= end_dt,
+                    Appointment.status.in_(["pending", "confirmed"])
+                ).first()
+                
+                if not appointment:
+                    return f"Não encontrei nenhuma consulta agendada para {patient.name} perto de {dt.strftime('%d/%m/%Y %H:%M')}."
+
+                # Apagar do banco de dados (Hard delete para não aparecer no app)
+                db.delete(appointment)
+                db.commit()
+                
+                return f"✅ Consulta de {patient.name} do dia {dt.strftime('%d/%m/%Y')} às {dt.strftime('%H:%M')} cancelada com sucesso! ✨"
+                
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Erro ao cancelar agendamento: {e}")
+                return "Tive um problema técnico ao tentar cancelar sua consulta. 😅 Por favor, tente novamente em instantes ou fale com a recepção."
 
         elif tool_name == "buscar_medico":
             return buscar_medico(
@@ -683,6 +991,18 @@ def execute_tool(tool_name: str, arguments: dict, db: Session, wa_from: str = No
 
         elif tool_name == "listar_especialidades":
             return listar_especialidades(db=db)
+
+        elif tool_name == "buscar_consultas_medico":
+            return buscar_consultas_medico(
+                db=db,
+                medico_id=arguments.get("medico_id")
+            )
+
+        elif tool_name == "buscar_info_paciente":
+            return buscar_info_paciente(
+                db=db,
+                nome_ou_cpf=arguments.get("nome_ou_cpf")
+            )
 
         else:
             return f"Tool '{tool_name}' não reconhecida."

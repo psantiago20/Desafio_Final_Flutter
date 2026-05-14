@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../constants/app_constants.dart';
 
@@ -41,9 +40,6 @@ class ApiClient {
       final response =
           await http.get(_uri(path, queryParams), headers: _headers);
       return _handleResponse(response);
-    } on SocketException {
-      throw ApiException(
-          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
           statusCode: 0, message: _mapClientError(e.message));
@@ -63,9 +59,6 @@ class ApiClient {
         body: jsonEncode(body),
       );
       return _handleResponse(response);
-    } on SocketException {
-      throw ApiException(
-          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
           statusCode: 0, message: _mapClientError(e.message));
@@ -87,9 +80,6 @@ class ApiClient {
         body: body,
       );
       return _handleResponse(response);
-    } on SocketException {
-      throw ApiException(
-          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
           statusCode: 0, message: _mapClientError(e.message));
@@ -107,9 +97,6 @@ class ApiClient {
         body: jsonEncode(body),
       );
       return _handleResponse(response);
-    } on SocketException {
-      throw ApiException(
-          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
           statusCode: 0, message: _mapClientError(e.message));
@@ -127,9 +114,6 @@ class ApiClient {
         body: jsonEncode(body),
       );
       return _handleResponse(response);
-    } on SocketException {
-      throw ApiException(
-          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
           statusCode: 0, message: _mapClientError(e.message));
@@ -146,9 +130,6 @@ class ApiClient {
       if (response.statusCode != 204 && response.statusCode != 200) {
         _handleResponse(response);
       }
-    } on SocketException {
-      throw ApiException(
-          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
           statusCode: 0, message: _mapClientError(e.message));
