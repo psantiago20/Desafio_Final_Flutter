@@ -10,6 +10,7 @@ import 'package:frontend/features/appointments/screens/appointments_screen.dart'
 import 'package:frontend/features/profile/screens/profile_screen.dart';
 import 'package:frontend/features/dashboard/screens/prontuarios_screen.dart';
 import 'package:frontend/features/messages/screens/doctor_messages_screen.dart';
+import 'package:frontend/features/patients/screens/patients_screen.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
 import 'package:frontend/shared/models/dashboard_stats_model.dart';
 
@@ -76,22 +77,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ],
       );
     }
-    if (_selectedNavIndex == 5) {
-      return Stack(
-        children: [
-          const ProfileScreen(),
-          if (!isDesktop)
-            Positioned(
-              bottom: 0, left: 0, right: 0,
-              child: _buildBottomNav(),
-            ),
-        ],
-      );
-    }
     if (_selectedNavIndex == 2) {
       return Stack(
         children: [
-          const DoctorMessagesScreen(),
+          const PatientsScreen(),
           if (!isDesktop)
             Positioned(
               bottom: 0, left: 0, right: 0,
@@ -103,7 +92,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (_selectedNavIndex == 3) {
       return Stack(
         children: [
+          const DoctorMessagesScreen(),
+          if (!isDesktop)
+            Positioned(
+              bottom: 0, left: 0, right: 0,
+              child: _buildBottomNav(),
+            ),
+        ],
+      );
+    }
+    if (_selectedNavIndex == 4) {
+      return Stack(
+        children: [
           const ProntuariosScreen(),
+          if (!isDesktop)
+            Positioned(
+              bottom: 0, left: 0, right: 0,
+              child: _buildBottomNav(),
+            ),
+        ],
+      );
+    }
+    if (_selectedNavIndex == 5) {
+      return Stack(
+        children: [
+          const ProfileScreen(),
           if (!isDesktop)
             Positioned(
               bottom: 0, left: 0, right: 0,
@@ -369,9 +382,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           const SizedBox(height: 32),
           _buildSidebarItem(0, Icons.grid_view, 'Painel'),
           _buildSidebarItem(1, Icons.calendar_today, 'Agenda'),
-          _buildSidebarItem(2, Icons.chat, 'Chat'),
-          _buildSidebarItem(3, Icons.description, 'Prontuários'),
-          _buildSidebarItem(4, Icons.payments, 'Financeiro'),
+          _buildSidebarItem(2, Icons.group, 'Pacientes'),
+          _buildSidebarItem(3, Icons.chat, 'Chat'),
+          _buildSidebarItem(4, Icons.description, 'Prontuários'),
+          _buildSidebarItem(6, Icons.payments, 'Financeiro'),
           const Spacer(),
           const Divider(color: _surfaceLow),
           const SizedBox(height: 16),
@@ -941,7 +955,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           _buildBottomNavItem(1, Icons.calendar_today, 'Agenda'),
           _buildBottomNavItem(2, Icons.group, 'Pacientes'),
           _buildBottomNavItem(3, Icons.chat, 'Chat'),
-          _buildBottomNavItem(4, Icons.menu, 'Mais'),
+          _buildBottomNavItem(4, Icons.description, 'Prontuários'),
         ],
       ),
     );
