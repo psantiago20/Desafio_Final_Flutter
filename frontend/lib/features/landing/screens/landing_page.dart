@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -507,10 +506,10 @@ class _LandingPageState extends ConsumerState<LandingPage> {
               child: Container(
                 height: 70,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1F2937).withOpacity(0.95) : Colors.white.withOpacity(0.9),
+                  color: isDark ? const Color(0xFF1F2937).withValues(alpha: 0.95) : Colors.white.withValues(alpha: 0.9),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -636,7 +635,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -698,7 +697,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.15 : 0.05),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.15 : 0.05),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(Icons.check, color: Theme.of(context).colorScheme.primary, size: 24),
@@ -747,7 +746,7 @@ class _LandingPageState extends ConsumerState<LandingPage> {
             border: Border.all(color: Theme.of(context).colorScheme.surface, width: 4),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -821,7 +820,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 40,
               offset: const Offset(0, 20),
             ),
@@ -848,7 +847,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -872,7 +871,7 @@ class _LoginModalState extends ConsumerState<LoginModal> {
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -1174,7 +1173,7 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 40,
               offset: const Offset(0, 20),
             ),
@@ -1213,7 +1212,7 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
                       'Selecione o tipo de conta e preencha os dados',
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -1276,10 +1275,12 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
                           keyboardType: TextInputType.phone,
                           formatters: [_phoneFormatter],
                           validator: (v) {
-                            if (v == null || v.isEmpty)
+                            if (v == null || v.isEmpty) {
                               return 'Informe o WhatsApp';
-                            if (!_phoneFormatter.isFill())
+                            }
+                            if (!_phoneFormatter.isFill()) {
                               return 'Número incompleto';
+                            }
                             return null;
                           },
                         ),
@@ -1432,7 +1433,7 @@ class _RegisterModalState extends ConsumerState<RegisterModal> {
           padding: const EdgeInsets.symmetric(vertical: 24),
           decoration: BoxDecoration(
             color: isSelected
-                ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
                 : Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(

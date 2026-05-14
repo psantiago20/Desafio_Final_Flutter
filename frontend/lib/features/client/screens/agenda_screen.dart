@@ -55,7 +55,7 @@ class AgendaScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(16.0),
                     itemCount: appointments.length,
                     itemBuilder: (context, index) {
-                      return _buildAppointmentCard(context, appointments[index]);
+                      return _buildAppointmentCard(context, ref, appointments[index]);
                     },
                   );
                 },
@@ -188,7 +188,7 @@ class AgendaScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAppointmentCard(BuildContext context, AppointmentModel apt) {
+  Widget _buildAppointmentCard(BuildContext context, WidgetRef ref, AppointmentModel apt) {
     final isUpcoming = (apt.status == 'confirmed' || apt.status == 'pending') && apt.appointmentDate.isAfter(DateTime.now());
     final isPast = apt.appointmentDate.isBefore(DateTime.now()) || apt.status == 'completed' || apt.status == 'cancelled';
 

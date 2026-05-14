@@ -16,6 +16,7 @@ class DashboardStats {
   final String? heartRate;
   final String? bloodPressure;
   final String? glucose;
+  final String? temperature;
   final String? lastExamDate;
   final String? lastPrescriptionDate;
 
@@ -35,6 +36,7 @@ class DashboardStats {
     this.heartRate,
     this.bloodPressure,
     this.glucose,
+    this.temperature,
     this.lastExamDate,
     this.lastPrescriptionDate,
   });
@@ -59,6 +61,7 @@ class DashboardStats {
       heartRate: json['heart_rate'] as String?,
       bloodPressure: json['blood_pressure'] as String?,
       glucose: json['glucose'] as String?,
+      temperature: json['temperature'] as String?,
       lastExamDate: json['last_exam_date'] as String?,
       lastPrescriptionDate: json['last_prescription_date'] as String?,
     );

@@ -8,6 +8,7 @@ import 'package:frontend/features/auth/providers/auth_provider.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
 import 'package:frontend/shared/models/dashboard_stats_model.dart';
+import 'package:frontend/shared/widgets/custom_app_bar.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -20,6 +21,10 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: const CustomAppBar(
+        subtitle: 'Painel do Médico',
+        showProfileButton: true,
+      ),
       body: RefreshIndicator(
         color: AppColors.primary,
         onRefresh: () async {
@@ -28,44 +33,51 @@ class DashboardScreen extends ConsumerWidget {
         },
         child: CustomScrollView(
           slivers: [
-            // App Bar customizada
-            SliverAppBar(
-              expandedHeight: 140,
-              pinned: true,
-              backgroundColor: AppColors.surface,
-              elevation: 0,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.logout_rounded,
-                      color: AppColors.textSecondary),
-                  onPressed: () {
-                    ref.read(authProvider.notifier).logout();
-                  },
+            SliverToBoxAdapter(
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.primaryBlue, AppTheme.primaryBlueDark],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                titlePadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                title: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Olá, Dr. ${user?.displayName.split(' ').first ?? ''}',
-                      style: GoogleFonts.dmSerifDisplay(
-                          fontSize: 20, color: AppColors.textPrimary),
+                      'Olá, ${user?.displayName.startsWith('Dr.') == true ? user?.displayName.split(' ').sublist(0, 2).join(' ') : 'Dr. ${user?.displayName.split(' ').first ?? ''}'}',
+                      style: GoogleFonts.manrope(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
                     ),
+                    const SizedBox(height: 8),
                     Text(
                       DateFormat("EEEE, d 'de' MMMM", 'pt_BR')
                           .format(DateTime.now()),
-                      style: GoogleFonts.dmSans(
-                          fontSize: 12, color: AppColors.textSecondary),
+                      style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-
             SliverPadding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -215,7 +227,7 @@ class _StatCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -248,74 +260,78 @@ class _AppointmentCard extends StatelessWidget {
     final color = statusColor(appointment.status);
     final timeFmt = DateFormat('HH:mm');
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 48,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
+    return InkWell(
+      onTap: () => context.push('/appointments/${appointment.id}', extra: appointment),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 48,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    appointment.patientName,
+                    style: GoogleFonts.dmSans(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                        fontSize: 14),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Nascimento: ${appointment.patientDob}',
+                    style: GoogleFonts.dmSans(
+                        color: AppColors.textSecondary, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  'Paciente #${appointment.patientId}',
+                  timeFmt.format(appointment.appointmentDate),
                   style: GoogleFonts.dmSans(
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
                       fontSize: 14),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  typeLabel(appointment.type),
-                  style: GoogleFonts.dmSans(
-                      color: AppColors.textSecondary, fontSize: 12),
+                const SizedBox(height: 4),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    statusLabel(appointment.status),
+                    style: GoogleFonts.dmSans(
+                        color: color,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600),
+                  ),
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                timeFmt.format(appointment.appointmentDate),
-                style: GoogleFonts.dmSans(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                    fontSize: 14),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  statusLabel(appointment.status),
-                  style: GoogleFonts.dmSans(
-                      color: color,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -368,9 +384,9 @@ class _ErrorCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cancelled.withOpacity(0.06),
+        color: AppColors.cancelled.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.cancelled.withOpacity(0.2)),
+        border: Border.all(color: AppColors.cancelled.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [

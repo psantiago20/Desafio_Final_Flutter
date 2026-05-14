@@ -43,6 +43,10 @@ def list_appointments(
         else:
             return {"total": 0, "appointments": []}
     
+    # Se for médico e não especificou um doctor_id no filtro, filtra apenas os dele
+    if current_user.role == "doctor" and not doctor_id:
+        query = query.filter(Appointment.doctor_id == current_user.id)
+    
     if patient_id:
         query = query.filter(Appointment.patient_id == patient_id)
     if doctor_id:
@@ -150,6 +154,15 @@ def update_appointment(
     update_data = appointment.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_appointment, key, value)
+    
+    # Sincronizar sinais vitais com o registro do Paciente para o Dashboard
+    vital_signs = ["heart_rate", "blood_pressure", "glucose", "temperature", "weight", "height"]
+    if any(sign in update_data for sign in vital_signs):
+        patient = db.query(Patient).filter(Patient.id == db_appointment.patient_id).first()
+        if patient:
+            for sign in vital_signs:
+                if sign in update_data:
+                    setattr(patient, sign, update_data[sign])
     
     db.commit()
     db.refresh(db_appointment)

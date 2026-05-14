@@ -44,6 +44,14 @@ class Appointment(Base):
     exam_url = Column(String(255), nullable=True)
     exam_summary = Column(Text, nullable=True)
     
+    # Novos campos clínicos (Signos Vitais)
+    weight = Column(String(20), nullable=True)
+    height = Column(String(20), nullable=True)
+    heart_rate = Column(String(20), nullable=True)
+    blood_pressure = Column(String(20), nullable=True)
+    glucose = Column(String(20), nullable=True)
+    temperature = Column(String(20), nullable=True)
+    
     price = Column(Float, default=0.0)
     paid = Column(Boolean, default=False)
     payment_method = Column(String(50))

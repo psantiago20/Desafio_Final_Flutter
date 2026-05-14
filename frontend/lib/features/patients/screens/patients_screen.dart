@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import '../providers/patients_provider.dart';
 import '../../../shared/models/patient_model.dart';
-import '../../../shared/widgets/custom_app_bar.dart';
+import 'package:frontend/shared/widgets/custom_app_bar.dart';
 
 class PatientsScreen extends ConsumerStatefulWidget {
   const PatientsScreen({super.key});
@@ -35,7 +35,10 @@ class _PatientsScreenState extends ConsumerState<PatientsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const CustomAppBar(subtitle: 'Pacientes', showProfileButton: false),
+      appBar: const CustomAppBar(
+        subtitle: 'Prontuários e Históricos',
+        showProfileButton: true,
+      ),
       body: Column(
         children: [
           // Search Bar
@@ -110,7 +113,7 @@ class _RecentSearches extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.person_search_rounded, size: 64, color: AppColors.textHint.withOpacity(0.5)),
+            Icon(Icons.person_search_rounded, size: 64, color: AppColors.textHint.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(
               'Pesquise seus pacientes',
@@ -203,7 +206,7 @@ class _SearchResults extends StatelessWidget {
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             leading: CircleAvatar(
-              backgroundColor: AppColors.primary.withOpacity(0.1),
+              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
               child: Text(
                 patient.name.substring(0, 1).toUpperCase(),
                 style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),

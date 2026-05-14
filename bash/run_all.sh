@@ -6,14 +6,13 @@ cd "$(dirname "$0")/.."
 # Navega para a pasta do frontend
 cd frontend
 
-# Instala pods se estiver no Mac
+# Instala pods se estiver no Mac (importante para o app macOS)
 if [[ "$OSTYPE" == "darwin"* ]]; then
     echo "🍎 Detectado macOS. Verificando CocoaPods..."
-    cd macos && pod install && cd ..
+    (cd macos && pod install)
 fi
 
-# Inicia o Flutter no macOS e Chrome simultaneamente
-echo "🚀 Iniciando Flutter no Chrome e no macOS simultaneamente..."
+echo "🚀 Iniciando Flutter no Chrome e no macOS em terminais separados..."
 
 # Inicia no Chrome em background (ou foreground dependendo do OS)
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then

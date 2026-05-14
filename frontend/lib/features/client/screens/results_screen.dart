@@ -279,35 +279,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   }
 
 
-  final List<Map<String, dynamic>> _mockExams = [
-    {
-      'id': 1,
-      'name': 'Hemograma Completo',
-      'type': 'Análise Sanguínea',
-      'date': 'Enviado em 01/05',
-      'status': 'available',
-      'doctor': 'Avaliado por Dr. João Santos',
-      'hasAbnormalities': false,
-    },
-    {
-      'id': 3,
-      'name': 'Glicemia em Jejum',
-      'type': 'Análise Sanguínea',
-      'date': '2026-04-25',
-      'status': 'available',
-      'doctor': 'Dra. Maria Lima',
-      'hasAbnormalities': true,
-    },
-    {
-      'id': 4,
-      'name': 'Raio-X de Tórax',
-      'type': 'Imagem',
-      'date': '2026-05-03',
-      'status': 'pending',
-      'doctor': 'Dr. Carlos Souza',
-      'hasAbnormalities': false,
-    },
-  ];
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
@@ -464,7 +435,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
 
   Widget _buildExamCard(Map<String, dynamic> exam) {
     final examUrl = exam['exam_url'] as String?;
-    final summary = exam['summary'] as String?;
     final hasFile = examUrl != null && examUrl.isNotEmpty;
 
     DateTime? date;

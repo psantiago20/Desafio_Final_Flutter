@@ -20,7 +20,7 @@ class MainShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authProvider).user;
+    // final user = ref.watch(authProvider).user;
     final currentIndex = _currentIndex(context);
 
     return Scaffold(
@@ -96,10 +96,10 @@ class MainShell extends ConsumerWidget {
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
               child: Text(
-                user?.displayName.isNotEmpty == true
-                    ? user!.displayName[0].toUpperCase()
+                (user?.displayName != null && user!.displayName.isNotEmpty)
+                    ? user.displayName[0].toUpperCase()
                     : 'U',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.primaryBlue,

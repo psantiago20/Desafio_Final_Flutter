@@ -44,27 +44,27 @@ class NotificationService {
     );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('User granted notification permission');
+      debugPrint('User granted notification permission');
       
       // 2. Get the FCM Device Token
       try {
         String? token = await _messaging.getToken();
-        print("FCM Token: $token");
+        debugPrint("FCM Token: $token");
         if (token != null) {
           try {
             await ApiClient.patch('/api/auth/fcm-token', {'fcm_token': token});
-            print("FCM Token sent to backend successfully.");
+            debugPrint("FCM Token sent to backend successfully.");
           } catch (e) {
-            print("FCM Token backend sync skipped (User might not be logged in).");
+            debugPrint("FCM Token backend sync skipped (User might not be logged in).");
           }
         }
       } catch (e) {
-        print("Error getting FCM token: $e");
+        debugPrint("Error getting FCM token: $e");
       }
       
       // 3. Listen to token refreshes
       _messaging.onTokenRefresh.listen((newToken) async {
-        print("FCM Token Refreshed: $newToken");
+        debugPrint("FCM Token Refreshed: $newToken");
         try {
           await ApiClient.patch('/api/auth/fcm-token', {'fcm_token': newToken});
         } catch (_) {}
@@ -72,7 +72,7 @@ class NotificationService {
 
       // 4. Handle Foreground Messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        print('Foreground message received: ${message.notification?.title}');
+        debugPrint('Foreground message received: ${message.notification?.title}');
         
         if (message.notification != null) {
           scaffoldMessengerKey.currentState?.showSnackBar(
@@ -108,7 +108,7 @@ class NotificationService {
         });
       }
     } else {
-      print('User declined notification permission');
+      debugPrint('User declined notification permission');
     }
   }
 }

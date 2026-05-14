@@ -82,9 +82,9 @@ class _AuthPageState extends ConsumerState<AuthPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: AppTheme.alertRed.withOpacity(0.1),
+                  color: AppTheme.alertRed.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.alertRed.withOpacity(0.3)),
+                  border: Border.all(color: AppTheme.alertRed.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [

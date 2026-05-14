@@ -34,6 +34,9 @@ class DashboardStats(BaseModel):
     heart_rate: Optional[str] = None
     blood_pressure: Optional[str] = None
     glucose: Optional[str] = None
+    temperature: Optional[str] = None
+    weight: Optional[str] = None
+    height: Optional[str] = None
     last_exam_date: Optional[str] = None
     last_prescription_date: Optional[str] = None
 
@@ -93,6 +96,9 @@ def get_dashboard_stats(
             "heart_rate": patient.heart_rate or None,
             "blood_pressure": patient.blood_pressure or None,
             "glucose": patient.glucose or None,
+            "temperature": getattr(patient, 'temperature', None),
+            "weight": getattr(patient, 'weight', None),
+            "height": getattr(patient, 'height', None),
             "last_exam_date": last_exam_date,
             "last_prescription_date": None  # Sem módulo de receitas implementado
         }
@@ -115,17 +121,17 @@ def get_dashboard_stats(
     
     revenue_today = db.query(func.sum(Appointment.price)).filter(
         Appointment.appointment_date >= datetime.combine(today, datetime.min.time()),
-        Appointment.paid == True
+        (Appointment.paid == True) | (Appointment.status == "completed")
     ).scalar() or 0
     
     revenue_week = db.query(func.sum(Appointment.price)).filter(
         Appointment.appointment_date >= datetime.combine(week_ago, datetime.min.time()),
-        Appointment.paid == True
+        (Appointment.paid == True) | (Appointment.status == "completed")
     ).scalar() or 0
     
     revenue_month = db.query(func.sum(Appointment.price)).filter(
         Appointment.appointment_date >= datetime.combine(month_ago, datetime.min.time()),
-        Appointment.paid == True
+        (Appointment.paid == True) | (Appointment.status == "completed")
     ).scalar() or 0
     
     no_show_count = db.query(Appointment).filter(Appointment.status == "no_show").count()
@@ -157,10 +163,24 @@ def get_today_appointments(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    today = datetime.utcnow().date()
-    appointments = db.query(Appointment).filter(
-        func.date(Appointment.appointment_date) == today
+    from sqlalchemy.orm import joinedload
+    from datetime import date
+    
+    query = db.query(Appointment).options(joinedload(Appointment.patient))
+    
+    # Se for médico, filtra apenas as dele
+    if current_user.role == "doctor":
+        query = query.filter(Appointment.doctor_id == current_user.id)
+    # Se for paciente, filtra apenas as dele
+    elif current_user.role == "patient":
+        patient = db.query(Patient).filter(Patient.email == current_user.email).first()
+        if patient:
+            query = query.filter(Appointment.patient_id == patient.id)
+            
+    appointments = query.filter(
+        func.date(Appointment.appointment_date) == date.today()
     ).order_by(Appointment.appointment_date).all()
+    
     return appointments
 
 
