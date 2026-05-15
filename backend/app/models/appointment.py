@@ -41,6 +41,7 @@ class Appointment(Base):
     symptoms = Column(Text)
     diagnosis = Column(Text)
     prescription = Column(Text)
+    prescription_html = Column(Text)
     exam_url = Column(String(255), nullable=True)
     exam_summary = Column(Text, nullable=True)
     

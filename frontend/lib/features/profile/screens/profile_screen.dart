@@ -44,7 +44,7 @@ class ProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Dr. ${user.displayName}',
+              user.salutationName,
               style: GoogleFonts.dmSerifDisplay(
                   fontSize: 22, color: AppColors.textPrimary),
             ),

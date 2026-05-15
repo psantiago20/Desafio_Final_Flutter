@@ -241,7 +241,7 @@ class _AppointmentTile extends ConsumerWidget {
                       ),
                     ),
                     loading: () => const Text('Carregando...'),
-                    error: (_, __) => Text(
+                    error: (_, _) => Text(
                       'Paciente #${appointment.patientId}',
                       style: GoogleFonts.dmSans(
                         fontWeight: FontWeight.w600,

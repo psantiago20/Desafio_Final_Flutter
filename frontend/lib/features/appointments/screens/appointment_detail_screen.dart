@@ -7,6 +7,7 @@ import '../providers/appointments_provider.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
 import 'package:frontend/features/patients/providers/patients_provider.dart';
+import 'package:frontend/features/dashboard/providers/dashboard_provider.dart';
 
 class AppointmentDetailScreen extends ConsumerStatefulWidget {
   final AppointmentModel appointment;
@@ -73,6 +74,8 @@ class _AppointmentDetailScreenState
                   Text('Status atualizado para ${statusLabel(status)}')),
         );
         ref.invalidate(appointmentsListProvider);
+        ref.invalidate(dashboardStatsProvider);
+        ref.invalidate(todayAppointmentsProvider);
       }
     }
   }
@@ -101,6 +104,8 @@ class _AppointmentDetailScreenState
           const SnackBar(content: Text('Anotações salvas com sucesso')),
         );
         ref.invalidate(appointmentsListProvider);
+        ref.invalidate(dashboardStatsProvider);
+        ref.invalidate(todayAppointmentsProvider);
       }
     }
   }
@@ -245,7 +250,16 @@ class _AppointmentDetailScreenState
               currentStatus: _appointment.status,
               onUpdate: _updateStatus,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
+
+            // Ferramentas
+            Text('Ferramentas',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 10),
+            _ToolActions(
+              patientId: _appointment.patientId,
+            ),
+            const SizedBox(height: 24),
 
             // Anotações clínicas
             Row(
@@ -353,11 +367,15 @@ class _AppointmentDetailScreenState
               enabled: _editing,
             ),
             const SizedBox(height: 10),
-            _ClinicalField(
-              label: 'Prescrição',
+            _PrescriptionField(
+              appointmentId: _appointment.id,
               controller: _prescriptionCtrl,
-              icon: Icons.medication_outlined,
               enabled: _editing,
+              onSent: (updated) {
+                if (updated != null) {
+                  setState(() => _appointment = updated);
+                }
+              },
             ),
             const SizedBox(height: 32),
           ],
@@ -454,6 +472,46 @@ class _StatusActions extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+class _ToolActions extends StatelessWidget {
+  final int patientId;
+
+  const _ToolActions({required this.patientId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        GestureDetector(
+          onTap: () {
+            context.push('/patients/$patientId/exams');
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.border,
+              ),
+            ),
+            child: Text(
+              'Exames do paciente',
+              style: GoogleFonts.dmSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -601,6 +659,107 @@ class _SmallClinicalField extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrescriptionField extends ConsumerWidget {
+  final int appointmentId;
+  final TextEditingController controller;
+  final bool enabled;
+  final Function(AppointmentModel?) onSent;
+
+  const _PrescriptionField({
+    required this.appointmentId,
+    required this.controller,
+    required this.enabled,
+    required this.onSent,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoading = ref.watch(appointmentActionsProvider).isLoading;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: enabled ? AppColors.primary : AppColors.border,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                const Icon(Icons.medication_outlined,
+                    size: 16, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text('Prescrição',
+                    style: GoogleFonts.dmSans(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    )),
+                const Spacer(),
+                if (!enabled)
+                  TextButton.icon(
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                            final updated = await ref
+                                .read(appointmentActionsProvider.notifier)
+                                .sendPrescription(appointmentId);
+                            onSent(updated);
+                            if (updated != null && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'Prescrição enviada com sucesso!')),
+                              );
+                            }
+                          },
+                    icon: isLoading
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppColors.primary),
+                          )
+                        : const Icon(Icons.send_rounded, size: 14),
+                    label: Text(isLoading ? 'Enviando...' : 'Enviar ao Paciente'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          TextField(
+            controller: controller,
+            enabled: enabled,
+            maxLines: 5,
+            style:
+                GoogleFonts.dmSans(fontSize: 14, color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.all(14),
+              hintText: enabled ? 'Toque para editar...' : 'Nenhuma informação',
+              hintStyle:
+                  GoogleFonts.dmSans(color: AppColors.textHint, fontSize: 13),
+              filled: false,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+            ),
           ),
         ],
       ),

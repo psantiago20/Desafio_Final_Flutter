@@ -14,6 +14,7 @@ router = APIRouter()
 
 @router.get("")
 def list_exams(
+    patient_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -22,6 +23,9 @@ def list_exams(
     # Se for paciente, vê apenas os seus
     if current_user.role == "patient":
         query = query.filter(Patient.email == current_user.email)
+    elif patient_id:
+        # Se for médico/admin e passou patient_id, filtra por ele
+        query = query.filter(Exam.patient_id == patient_id)
     
     exams = query.order_by(Exam.created_at.desc()).all()
     return {"total": len(exams), "exams": exams}

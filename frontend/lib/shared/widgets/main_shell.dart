@@ -47,7 +47,7 @@ class MainShell extends ConsumerWidget {
               ),
             ),
             accountName: Text(
-              user?.displayName ?? 'Usuário',
+              user?.salutationName ?? 'Usuário',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             accountEmail: Text(

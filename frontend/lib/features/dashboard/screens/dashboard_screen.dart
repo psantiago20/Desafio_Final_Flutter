@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../providers/dashboard_provider.dart';
+import 'package:frontend/features/appointments/providers/appointments_live_sync.dart';
 import 'package:frontend/features/auth/providers/auth_provider.dart';
 import 'package:frontend/features/appointments/providers/appointments_provider.dart';
 import 'package:frontend/features/appointments/screens/appointments_screen.dart';
@@ -48,9 +49,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(appointmentsLiveSyncProvider);
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 768;
-    
+
     final user = ref.watch(authProvider).user;
     final statsAsync = ref.watch(dashboardStatsProvider);
     final todayAsync = ref.watch(appointmentsListProvider);

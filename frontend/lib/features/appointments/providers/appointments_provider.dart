@@ -98,6 +98,18 @@ class AppointmentActionsNotifier extends StateNotifier<AsyncValue<void>> {
       return false;
     }
   }
+
+  Future<AppointmentModel?> sendPrescription(int id) async {
+    state = const AsyncValue.loading();
+    try {
+      final updated = await _repository.sendPrescription(id);
+      state = const AsyncValue.data(null);
+      return updated;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return null;
+    }
+  }
 }
 
 final appointmentActionsProvider =

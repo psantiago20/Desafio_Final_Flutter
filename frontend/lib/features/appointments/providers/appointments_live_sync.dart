@@ -3,12 +3,17 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../chat/providers/chat_provider.dart';
+import '../../dashboard/providers/dashboard_provider.dart';
 import 'appointments_provider.dart';
+import '../../client/providers/exams_provider.dart';
 
 /// Mantém a lista de consultas alinhada com o servidor (ex.: agendamento via WhatsApp).
 final appointmentsLiveSyncProvider = Provider.autoDispose<void>((ref) {
   final timer = Timer.periodic(const Duration(seconds: 12), (_) {
     ref.invalidate(appointmentsListProvider);
+    ref.invalidate(dashboardStatsProvider);
+    ref.invalidate(todayAppointmentsProvider);
+    ref.invalidate(examsListProvider);
   });
   ref.onDispose(timer.cancel);
 });

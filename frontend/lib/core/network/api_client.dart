@@ -51,6 +51,24 @@ class ApiClient {
     }
   }
 
+  static Future<List<int>> getBytes(String path,
+      [Map<String, dynamic>? queryParams]) async {
+    try {
+      final response =
+          await http.get(_uri(path, queryParams), headers: _headers);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return response.bodyBytes;
+      }
+      return _handleResponse(response);
+    } on SocketException {
+      throw ApiException(
+          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
+    } catch (e) {
+      throw ApiException(
+          statusCode: 0, message: 'Ocorreu um erro ao baixar o arquivo: $e');
+    }
+  }
+
   static Future<dynamic> post(String path, Map<String, dynamic> body) async {
     try {
       final response = await http.post(

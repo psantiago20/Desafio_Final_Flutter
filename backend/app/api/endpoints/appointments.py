@@ -13,6 +13,7 @@ from app.schemas.appointment import (
 )
 from app.api.endpoints.auth import get_current_user
 from app.models.user import User
+from app.services.prescription_service import prescription_service
 
 router = APIRouter()
 
@@ -243,3 +244,66 @@ def delete_appointment(
         )
         
     return None
+
+
+@router.post("/{appointment_id}/send-prescription", response_model=AppointmentResponse)
+def send_prescription(
+    appointment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from sqlalchemy.orm import joinedload
+    db_appointment = db.query(Appointment).options(
+        joinedload(Appointment.patient),
+        joinedload(Appointment.medico),
+        joinedload(Appointment.doctor)
+    ).filter(Appointment.id == appointment_id).first()
+    
+    if not db_appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    # Gerar HTML da prescrição
+    html_content = prescription_service.generate_html(
+        db_appointment, 
+        db_appointment.patient, 
+        db_appointment.medico
+    )
+    
+    db_appointment.prescription_html = html_content
+    db.commit()
+    db.refresh(db_appointment)
+    
+    return db_appointment
+
+@router.get("/{appointment_id}/prescription/pdf")
+def download_prescription_pdf(
+    appointment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from fastapi import Response, HTTPException
+    from xhtml2pdf import pisa
+    import io
+
+    db_appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    
+    if not db_appointment or not db_appointment.prescription_html:
+        raise HTTPException(status_code=404, detail="Prescrição não encontrada")
+    
+    # Gerar PDF a partir do HTML
+    pdf_buffer = io.BytesIO()
+    pisa_status = pisa.CreatePDF(db_appointment.prescription_html, dest=pdf_buffer)
+    
+    if pisa_status.err:
+        raise HTTPException(status_code=500, detail="Erro ao gerar PDF")
+    
+    pdf_buffer.seek(0)
+    pdf_content = pdf_buffer.getvalue()
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=Prescricao_{appointment_id}.pdf"
+        }
+    )
