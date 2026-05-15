@@ -4,15 +4,15 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.security.Key;
+import java.security.KeyFactory;
 import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 
 @Slf4j
 @Component
@@ -26,8 +26,10 @@ public class JwtTokenProvider {
     @PostConstruct
     public void init() {
         try {
-            byte[] keyBytes = Decoders.BASE64.decode(publicKeyBase64);
-            this.publicKey = (PublicKey) Keys.hmacShaKeyFor(keyBytes);
+            byte[] keyBytes = Base64.getDecoder().decode(publicKeyBase64);
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(keyBytes);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            this.publicKey = keyFactory.generatePublic(keySpec);
         } catch (Exception e) {
             log.error("Failed to initialize JWT public key: {}", e.getMessage());
             throw new IllegalStateException("Invalid JWT public key configuration", e);
