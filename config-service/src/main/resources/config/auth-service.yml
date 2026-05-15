@@ -1,0 +1,35 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/auth_service
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  redis:
+    host: ${REDIS_HOST:redis}
+  rabbitmq:
+    host: ${RABBIT_HOST:rabbitmq}
+    username: ${RABBIT_USER}
+    password: ${RABBIT_PASS}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:pitaya-jwt-secret-key-change-in-production}
+    expiration-ms: 86400000
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://discovery-service:8761/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

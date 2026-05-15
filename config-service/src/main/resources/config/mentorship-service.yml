@@ -1,0 +1,30 @@
+server:
+  port: 8086
+
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/mentorship_service
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  redis:
+    host: ${REDIS_HOST:redis}
+  rabbitmq:
+    host: ${RABBIT_HOST:rabbitmq}
+    username: ${RABBIT_USER}
+    password: ${RABBIT_PASS}
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://discovery-service:8761/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
