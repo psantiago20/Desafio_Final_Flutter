@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pitaya - Mentoria</title>
+  <link rel="stylesheet" href="/frontend/css/reset.css">
+  <link rel="stylesheet" href="/frontend/css/themes.css">
+  <link rel="stylesheet" href="/frontend/css/main.css">
+  <link rel="stylesheet" href="/frontend/css/layout.css">
+  <link rel="stylesheet" href="/frontend/css/components.css">
+  <link rel="stylesheet" href="/frontend/css/responsive.css">
+  <link rel="stylesheet" href="/frontend/css/pages/mentorship.css">
+</head>
+<body>
+  <div id="app">
+    <header id="navbar" style="position:fixed;top:0;left:0;right:0;height:56px;background:var(--bg-primary);border-bottom:1px solid var(--border-primary);z-index:100;display:flex;align-items:center;padding:0 24px;">
+      <div style="max-width:1200px;width:100%;margin:0 auto;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:1.25rem;font-weight:800;color:var(--accent-primary);">Pitaya</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:var(--text-secondary);cursor:pointer;">🌙</span>
+          <span style="color:var(--text-secondary);cursor:pointer;">🔔</span>
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;">U</div>
+        </div>
+      </div>
+    </header>
+    <div class="app-layout" style="margin-top:56px;">
+      <aside id="left-sidebar" style="position:sticky;top:56px;height:calc(100vh - 56px);padding:12px;border-right:1px solid var(--border-primary);">
+        <nav>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:9999px;color:var(--text-secondary);">🏠 Feed</div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:9999px;color:var(--text-secondary);">🔍 Explorar</div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:9999px;color:var(--text-secondary);">👥 Grupos</div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:9999px;color:var(--text-secondary);">📚 Biblioteca</div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:9999px;color:var(--accent-primary);font-weight:700;">🎓 Mentoria</div>
+          <div style="margin:12px 0;">
+            <button style="width:100%;padding:14px;background:var(--accent-primary);color:#fff;border:none;border-radius:9999px;font-weight:700;cursor:pointer;">Postar</button>
+          </div>
+        </nav>
+      </aside>
+      <main id="main-content" style="border-right:1px solid var(--border-primary);">
+        <div style="padding:24px;">
+          <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:24px;">Mentoria</h1>
+          
+          <div class="mentorship-header">
+            <div class="mentorship-stats">
+              <div class="stat">
+                <span class="stat-number">124</span>
+                <span class="stat-label">Mentores</span>
+              </div>
+              <div class="stat">
+                <span class="stat-number">892</span>
+                <span class="stat-label">Mentorados</span>
+              </div>
+              <div class="stat">
+                <span class="stat-number">65</span>
+                <span class="stat-label">Sessões esta semana</span>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-lg" style="width:100%;margin-top:16px;">Buscar Mentor</button>
+          </div>
+          
+          <div class="mentorship-tabs">
+            <div class="mentorship-tab active" data-tab="mentors">Mentores</div>
+            <div class="mentorship-tab" data-tab="sessions">Minhas Sessões</div>
+            <div class="mentorship-tab" data-tab="requests">Solicitações</div>
+          </div>
+          
+          <div id="mentorship-content">
+            <!-- Mentors grid -->
+            <div class="mentors-grid">
+              <div class="mentor-card">
+                <div class="mentor-avatar"><div style="width:50px;height:50px;border-radius:50%;background:#42a5f5;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;">J</div></div>
+                <div class="mentor-info">
+                  <h3 class="mentor-name">João Santos</h3>
+                  <p class="mentor-title">Especialista em Machine Learning</p>
+                  <p class="mentor-bio">PhD em IA com 5 anos de experiência em pesquisa e indústria</p>
+                  <div class="mentor-tags">
+                    <span class="tag">Machine Learning</span>
+                    <span class="tag">Python</span>
+                    <span class="tag">TensorFlow</span>
+                  </div>
+                  <div class="mentor-stats">
+                    <span>4.9★ (12 sessões)</span>
+                    <span>·</span>
+                    <span>R$ 80/h</span>
+                  </div>
+                  <button class="btn btn-outline btn-sm">Solicitar Mentoria</button>
+                </div>
+              </div>
+              
+              <div class="mentor-card">
+                <div class="mentor-avatar"><div style="width:50px;height:50px;border-radius:50%;background:#66bb6a;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;">M</div></div>
+                <div class="mentor-info">
+                  <h3 class="mentor-name">Mariana Costa</h3>
+                  <p class="mentor-title">Especialista em TCC e Metodologia</p>
+                  <p class="mentor-bio">Mestre em Educação com foco em orientação de trabalhos acadêmicos</p>
+                  <div class="mentor-tags">
+                    <span class="tag">TCC</span>
+                    <span class="tag">Metodologia</span>
+                    <span class="tag">ABNT</span>
+                  </div>
+                  <div class="mentor-stats">
+                    <span>5.0★ (8 sessões)</span>
+                    <span>·</span>
+                    <span>R$ 60/h</span>
+                  </div>
+                  <button class="btn btn-outline btn-sm">Solicitar Mentoria</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <aside id="right-sidebar" style="position:sticky;top:56px;height:calc(100vh - 56px);padding:16px;">
+        <div class="trending-widget">
+          <div class="widget-header">O que está bombando</div>
+          <div class="widget-item"><div class="widget-item-title">#TCC</div><div class="widget-item-subtitle">42 posts</div></div>
+          <div class="widget-item"><div class="widget-item-title">#Pesquisa</div><div class="widget-item-subtitle">28 posts</div></div>
+          <div class="widget-item"><div class="widget-item-title">#InteligenciaArtificial</div><div class="widget-item-subtitle">15 posts</div></div>
+          <div class="widget-item"><div class="widget-item-title">#Mestrado</div><div class="widget-item-subtitle">12 posts</div></div>
+        </div>
+        <div class="trending-widget">
+          <div class="widget-header">Sugestões</div>
+          <div class="user-card" style="padding:8px 16px;">
+            <div style="width:40px;height:40px;border-radius:50%;background:#66bb6a;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;">C</div>
+            <div class="user-card-info">
+              <div class="user-card-name">Carlos Lima</div>
+              <div class="user-card-username">@carloslima</div>
+            </div>
+            <button style="padding:4px 16px;border:1px solid var(--accent-primary);border-radius:9999px;color:var(--accent-primary);font-weight:600;font-size:12px;background:transparent;cursor:pointer;">Seguir</button>
+          </div>
+          <div class="user-card" style="padding:8px 16px;">
+            <div style="width:40px;height:40px;border-radius:50%;background:#ffa726;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;">A</div>
+            <div class="user-card-info">
+              <div class="user-card-name">Ana Costa</div>
+              <div class="user-card-username">@anacosta</div>
+            </div>
+            <button style="padding:4px 16px;border:1px solid var(--accent-primary);border-radius:9999px;color:var(--accent-primary);font-weight:600;font-size:12px;background:transparent;cursor:pointer;">Seguir</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+  
+  <script>
+    // Tab switching functionality
+    document.querySelectorAll('.mentorship-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.mentorship-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const tabName = tab.dataset.tab;
+        // In a real app, we would load different content here
+        document.getElementById('mentorship-content').innerHTML = `<p>Conteúdo da aba ${tabName} sendo carregado...</p>`;
+      });
+    });
+  </script>
+</body>
+</html>
