@@ -199,3 +199,24 @@
     margin-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
   }
 }
+
+.mobile-menu-open #left-sidebar {
+  display: block;
+  position: fixed;
+  top: var(--nav-height);
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
+  z-index: 90;
+  box-shadow: var(--shadow-xl);
+}
+
+.mobile-menu-open::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: var(--bg-modal-overlay);
+  z-index: 89;
+}
+
+

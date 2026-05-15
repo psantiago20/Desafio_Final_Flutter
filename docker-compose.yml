@@ -280,3 +280,24 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:8089/actuator/health" ]
+
+  # ---------------- FRONTEND ----------------
+
+  frontend:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      gateway-service:
+        condition: service_healthy
+    networks:
+      - pitaya-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:80/" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

@@ -7,39 +7,14 @@
   <meta name="description" content="Pitaya - Rede Social Acadêmica">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="manifest" href="/frontend/public/manifest.json">
-  <link rel="icon" type="image/x-icon" href="/frontend/public/favicon.ico">
-  <link rel="apple-touch-icon" href="/frontend/public/apple-touch-icon.png">
-  <link rel="stylesheet" href="/frontend/css/reset.css">
-  <link rel="stylesheet" href="/frontend/css/themes.css">
-  <link rel="stylesheet" href="/frontend/css/main.css">
-  <link rel="stylesheet" href="/frontend/css/layout.css">
-  <link rel="stylesheet" href="/frontend/css/components.css">
-  <link rel="stylesheet" href="/frontend/css/responsive.css">
-<link rel="stylesheet" href="/frontend/css/pages/auth.css">
-<link rel="stylesheet" href="/frontend/css/pages/feed.css">
-<link rel="stylesheet" href="/frontend/css/pages/profile.css">
-<link rel="stylesheet" href="/frontend/css/pages/groups.css">
-<link rel="stylesheet" href="/frontend/css/pages/library.css">
-<link rel="stylesheet" href="/frontend/css/pages/mentorship.css">
-<link rel="stylesheet" href="/frontend/css/pages/messages.css">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <title>Pitaya</title>
 </head>
 <body>
-  <div id="app">
-    <header id="navbar"></header>
-    <div id="loading-spinner" class="loading-container" style="min-height: 100vh;">
-      <div class="spinner spinner-lg"></div>
-    </div>
-    <div class="app-layout" id="app-layout" style="display: none;">
-      <aside id="left-sidebar"></aside>
-      <main id="main-content"></main>
-      <aside id="right-sidebar"></aside>
-    </div>
-    <nav id="bottom-nav"></nav>
-  </div>
-  <div id="toast-container" class="toast-container"></div>
+  <div id="root"></div>
   <div id="modal-root"></div>
-  <script type="module" src="/frontend/js/app.js"></script>
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
