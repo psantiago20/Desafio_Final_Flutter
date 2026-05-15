@@ -12,6 +12,7 @@ import 'agenda_screen.dart';
 import 'results_screen.dart';
 import 'chat_screen.dart';
 import 'profile_screen.dart';
+import 'prescriptions_screen.dart';
 
 class MainDashboardScreen extends ConsumerStatefulWidget {
   const MainDashboardScreen({super.key});
@@ -36,8 +37,9 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
     const AgendaScreen(),
     const ChatScreen(),
     const ResultsScreen(),
+    const PrescriptionsScreen(),
     const Scaffold(body: Center(child: Text('Alertas e Notificações'))),
-    const ProfileScreen(), // 5: Perfil
+    const ProfileScreen(),
   ];
 
   @override
@@ -61,19 +63,6 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
     final authState = ref.watch(authProvider);
     final user = authState.user;
     
-    // Calcular iniciais
-    String initials = 'SC';
-    if (user != null && user.fullName != null && user.fullName!.isNotEmpty) {
-      final names = user.fullName!.split(' ');
-      if (names.length >= 2) {
-        initials = '${names[0][0]}${names[1][0]}'.toUpperCase();
-      } else if (names.isNotEmpty) {
-        initials = names[0][0].toUpperCase();
-      }
-    } else if (user != null) {
-      initials = user.username.substring(0, 1).toUpperCase();
-    }
-
     return Scaffold(
       backgroundColor: surfaceColor,
       body: Column(
@@ -83,8 +72,8 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
             height: 70,
             padding: const EdgeInsets.symmetric(horizontal: 48),
             decoration: BoxDecoration(
-              color: surfaceColor.withOpacity(0.95),
-              border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.2))),
+              color: surfaceColor.withValues(alpha: 0.95),
+              border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.2))),
             ),
             child: Row(
               children: [
@@ -112,9 +101,10 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
                 _buildWebNavLink('Consultas', isActive: _currentIndex == 1, onTap: () => _navigate(1)),
                 _buildWebNavLink('Exames', isActive: _currentIndex == 3, onTap: () => _navigate(3)),
                 _buildWebNavLink('Mensagens', isActive: _currentIndex == 2, onTap: () => _navigate(2)),
+                _buildWebNavLink('Prescrições', isActive: _currentIndex == 4, onTap: () => _navigate(4)),
                 const SizedBox(width: 24),
-                IconButton(icon: const Icon(Icons.notifications_none), color: onSurfaceVariant, onPressed: () => _navigate(4)),
-                IconButton(icon: Icon(Icons.settings_outlined, color: _currentIndex == 5 ? primaryContainer : onSurfaceVariant), onPressed: () => _navigate(5)),
+                IconButton(icon: const Icon(Icons.notifications_none), color: onSurfaceVariant, onPressed: () => _navigate(5)),
+                IconButton(icon: Icon(Icons.settings_outlined, color: _currentIndex == 6 ? primaryContainer : onSurfaceVariant), onPressed: () => _navigate(6)),
                 const SizedBox(width: 16),
                 IconButton(
                   icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
@@ -198,9 +188,9 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
             label: 'Exames',
           ),
           NavigationDestination(
-            icon: Icon(Icons.notifications_none),
-            selectedIcon: Icon(Icons.notifications, color: Colors.white),
-            label: 'Alertas',
+            icon: Icon(Icons.medication_outlined),
+            selectedIcon: Icon(Icons.medication, color: Colors.white),
+            label: 'Prescrições',
           ),
         ],
       ),

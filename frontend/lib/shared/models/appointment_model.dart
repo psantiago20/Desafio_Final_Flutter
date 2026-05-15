@@ -38,6 +38,7 @@ class AppointmentModel {
   final String? symptoms;
   final String? diagnosis;
   final String? prescription;
+  final String? prescriptionHtml;
   final String? examUrl;
   final String? examSummary;
   final String? weight;
@@ -68,6 +69,7 @@ class AppointmentModel {
     this.symptoms,
     this.diagnosis,
     this.prescription,
+    this.prescriptionHtml,
     this.examUrl,
     this.examSummary,
     this.weight,
@@ -100,6 +102,7 @@ class AppointmentModel {
       symptoms: json['symptoms'] as String?,
       diagnosis: json['diagnosis'] as String?,
       prescription: json['prescription'] as String?,
+      prescriptionHtml: json['prescription_html'] as String?,
       examUrl: json['exam_url'] as String?,
       examSummary: json['exam_summary'] as String?,
       weight: json['weight'] as String?,
@@ -125,6 +128,7 @@ class AppointmentModel {
     String? symptoms,
     String? diagnosis,
     String? prescription,
+    String? prescriptionHtml,
     String? examUrl,
     String? examSummary,
     String? weight,
@@ -151,6 +155,7 @@ class AppointmentModel {
       symptoms: symptoms ?? this.symptoms,
       diagnosis: diagnosis ?? this.diagnosis,
       prescription: prescription ?? this.prescription,
+      prescriptionHtml: prescriptionHtml ?? this.prescriptionHtml,
       examUrl: examUrl ?? this.examUrl,
       examSummary: examSummary ?? this.examSummary,
       weight: weight ?? this.weight,

@@ -38,6 +38,7 @@ class AppointmentUpdate(BaseModel):
     symptoms: Optional[str] = None
     diagnosis: Optional[str] = None
     prescription: Optional[str] = None
+    prescription_html: Optional[str] = None
     weight: Optional[str] = None
     height: Optional[str] = None
     heart_rate: Optional[str] = None
@@ -58,6 +59,7 @@ class AppointmentResponse(AppointmentBase):
     symptoms: Optional[str] = None
     diagnosis: Optional[str] = None
     prescription: Optional[str] = None
+    prescription_html: Optional[str] = None
     weight: Optional[str] = None
     height: Optional[str] = None
     heart_rate: Optional[str] = None

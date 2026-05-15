@@ -80,4 +80,19 @@ class AppointmentsRepository {
   Future<void> deleteAppointment(int id) async {
     await ApiClient.delete('${AppConstants.appointmentsEndpoint}/$id');
   }
+
+  Future<AppointmentModel> sendPrescription(int id) async {
+    final data = await ApiClient.post(
+      '${AppConstants.appointmentsEndpoint}/$id/send-prescription',
+      {},
+    );
+    return AppointmentModel.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<List<int>> downloadPrescriptionPdf(int id) async {
+    final bytes = await ApiClient.getBytes(
+      '${AppConstants.appointmentsEndpoint}/$id/prescription/pdf',
+    );
+    return bytes;
+  }
 }

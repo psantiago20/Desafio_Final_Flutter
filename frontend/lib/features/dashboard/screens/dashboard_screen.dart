@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../providers/dashboard_provider.dart';
+import 'package:frontend/features/appointments/providers/appointments_live_sync.dart';
 import 'package:frontend/features/auth/providers/auth_provider.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
@@ -15,6 +16,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(appointmentsLiveSyncProvider);
     final user = ref.watch(authProvider).user;
     final statsAsync = ref.watch(dashboardStatsProvider);
     final todayAsync = ref.watch(todayAppointmentsProvider);
@@ -57,7 +59,7 @@ class DashboardScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Olá, ${user?.displayName.startsWith('Dr.') == true ? user?.displayName.split(' ').sublist(0, 2).join(' ') : 'Dr. ${user?.displayName.split(' ').first ?? ''}'}',
+                      'Olá, ${user?.shortSalutationName ?? ''}',
                       style: GoogleFonts.manrope(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,

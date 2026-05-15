@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../providers/appointments_provider.dart';
 import 'package:frontend/features/auth/providers/auth_provider.dart';
+import 'package:frontend/features/dashboard/providers/dashboard_provider.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 
 class NewAppointmentScreen extends ConsumerStatefulWidget {
@@ -114,6 +115,8 @@ class _NewAppointmentScreenState extends ConsumerState<NewAppointmentScreen> {
           );
 
       ref.invalidate(appointmentsListProvider);
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(todayAppointmentsProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

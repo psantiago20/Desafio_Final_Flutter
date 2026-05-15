@@ -46,6 +46,27 @@ class UserModel {
 
   String get displayName => fullName ?? username;
 
+  String get salutationName {
+    if (isDoctor) {
+      if (displayName.startsWith('Dr.') || displayName.startsWith('Dra.')) {
+        return displayName;
+      }
+      return 'Dr. $displayName';
+    }
+    return displayName;
+  }
+
+  String get shortSalutationName {
+    if (isDoctor) {
+      if (displayName.startsWith('Dr.') || displayName.startsWith('Dra.')) {
+        final parts = displayName.split(' ');
+        return parts.length >= 2 ? '${parts[0]} ${parts[1]}' : parts[0];
+      }
+      return 'Dr. ${displayName.split(' ').first}';
+    }
+    return displayName.split(' ').first;
+  }
+
   bool get isDoctor => role == 'doctor';
   bool get isAdmin => role == 'admin';
 }

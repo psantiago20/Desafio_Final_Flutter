@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:frontend/features/profile/screens/profile_screen.dart';
 import 'package:frontend/features/client/screens/main_dashboard_screen.dart';
 import 'dart:ui';
@@ -7,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/theme/theme_provider.dart';
 import 'package:frontend/shared/widgets/main_shell.dart';
 import 'package:frontend/shared/widgets/app_logo.dart';
-import '../../core/theme/app_theme.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String subtitle;
@@ -37,20 +35,26 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       iconTheme: IconThemeData(color: Theme.of(context).colorScheme.primary),
-      leading: leading ?? Builder(
-        builder: (context) => IconButton(
-          icon: Icon(Icons.menu, color: Theme.of(context).colorScheme.primary),
-          onPressed: () {
-            if (MainShell.scaffoldKey.currentState != null) {
-              MainShell.scaffoldKey.currentState?.openDrawer();
-            } else if (MainDashboardScreen.scaffoldKey.currentState != null) {
-              MainDashboardScreen.scaffoldKey.currentState?.openDrawer();
-            } else {
-              Scaffold.of(context).openDrawer();
-            }
-          },
-        ),
-      ),
+      leading:
+          leading ??
+          Builder(
+            builder: (context) => IconButton(
+              icon: Icon(
+                Icons.menu,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              onPressed: () {
+                if (MainShell.scaffoldKey.currentState != null) {
+                  MainShell.scaffoldKey.currentState?.openDrawer();
+                } else if (MainDashboardScreen.scaffoldKey.currentState !=
+                    null) {
+                  MainDashboardScreen.scaffoldKey.currentState?.openDrawer();
+                } else {
+                  Scaffold.of(context).openDrawer();
+                }
+              },
+            ),
+          ),
       title: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -63,8 +67,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               Text(
                 'Sua Consulta',
                 style: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark 
-                      ? Colors.white 
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
                       : Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
