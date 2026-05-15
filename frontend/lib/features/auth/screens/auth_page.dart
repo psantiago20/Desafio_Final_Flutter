@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/features/auth/widgets/auth_header.dart';
@@ -17,7 +16,6 @@ class AuthPage extends ConsumerStatefulWidget {
 }
 
 class _AuthPageState extends ConsumerState<AuthPage> {
-
   bool isLogin = true;
 
   void toggle() {
@@ -25,10 +23,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   }
 
   void goToOtp() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const OtpPage()),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const OtpPage()));
   }
 
   Future<void> _handleLogin(String username, String password) async {
@@ -62,8 +57,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                 Text(
                   isLogin ? "Entrar" : "Criar conta",
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: AppTheme.primaryBlue,
-                      ),
+                    color: AppTheme.primaryBlue,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -80,15 +75,24 @@ class _AuthPageState extends ConsumerState<AuthPage> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.alertRed.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.alertRed.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppTheme.alertRed.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: AppTheme.alertRed, size: 18),
+                    const Icon(
+                      Icons.error_outline,
+                      color: AppTheme.alertRed,
+                      size: 18,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -115,7 +119,6 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                       key: const ValueKey('login'),
                       onToggle: toggle,
                       onLogin: _handleLogin,
-
                     )
                   : RegisterForm(
                       key: const ValueKey('register'),

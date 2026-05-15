@@ -367,11 +367,15 @@ class _AppointmentDetailScreenState
               enabled: _editing,
             ),
             const SizedBox(height: 10),
-            _ClinicalField(
-              label: 'Prescrição',
+            _PrescriptionField(
+              appointmentId: _appointment.id,
               controller: _prescriptionCtrl,
-              icon: Icons.medication_outlined,
               enabled: _editing,
+              onSent: (updated) {
+                if (updated != null) {
+                  setState(() => _appointment = updated);
+                }
+              },
             ),
             const SizedBox(height: 32),
           ],
@@ -655,6 +659,107 @@ class _SmallClinicalField extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrescriptionField extends ConsumerWidget {
+  final int appointmentId;
+  final TextEditingController controller;
+  final bool enabled;
+  final Function(AppointmentModel?) onSent;
+
+  const _PrescriptionField({
+    required this.appointmentId,
+    required this.controller,
+    required this.enabled,
+    required this.onSent,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoading = ref.watch(appointmentActionsProvider).isLoading;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: enabled ? AppColors.primary : AppColors.border,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                const Icon(Icons.medication_outlined,
+                    size: 16, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text('Prescrição',
+                    style: GoogleFonts.dmSans(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    )),
+                const Spacer(),
+                if (!enabled)
+                  TextButton.icon(
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                            final updated = await ref
+                                .read(appointmentActionsProvider.notifier)
+                                .sendPrescription(appointmentId);
+                            onSent(updated);
+                            if (updated != null && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'Prescrição enviada com sucesso!')),
+                              );
+                            }
+                          },
+                    icon: isLoading
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppColors.primary),
+                          )
+                        : const Icon(Icons.send_rounded, size: 14),
+                    label: Text(isLoading ? 'Enviando...' : 'Enviar ao Paciente'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          TextField(
+            controller: controller,
+            enabled: enabled,
+            maxLines: 5,
+            style:
+                GoogleFonts.dmSans(fontSize: 14, color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.all(14),
+              hintText: enabled ? 'Toque para editar...' : 'Nenhuma informação',
+              hintStyle:
+                  GoogleFonts.dmSans(color: AppColors.textHint, fontSize: 13),
+              filled: false,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+            ),
           ),
         ],
       ),
