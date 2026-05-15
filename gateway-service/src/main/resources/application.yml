@@ -1,0 +1,123 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: pitaya-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lowerCaseServiceId: true
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin
+      routes:
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - StripPrefix=1
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/users/**
+          filters:
+            - StripPrefix=1
+        - id: post-service
+          uri: lb://post-service
+          predicates:
+            - Path=/api/v1/posts/**
+          filters:
+            - StripPrefix=1
+        - id: group-service
+          uri: lb://group-service
+          predicates:
+            - Path=/api/v1/groups/**
+          filters:
+            - StripPrefix=1
+        - id: library-service
+          uri: lb://library-service
+          predicates:
+            - Path=/api/v1/library/**
+          filters:
+            - StripPrefix=1
+        - id: mentorship-service
+          uri: lb://mentorship-service
+          predicates:
+            - Path=/api/v1/mentorships/**
+          filters:
+            - StripPrefix=1
+        - id: gamification-service
+          uri: lb://gamification-service
+          predicates:
+            - Path=/api/v1/gamification/**
+          filters:
+            - StripPrefix=1
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/v1/notifications/**
+          filters:
+            - StripPrefix=1
+        - id: message-service
+          uri: lb://message-service
+          predicates:
+            - Path=/api/v1/messages/**
+          filters:
+            - StripPrefix=1
+    loadbalancer:
+      ribbon:
+        enabled: false
+    circuitbreaker:
+      resilience4j:
+        enabled: true
+
+eureka:
+  instance:
+    preferIpAddress: true
+    hostname: gateway-service
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://discovery-service:8761/eureka/}
+    registerWithEureka: true
+    fetchRegistry: true
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000
+        permittedNumberOfCallsInHalfOpenState: 3
+  retry:
+    configs:
+      default:
+        maxRetryAttempts: 3
+        waitDuration: 500ms
+
+jwt:
+  public-key: ${JWT_PUBLIC_KEY}
+
+logging:
+  level:
+    com.pitaya.gateway: DEBUG
+    org.springframework.cloud.gateway: INFO
+    org.springframework.web: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: pitaya-gateway
+  cloud:
+    config:
+      uri: ${CONFIG_SERVER_URI:http://config-service:8888}
+      fail-fast: false
+      retry:
+        initial-interval: 1000
+        max-attempts: 5
+        multiplier: 1.5
