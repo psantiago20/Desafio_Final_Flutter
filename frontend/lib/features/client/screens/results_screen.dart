@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../shared/widgets/custom_app_bar.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/exams_provider.dart';
+import '../../appointments/providers/appointments_live_sync.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/app_constants.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/custom_app_bar.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../core/theme/app_theme.dart';
 
 
 
@@ -25,64 +26,13 @@ class ResultsScreen extends ConsumerStatefulWidget {
 }
 
 class _ResultsScreenState extends ConsumerState<ResultsScreen> {
-  bool _isLoading = true;
-  List<Map<String, dynamic>> _exams = [];
-  String? _error;
-
   @override
   void initState() {
     super.initState();
-    _fetchExams();
   }
 
   Future<void> _fetchExams() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    try {
-      final endpoint = widget.patientId != null 
-          ? '${AppConstants.examsEndpoint}?patient_id=${widget.patientId}'
-          : AppConstants.examsEndpoint;
-      final data = await ApiClient.get(endpoint);
-      final list = (data as Map<String, dynamic>)['exams'] as List;
-      final allExams = list.cast<Map<String, dynamic>>();
-
-      // Filtra exames que não possuem URL válida ou que falharam na identificação
-      final validExams = allExams.where((exam) {
-        final url = exam['exam_url'] as String?;
-        final title = exam['title'] as String? ?? '';
-        
-        // Se a URL for nula, vazia ou strings que indicam ausência de arquivo
-        if (url == null || url.trim().isEmpty || 
-            url.toLowerCase() == 'none' || 
-            url.toLowerCase() == 'null' || 
-            url.toLowerCase() == 'undefined' ||
-            url.toLowerCase().contains('TODO')) {
-          return false;
-        }
-
-        // Se o título indicar que falhou o upload ou é um erro
-        final lowerTitle = title.toLowerCase();
-        if (lowerTitle.contains('erro') || 
-            lowerTitle.contains('falha') || 
-            lowerTitle.contains('nenhum exame')) {
-          return false;
-        }
-
-        return true;
-      }).toList();
-
-      setState(() {
-        _exams = validExams;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = 'Erro ao buscar exames: $e';
-        _isLoading = false;
-      });
-    }
+    ref.invalidate(examsListProvider(widget.patientId));
   }
 
   Future<void> _deleteExam(int examId) async {
@@ -288,15 +238,17 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(appointmentsLiveSyncProvider);
+    final examsAsync = ref.watch(examsListProvider(widget.patientId));
+    final filteredExams = ref.watch(filteredExamsProvider(widget.patientId));
+
     if (kIsWeb) {
-      return _buildWeb();
+      return _buildWeb(examsAsync, filteredExams);
     }
-    return _buildMobile();
+    return _buildMobile(examsAsync, filteredExams);
   }
 
-  Widget _buildWeb() {
-    final filteredExams = _exams;
-
+  Widget _buildWeb(AsyncValue<List<Map<String, dynamic>>> examsAsync, List<Map<String, dynamic>> filteredExams) {
     return Scaffold(
       appBar: kIsWeb ? null : CustomAppBar(
         subtitle: 'Seus Resultados',
@@ -309,16 +261,13 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       ),
       body: Container(
         decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-            ? Center(child: Text(_error!))
-            : Column(
+        child: examsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Center(child: Text('Erro: $err')),
+          data: (_) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   const SizedBox(height: 16),
-
                   // Lista de Exames
                   Expanded(
                     child: ListView.builder(
@@ -331,6 +280,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                   ),
                 ],
               ),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _fetchExams,
@@ -339,7 +289,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     );
   }
 
-  Widget _buildMobile() {
+  Widget _buildMobile(AsyncValue<List<Map<String, dynamic>>> examsAsync, List<Map<String, dynamic>> filteredExams) {
     return Scaffold(
       appBar: kIsWeb ? null : CustomAppBar(
         subtitle: 'Seus Resultados',
@@ -352,15 +302,14 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       ),
       body: Container(
         decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-            ? Center(child: Text(_error!))
-            : ListView.builder(
+        child: examsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Center(child: Text('Erro: $err')),
+          data: (_) => ListView.builder(
                 padding: const EdgeInsets.all(16.0),
-                itemCount: _exams.length,
+                itemCount: filteredExams.length,
                 itemBuilder: (context, index) {
-                  final exam = _exams[index];
+                  final exam = filteredExams[index];
 
                   // Formatação de data
                   DateTime? date;
@@ -488,6 +437,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                   );
                 },
               ),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _fetchExams,

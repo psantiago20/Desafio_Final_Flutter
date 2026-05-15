@@ -7,6 +7,7 @@ import '../providers/appointments_provider.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
 import 'package:frontend/features/patients/providers/patients_provider.dart';
+import 'package:frontend/features/dashboard/providers/dashboard_provider.dart';
 
 class AppointmentDetailScreen extends ConsumerStatefulWidget {
   final AppointmentModel appointment;
@@ -73,6 +74,8 @@ class _AppointmentDetailScreenState
                   Text('Status atualizado para ${statusLabel(status)}')),
         );
         ref.invalidate(appointmentsListProvider);
+        ref.invalidate(dashboardStatsProvider);
+        ref.invalidate(todayAppointmentsProvider);
       }
     }
   }
@@ -101,6 +104,8 @@ class _AppointmentDetailScreenState
           const SnackBar(content: Text('Anotações salvas com sucesso')),
         );
         ref.invalidate(appointmentsListProvider);
+        ref.invalidate(dashboardStatsProvider);
+        ref.invalidate(todayAppointmentsProvider);
       }
     }
   }
