@@ -1,0 +1,39 @@
+# Git
+.git
+.gitignore
+.github
+
+# IDEs
+.idea
+.vscode
+*.iml
+
+# Build
+target
+build
+.gradle
+.dart_tool
+
+# Node 
+node_modules
+
+# Logs
+*.log
+logs
+
+# Env
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.yml
+docker-compose.override.yml
+
+# Misc
+tmp
+temp
+*.tmp

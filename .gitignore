@@ -1,0 +1,49 @@
+# Java
+target/
+*.class
+*.jar
+*.war
+*.log
+
+# Maven
+.mvn/
+!/.mvn/jvm.config
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+*.pem
+*.key
+
+# Node
+node_modules/
+npm-debug.log
+
+# Frontend
+frontend/dist/
+frontend/build/
+
+# Docker
+docker/data/
+
+# Logs
+logs/
+*.log.gz
+
+# Test
+test-output/
+*.test.js.snap
