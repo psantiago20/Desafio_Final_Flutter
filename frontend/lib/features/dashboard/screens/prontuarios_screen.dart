@@ -136,7 +136,7 @@ class _ProntuariosScreenState extends ConsumerState<ProntuariosScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Prontuários Médicos',
+                'Pacientes e Prontuários',
                 style: GoogleFonts.manrope(
                   fontSize: 32,
                   fontWeight: FontWeight.w800,

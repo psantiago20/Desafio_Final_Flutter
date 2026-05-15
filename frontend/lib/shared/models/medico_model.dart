@@ -1,5 +1,6 @@
 class MedicoModel {
   final int id;
+  final int? userId;
   final String nomeCompleto;
   final String crm;
   final String crmEstado;
@@ -15,6 +16,7 @@ class MedicoModel {
 
   MedicoModel({
     required this.id,
+    this.userId,
     required this.nomeCompleto,
     required this.crm,
     required this.crmEstado,
@@ -32,6 +34,7 @@ class MedicoModel {
   factory MedicoModel.fromJson(Map<String, dynamic> json) {
     return MedicoModel(
       id: json['id'],
+      userId: json['user_id'],
       nomeCompleto: json['nome_completo'],
       crm: json['crm'],
       crmEstado: json['crm_estado'],
@@ -47,3 +50,4 @@ class MedicoModel {
     );
   }
 }
+

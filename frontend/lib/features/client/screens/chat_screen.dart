@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/custom_app_bar.dart';
 import '../../chat/providers/chat_provider.dart';
+import '../../home/providers/medicos_provider.dart';
+import '../../../shared/models/medico_model.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -17,6 +20,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _picker = ImagePicker();
+  String _selectedChat = 'isis'; // 'isis' ou 'doctor'
 
   @override
   void initState() {
@@ -30,7 +34,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    ref.read(chatProvider.notifier).sendMessage(text);
+    ref.read(chatProvider.notifier).sendMessage(text, toDoctor: _selectedChat == 'doctor');
     _controller.clear();
     _scrollToBottom();
   }
@@ -80,42 +84,143 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildWeb(List<ChatMessage> messages, bool isLoading) {
+    final chatState = ref.watch(chatProvider);
+    final activeMessages = _selectedChat == 'doctor' ? chatState.doctorMessages : chatState.isisMessages;
+
+    final medicosAsync = ref.watch(medicosProvider);
+    String doctorName = 'Médico';
+    String? doctorPhotoUrl;
+
+    medicosAsync.whenData((medicos) {
+      if (medicos.isNotEmpty) {
+        // Tenta encontrar o médico das mensagens
+        final doctorMessages = chatState.doctorMessages;
+        if (doctorMessages.isNotEmpty) {
+          for (var m in doctorMessages) {
+            if (!m.isMe && m.senderName != null && m.senderName != 'Médico') {
+              doctorName = m.senderName!;
+              doctorPhotoUrl = m.senderPhotoUrl;
+              break;
+            }
+          }
+        }
+        
+        // Se ainda não encontrou por mensagens, usa o primeiro da lista
+        if (doctorName == 'Médico' && medicos.isNotEmpty) {
+          doctorName = medicos.first.nomeCompleto;
+          doctorPhotoUrl = medicos.first.fotoUrl;
+        }
+      }
+    });
+
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),
-        child: Column(
-          children: [
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () =>
-                    ref.read(chatProvider.notifier).fetchMessages(),
-                child: ListView.builder(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16.0),
-                  itemCount: messages.length + (isLoading ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == messages.length && isLoading) {
-                      return const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            vertical: 16.0,
-                            horizontal: 8.0,
-                          ),
-                          child: CircularProgressIndicator(),
-                        ),
-                      );
-                    }
-                    final msg = messages[index];
-                    return _buildMessageBubble(msg.text, msg.isMe);
-                  },
+      body: Row(
+        children: [
+          // Sidebar estilo WhatsApp
+          Container(
+            width: 320,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              border: Border(right: BorderSide(color: Theme.of(context).colorScheme.outline.withOpacity(0.2))),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  height: 70,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Conversas',
+                    style: GoogleFonts.manrope(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
+                Divider(height: 1, thickness: 1, color: Theme.of(context).colorScheme.outline.withOpacity(0.2)),
+                Expanded(
+                  child: ListView(
+                    children: [
+                      ListTile(
+                        leading: const CircleAvatar(
+                          backgroundColor: AppTheme.primaryBlueDark,
+                          child: Text('I', style: TextStyle(color: Colors.white)),
+                        ),
+                        title: const Text('Isis (Assistente)'),
+                        subtitle: const Text('Atendimento Virtual'),
+                        selected: _selectedChat == 'isis',
+                        selectedTileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        onTap: () {
+                          setState(() {
+                            _selectedChat = 'isis';
+                          });
+                        },
+                      ),
+                      ListTile(
+                        leading: doctorPhotoUrl != null
+                            ? CircleAvatar(
+                                backgroundImage: NetworkImage(doctorPhotoUrl!),
+                              )
+                            : const CircleAvatar(
+                                backgroundColor: Colors.green,
+                                child: Text('M', style: TextStyle(color: Colors.white)),
+                              ),
+                        title: Text(doctorName),
+                        subtitle: const Text('Atendimento Humano'),
+                        selected: _selectedChat == 'doctor',
+                        selectedTileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        onTap: () {
+                          setState(() {
+                            _selectedChat = 'doctor';
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Área do Chat
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () =>
+                          ref.read(chatProvider.notifier).fetchMessages(),
+                      child: ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(16.0),
+                        itemCount: activeMessages.length + (isLoading ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == activeMessages.length && isLoading) {
+                            return const Align(
+                              alignment: Alignment.centerLeft,
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: 16.0,
+                                  horizontal: 8.0,
+                                ),
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+                          }
+                          final msg = activeMessages[index];
+                          return _buildMessageBubble(msg);
+                        },
+                      ),
+                    ),
+                  ),
+                  _buildMessageInput(),
+                ],
               ),
             ),
-            _buildMessageInput(),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -150,7 +255,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       );
                     }
                     final msg = messages[index];
-                    return _buildMessageBubble(msg.text, msg.isMe);
+                    return _buildMessageBubble(msg);
                   },
                 ),
               ),
@@ -206,7 +311,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildMessageBubble(String message, bool isMe) {
+  Widget _buildMessageBubble(ChatMessage msg) {
+    final message = msg.text;
+    final isMe = msg.isMe;
+    final senderName = msg.senderName;
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -224,9 +333,39 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
           border: isMe ? null : Border.all(color: Theme.of(context).colorScheme.outline),
         ),
-        child: Text(
-          message,
-          style: TextStyle(color: isMe ? Colors.white : Theme.of(context).colorScheme.onSurface),
+        child: Column(
+          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!isMe && senderName != null) ...[
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (msg.senderPhotoUrl != null)
+                    CircleAvatar(
+                      radius: 10,
+                      backgroundImage: NetworkImage(msg.senderPhotoUrl!),
+                    ),
+                  if (msg.senderPhotoUrl != null) const SizedBox(width: 4),
+                  Text(
+                    senderName,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: senderName.contains('Isis') 
+                          ? Colors.teal 
+                          : Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+            ],
+            Text(
+              message,
+              style: TextStyle(color: isMe ? Colors.white : Theme.of(context).colorScheme.onSurface),
+            ),
+          ],
         ),
       ),
     );

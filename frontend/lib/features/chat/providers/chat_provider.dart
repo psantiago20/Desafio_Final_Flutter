@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -6,27 +7,37 @@ import '../../../core/network/api_client.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/phone_utils.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../home/providers/medicos_provider.dart';
+import '../../../shared/models/medico_model.dart';
 
 class ChatMessage {
   final String text;
   final bool isMe;
   final DateTime? timestamp;
+  final String? senderName;
+  final String? senderPhotoUrl;
 
   const ChatMessage({
     required this.text,
     required this.isMe,
     this.timestamp,
+    this.senderName,
+    this.senderPhotoUrl,
   });
 }
 
 class ChatState {
   final List<ChatMessage> messages;
+  final List<ChatMessage> isisMessages;
+  final List<ChatMessage> doctorMessages;
   final bool isLoading;
   final bool isFetching;
   final String? error;
 
   ChatState({
     this.messages = const [],
+    this.isisMessages = const [],
+    this.doctorMessages = const [],
     this.isLoading = false,
     this.isFetching = false,
     this.error,
@@ -34,15 +45,19 @@ class ChatState {
 
   ChatState copyWith({
     List<ChatMessage>? messages,
+    List<ChatMessage>? isisMessages,
+    List<ChatMessage>? doctorMessages,
     bool? isLoading,
     bool? isFetching,
     String? error,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
+      isisMessages: isisMessages ?? this.isisMessages,
+      doctorMessages: doctorMessages ?? this.doctorMessages,
       isLoading: isLoading ?? this.isLoading,
       isFetching: isFetching ?? this.isFetching,
-      error: error,
+      error: error ?? this.error,
     );
   }
 }
@@ -50,11 +65,27 @@ class ChatState {
 class ChatNotifier extends StateNotifier<ChatState> {
   final Ref ref;
 
+  Timer? _pollTimer;
+  int? _patientId;
+
   ChatNotifier(this.ref) : super(ChatState()) {
-    // Carregar mensagens iniciais apenas se ainda não foram carregadas
     if (state.messages.isEmpty) {
       fetchMessages();
     }
+    _startPolling();
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      fetchMessages();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> fetchMessages() async {
@@ -65,9 +96,29 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final response = await ApiClient.get('/api/messages');
       final List<dynamic> msgs = response['messages'];
 
+      if (msgs.isNotEmpty) {
+        _patientId = msgs.first['patient_id'] as int?;
+      }
+
+      final authState = ref.read(authProvider);
+      final currentUserId = authState.user?.id;
+
+      List<MedicoModel> medicos = [];
+      try {
+        medicos = await ref.read(medicosProvider.future);
+      } catch (e) {
+        debugPrint('Erro ao buscar médicos: $e');
+      }
+
       final List<ChatMessage> loadedMessages = [];
+      final List<ChatMessage> isisMessages = [];
+      final List<ChatMessage> doctorMessages = [];
+      
       for (var m in msgs.reversed) {
         final source = m['source'] as String?;
+        final waFrom = m['wa_from'] as String?;
+        final senderId = m['sender_id'] as int?;
+        
         DateTime? ts;
         final rawTs = m['created_at'];
         if (rawTs is String) {
@@ -75,23 +126,76 @@ class ChatNotifier extends StateNotifier<ChatState> {
             ts = DateTime.parse(rawTs);
           } catch (_) {}
         }
-        loadedMessages.add(
-          ChatMessage(
-            text: m['content'] as String,
-            isMe: source == 'app' || source == 'whatsapp',
-            timestamp: ts,
-          ),
+
+        bool isMe = false;
+        if (senderId != null) {
+          isMe = senderId == currentUserId;
+        } else {
+          isMe = source == 'app' || source == 'whatsapp';
+        }
+
+        String? senderName;
+        String? senderPhotoUrl;
+        if (!isMe) {
+          if (waFrom == 'isis_ia' || source == 'system' || source == 'ai' || source == 'bot') {
+            senderName = 'Isis (Assistente)';
+          } else {
+            senderName = 'Médico';
+            if (medicos.isNotEmpty) {
+              senderName = medicos.first.nomeCompleto;
+              senderPhotoUrl = medicos.first.fotoUrl;
+            }
+            if (senderId != null) {
+              for (var doc in medicos) {
+                if (doc.userId == senderId) {
+                  senderName = doc.nomeCompleto;
+                  senderPhotoUrl = doc.fotoUrl;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        final chatMsg = ChatMessage(
+          text: m['content'] as String,
+          isMe: isMe,
+          timestamp: ts,
+          senderName: senderName,
+          senderPhotoUrl: senderPhotoUrl,
         );
+
+        loadedMessages.add(chatMsg);
+
+        // Separação das mensagens por aba
+        if (waFrom == 'isis_ia' || source == 'system' || source == 'ai' || source == 'bot') {
+          isisMessages.add(chatMsg);
+        } else if (source == 'app_doctor' || senderName == 'Médico' || (senderName != null && senderName != 'Isis (Assistente)')) {
+          doctorMessages.add(chatMsg);
+        } else if (isMe) {
+          if (source == 'app_doctor') {
+            doctorMessages.add(chatMsg);
+          } else {
+            isisMessages.add(chatMsg);
+          }
+        } else {
+          doctorMessages.add(chatMsg);
+        }
       }
       
-      state = state.copyWith(messages: loadedMessages, isFetching: false);
+      state = state.copyWith(
+        messages: loadedMessages,
+        isisMessages: isisMessages,
+        doctorMessages: doctorMessages,
+        isFetching: false,
+      );
     } catch (e) {
       debugPrint('Erro ao buscar mensagens: $e');
       state = state.copyWith(isFetching: false, error: e.toString());
     }
   }
 
-  Future<void> sendMessage(String text) async {
+  Future<void> sendMessage(String text, {bool toDoctor = false}) async {
     if (text.trim().isEmpty) return;
 
     final userMessage = ChatMessage(text: text, isMe: true);
@@ -101,6 +205,42 @@ class ChatNotifier extends StateNotifier<ChatState> {
     );
 
     try {
+      if (toDoctor) {
+        if (_patientId == null) {
+          state = state.copyWith(
+            messages: [
+              ...state.messages,
+              const ChatMessage(
+                text: 'Erro: Não foi possível identificar o paciente para enviar a mensagem.',
+                isMe: false,
+              ),
+            ],
+            isLoading: false,
+          );
+          return;
+        }
+        try {
+          await ApiClient.post('/api/messages', {
+            'patient_id': _patientId,
+            'content': text,
+            'message_type': 'text',
+            'source': 'app_doctor',
+          });
+          state = state.copyWith(isLoading: false);
+          await fetchMessages();
+        } catch (e) {
+          final errorMessage = ChatMessage(
+            text: 'Erro ao enviar mensagem para o médico: $e',
+            isMe: false,
+          );
+          state = state.copyWith(
+            messages: [...state.messages, errorMessage],
+            isLoading: false,
+          );
+        }
+        return;
+      }
+
       final authState = ref.read(authProvider);
       final waFrom = canonicalWaFrom(authState.user?.phone);
       if (waFrom.isEmpty) {
@@ -219,6 +359,6 @@ class ChatNotifier extends StateNotifier<ChatState> {
   }
 }
 
-final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
+final chatProvider = StateNotifierProvider.autoDispose<ChatNotifier, ChatState>((ref) {
   return ChatNotifier(ref);
 });

@@ -3,9 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:frontend/core/network/api_client.dart';
+import 'package:frontend/features/auth/providers/auth_provider.dart';
 
 class DoctorMessagesScreen extends ConsumerStatefulWidget {
-  const DoctorMessagesScreen({super.key});
+  final int? initialPatientId;
+  final String? initialPatientName;
+  
+  const DoctorMessagesScreen({
+    super.key,
+    this.initialPatientId,
+    this.initialPatientName,
+  });
 
   @override
   ConsumerState<DoctorMessagesScreen> createState() =>
@@ -42,7 +50,7 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
       
       for (final m in msgs) {
         final patientId = m['patient_id'];
-        if (patientId != null && !conversations.containsKey(patientId)) {
+        if (patientId != null && patientId != 15 && !conversations.containsKey(patientId)) {
           final patient = m['patient'];
           final name = patient != null ? patient['name'] : 'Paciente $patientId';
           
@@ -86,6 +94,22 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
         
         _patients.clear();
         _patients.addAll(patientsList);
+        
+        // Handle initial patient selection
+        if (widget.initialPatientId != null) {
+          final exists = _patients.any((p) => p['id'] == widget.initialPatientId);
+          if (!exists && widget.initialPatientName != null) {
+            _patients.add({
+              'id': widget.initialPatientId!,
+              'name': widget.initialPatientName!,
+              'lastMessage': '',
+              'time': '',
+              'hasChat': true,
+            });
+          }
+          _selectedPatientId = widget.initialPatientId;
+          _loadMessages(widget.initialPatientId!);
+        }
       });
     } catch (e) {
       print('Erro ao carregar conversas: $e');
@@ -112,21 +136,27 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
       final response = await ApiClient.get('/api/messages?patient_id=$targetId');
       final List<dynamic> msgs = response['messages'];
       
+      final authState = ref.read(authProvider);
+      final currentUserId = authState.user?.id;
+
       setState(() {
         _messagesByPatient[patientId] = msgs.map((m) {
           final content = m['content'];
           final waFrom = m['wa_from'];
+          final senderId = m['sender_id'];
           
           String sender = 'patient';
           if (waFrom == 'isis_ia' || m['source'] == 'system') {
             sender = 'isis';
+          } else if (senderId == currentUserId) {
+            sender = 'doctor';
           } else if (patientId == 0) {
             sender = 'doctor';
           }
           
           String timeStr = '...';
           try {
-            final dt = DateTime.parse(m['created_at']);
+            final dt = DateTime.parse(m['created_at']).toLocal();
             timeStr = "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
           } catch (e) {
             // fallback
@@ -227,9 +257,22 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
         }
       }
     } else {
-      setState(() {
-        _isSending = false;
-      });
+      try {
+        await ApiClient.post('/api/messages', {
+          'patient_id': patientId,
+          'content': text,
+          'message_type': 'text',
+          'source': 'app',
+        });
+      } catch (e) {
+        print('Erro ao enviar mensagem: $e');
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isSending = false;
+          });
+        }
+      }
     }
   }
 
@@ -543,14 +586,13 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
                                                 Text(
                                                   isIsis
                                                       ? 'Isis (Assistente)'
-                                                      : 'Paciente',
+                                                      : (_patients.firstWhere((p) => p['id'] == _selectedPatientId, orElse: () => {'name': 'Paciente'})['name']),
                                                   style: TextStyle(
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.bold,
                                                     color: isIsis
                                                         ? AppColors.primary
-                                                        : AppColors
-                                                              .textSecondary,
+                                                        : AppColors.textSecondary,
                                                   ),
                                                 ),
                                               const SizedBox(height: 4),

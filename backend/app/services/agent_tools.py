@@ -661,10 +661,20 @@ def buscar_info_paciente(db: Session, nome_ou_cpf: str) -> str:
         else:
             query = query.filter(Patient.name.ilike(f"%{nome_ou_cpf}%"))
             
-        patient = query.first()
+        patients = query.all()
         
-        if not patient:
+        if not patients:
             return f"Paciente '{nome_ou_cpf}' não encontrado."
+            
+        if len(patients) > 1:
+            lista_pacientes = []
+            for p in patients:
+                cpf_mask = f"***.{p.cpf[3:6]}.{p.cpf[6:9]}-**" if p.cpf and len(p.cpf) >= 9 else "Não informado"
+                lista_pacientes.append(f"- **{p.name}** (ID: {p.id}, CPF: {cpf_mask})")
+            lista_str = "\n".join(lista_pacientes)
+            return f"Encontrei múltiplos pacientes com o nome '{nome_ou_cpf}'. Por favor, confirme qual deles informando o ID:\n{lista_str}"
+            
+        patient = patients[0]
             
         res = f"Informações do Paciente:\n"
         res += f"Nome: {patient.name}\n"
@@ -754,14 +764,15 @@ def execute_tool(tool_name: str, arguments: dict, db: Session, wa_from: str = No
                         (Patient.phone.like(f"%{suffix}%"))
                     ).all()
 
-                    if potential_patients:
-                        # Priorizar o que NÃO tem "WhatsApp User" no nome e tem CPF
+                    if len(potential_patients) == 1:
+                        patient = potential_patients[0]
+                    elif len(potential_patients) > 1:
+                        lista_pacientes = []
                         for p in potential_patients:
-                            if p.name and "WhatsApp User" not in p.name:
-                                patient = p
-                                if p.cpf: break
-                        if not patient:
-                            patient = potential_patients[0]
+                            cpf_mask = f"***.{p.cpf[3:6]}.{p.cpf[6:9]}-**" if p.cpf and len(p.cpf) >= 9 else "Não informado"
+                            lista_pacientes.append(f"- **{p.name}** (ID: {p.id}, CPF: {cpf_mask})")
+                        lista_str = "\n".join(lista_pacientes)
+                        return f"Encontrei múltiplos pacientes vinculados a este telefone. Por favor, confirme qual deles informando o ID ou CPF:\n{lista_str}"
             
             # 2. Se não achou por telefone, tentar pelo CPF (se fornecido ou já coletado)
             if not patient:

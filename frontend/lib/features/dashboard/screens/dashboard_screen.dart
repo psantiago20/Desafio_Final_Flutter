@@ -11,7 +11,9 @@ import 'package:frontend/features/profile/screens/profile_screen.dart';
 import 'package:frontend/features/dashboard/screens/prontuarios_screen.dart';
 import 'package:frontend/features/messages/screens/doctor_messages_screen.dart';
 import 'package:frontend/features/patients/screens/patients_screen.dart';
+import 'package:frontend/features/dashboard/screens/financial_screen.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
+
 import 'package:frontend/shared/models/dashboard_stats_model.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -24,6 +26,8 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   int _selectedNavIndex = 0;
   String _selectedFilter = 'Todos';
+  int? _selectedChatPatientId;
+  String? _selectedChatPatientName;
 
   // Colors from HTML
   static const Color _bg = Color(0xFFF7F9FB);
@@ -69,18 +73,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       return const AppointmentsScreen();
     }
     if (_selectedNavIndex == 2) {
-      return const PatientsScreen();
+      return const ProntuariosScreen();
     }
     if (_selectedNavIndex == 3) {
-      return const DoctorMessagesScreen();
-    }
-    if (_selectedNavIndex == 4) {
-      return const ProntuariosScreen();
+      return DoctorMessagesScreen(
+        initialPatientId: _selectedChatPatientId,
+        initialPatientName: _selectedChatPatientName,
+      );
     }
     if (_selectedNavIndex == 5) {
       return const ProfileScreen();
     }
+    if (_selectedNavIndex == 6) {
+      return const FinancialScreen();
+    }
     if (_selectedNavIndex != 0) {
+
       return Scaffold(
         backgroundColor: _bg,
         body: Center(
@@ -319,17 +327,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ],
           ),
           const SizedBox(height: 32),
-          _buildSidebarItem(0, Icons.grid_view, 'Painel'),
-          _buildSidebarItem(1, Icons.calendar_today, 'Agenda'),
-          _buildSidebarItem(2, Icons.group, 'Pacientes'),
-          _buildSidebarItem(3, Icons.chat, 'Chat'),
-          _buildSidebarItem(4, Icons.description, 'Prontuários'),
-          _buildSidebarItem(6, Icons.payments, 'Financeiro'),
-          const Spacer(),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSidebarItem(0, Icons.grid_view, 'Painel'),
+                  _buildSidebarItem(1, Icons.calendar_today, 'Agenda'),
+                  _buildSidebarItem(2, Icons.group, 'Pacientes'),
+                  _buildSidebarItem(3, Icons.chat, 'Chat'),
+                  _buildSidebarItem(6, Icons.payments, 'Financeiro'),
+                ],
+              ),
+            ),
+          ),
           const Divider(color: _surfaceLow),
           const SizedBox(height: 16),
           _buildSidebarItem(5, Icons.settings, 'Configurações'),
-          _buildSidebarItem(6, Icons.help_outline, 'Suporte'),
+          _buildSidebarItem(7, Icons.help_outline, 'Suporte'),
           const SizedBox(height: 16),
           InkWell(
             onTap: () {
@@ -836,8 +851,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             const SizedBox(width: 24),
             IconButton(
+              icon: const Icon(Icons.chat_bubble_outline, color: _primary),
+              onPressed: () {
+                setState(() {
+                  _selectedNavIndex = 3;
+                  _selectedChatPatientId = appointment.patientId;
+                  _selectedChatPatientName = appointment.patientName;
+                });
+              },
+            ),
+            IconButton(
               icon: const Icon(Icons.chevron_right, color: _onSurfaceVariant),
-              onPressed: () {},
+              onPressed: () {
+                context.push('/appointments/${appointment.id}', extra: appointment);
+              },
             ),
           ] else ...[
             Column(
@@ -860,7 +887,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Icon(Icons.chevron_right, color: _onSurfaceVariant),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.chat_bubble_outline, color: _primary, size: 20),
+                      onPressed: () {
+                        setState(() {
+                          _selectedNavIndex = 3;
+                          _selectedChatPatientId = appointment.patientId;
+                          _selectedChatPatientName = appointment.patientName;
+                        });
+                      },
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right, color: _onSurfaceVariant),
+                  ],
+                ),
               ],
             ),
           ],
