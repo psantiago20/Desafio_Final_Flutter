@@ -1,0 +1,122 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pitaya_auth
+    username: pitaya
+    password: pitaya
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: pitaya
+    password: pitaya
+    virtual-host: /
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+
+app:
+  jwt:
+    access-token-expiration: 900000
+    refresh-token-expiration: 2592000000
+    private-key: |
+      -----BEGIN PRIVATE KEY-----
+      MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCGQkW4Vi18pFrd
+      DOSnn13xVF0zIBTsoyXm0ZYeHu4RbTr5G8rmHLVbPEjsXz500nu5BSvO35PpH5Va
+      GxeGroBfsaYrccN3O/xCdGIVR7AvGVYZzjhEev8CGV3IjNOvjp9XF2KXBkcTaors
+      Y67ySWVA+qAT/5AmXYN84PduMavR/iGNAMssLirUYFiywJdOUGKH+exTQKZsi+c5
+      SMRVjEER35QaB3pmnbIYVlBwruvJhhT3yV160dX48KIhLjNxD/djOj1B2ha+qNMp
+      RlbyF8kw+2P6AhVFVMI9cFxG00CQBkk1MTfY+azqCRANT06qDTvfBKz8eDtzsRjd
+      LfKEZdAdAgMBAAECggEAI2O2swdsSA2esePjJdgZUDK3unE7csDyjawzUM9AW7Ga
+      OO29hviMSXdTlZLpiKuu1y9ow8glWe7sVGsNwX+f8RmHvq3nIzfZn77D1+4kn9Wi
+      33x/UnXFYE1FbkbIyd7jW3abk0mhVJnh8ru38r+sA/vMVFkqKyK9NR6rug03yEs9
+      1oEDLif2IGdieFGPrhNGSgFnfkJFtGdrIyMaQk0rQEgYuCxaG/ullF02+cqp0H3F
+      /RWfTe96lJfpyJCHRZmr53JUiUPJj92vrdKLrgWIc1uCWbrgfBH6HvZhT9ht/C0N
+      EpwdsysCo0u9DR82aKrvFv1l5aQnOeFhGq2RBzr6dQKBgQC8jQ35/bROSQm5VyhC
+      0Lqla7KOH47ysrBHwn+2RDz2NMUOs2lLgk0vT1SU1EAuMCAgI6FRjBtTPyuYijaX
+      M/H5NyS0Qh2ocrhg1nLG07MWw+0N4QCCs9EGdTJjgL432J3v6/BK1PreRf6MK4Nd
+      d8SiP56UnRRaAF0dysaI/VoI1wKBgQC2SU4m5IqaV4m8RjXqmUC7HtyiJwrHvJFm
+      nBTdFaFtMV/rP6C2inwV5O3TZUf+l+/x2in3owj03H+TIjAlyamRBxtjkmkmahAT
+      yPI3W9SHnYAP/CZlExYCku4qtfZ6xST2btUCMBnt1JkCsO8k/a9+ImR3fvB05mtG
+      z7zZRD3MKwKBgGeWQvh15qofvETj2k2i6PfajDVCp0E05F34QDu9j5Rf92cVMCL4
+      yjjUp45AcaYucGfXy1fG1nhMu0HJpSY6tpSJNBQIQsz5gcxJ5LLROZGnQEQguiwU
+      aCDZID7ESzzZOCPIhrJGAjE9WRRfD4O5OgE9XH0fM0Ai9QVaEurN7bnvAoGBAI6X
+      tVzTNmEZzRLMUWzcyTgXIjxuEg7AwXTk76UqQIasMv5RXaStm/d8h1XwSmsr63Tj
+      ViTzEhSJT/qGqedFYzGhv5kadMqp+T2g2WjYmt4jJIRcmKREU9lbmpcqlE7hXNKx
+      TEtT2VSkE7V5NvlWwSsIOFMJp4uqm4xfALlsmnLVAoGBAIBM6dyZGdxipWmuJD3y
+      A61SYV3ULhRc6ffX1/7Xk03/pOW8JZeGnmXjDSyMRiE77aOwAFrX23xJQ+Y9kPZW
+      VQyXXrLAJTH25Znro94JSnqm1c7DrQld2sU0qRUtzY1FVttZgk+5o2t0hEHkSnS3
+      3Zz5wzDnWpwfsFu+zH/ogLW7
+      -----END PRIVATE KEY-----
+    public-key: |
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAhkJFuFYtfKRa3Qzkp59d
+      8VRdMyAU7KMl5tGWHh7uEW06+RvK5hy1WzxI7F8+dNJ7uQUrzt+T6R+VWhsXhq6A
+      X7GmK3HDdzv8QnRiFUewLxlWGc44RHr/AhldyIzTr46fVxdilwZHE2qK7GOu8kll
+      QPqgE/+QJl2DfOD3bjGr0f4hjQDLLC4q1GBYssCXTlBih/nsU0CmbIvnOUjEVYxB
+      Ed+UGgd6Zp2yGFZQcK7ryYYU98ldetHV+PCiIS4zcQ/3Yzo9QdoWvqjTKUZW8hfJ
+      MPtj+gIVRVTCPXBcRtNAkAZJNTE32Pms6gkQDU9Oqg073wSs/Hg7c7EY3S3yhGXQ
+      HQIDAQAB
+      -----END PUBLIC KEY-----
+
+eureka:
+  instance:
+    hostname: localhost
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  api-docs:
+    path: /api/v1/auth/api-docs
+  swagger-ui:
+    path: /api/v1/auth/swagger-ui.html
+    operationsSorter: method
+
+logging:
+  level:
+    com.pitaya: DEBUG
+    org.springframework.security: INFO
+    org.springframework.web: INFO

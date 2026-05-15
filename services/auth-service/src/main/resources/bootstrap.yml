@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: auth-service
+  cloud:
+    config:
+      uri: http://localhost:8888
+      fail-fast: false
+      retry:
+        initial-interval: 1000
+        max-attempts: 3
+        multiplier: 1.5
