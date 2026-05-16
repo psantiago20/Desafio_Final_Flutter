@@ -63,8 +63,8 @@ class Appointment(Base):
     # canal_notificacao = Column(String(50), default="whatsapp")  # whatsapp, sms, email
     # notificado_em = Column(DateTime, nullable=True)
     
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     patient = relationship("Patient", back_populates="appointments")
     doctor = relationship("User", back_populates="appointments")

@@ -13,6 +13,7 @@ import 'results_screen.dart';
 import 'chat_screen.dart';
 import 'profile_screen.dart';
 import 'prescriptions_screen.dart';
+import '../../chat/providers/chat_provider.dart';
 
 class MainDashboardScreen extends ConsumerStatefulWidget {
   const MainDashboardScreen({super.key});
@@ -100,7 +101,12 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
                 _buildWebNavLink('Dashboard', isActive: _currentIndex == 0, onTap: () => _navigate(0)),
                 _buildWebNavLink('Consultas', isActive: _currentIndex == 1, onTap: () => _navigate(1)),
                 _buildWebNavLink('Exames', isActive: _currentIndex == 3, onTap: () => _navigate(3)),
-                _buildWebNavLink('Mensagens', isActive: _currentIndex == 2, onTap: () => _navigate(2)),
+                _buildWebNavLink(
+                  'Mensagens', 
+                  isActive: _currentIndex == 2, 
+                  onTap: () => _navigate(2),
+                  unreadCount: ref.watch(chatProvider).totalUnreadCount,
+                ),
                 _buildWebNavLink('Prescrições', isActive: _currentIndex == 4, onTap: () => _navigate(4)),
                 const SizedBox(width: 24),
                 IconButton(icon: const Icon(Icons.notifications_none), color: onSurfaceVariant, onPressed: () => _navigate(5)),
@@ -125,7 +131,7 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
     );
   }
 
-  Widget _buildWebNavLink(String label, {bool isActive = false, VoidCallback? onTap}) {
+  Widget _buildWebNavLink(String label, {bool isActive = false, VoidCallback? onTap, int unreadCount = 0}) {
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -133,13 +139,31 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              label,
-              style: GoogleFonts.manrope(
-                fontSize: 15,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.manrope(
+                    fontSize: 15,
+                    fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                    color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (unreadCount > 0)
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      unreadCount.toString(),
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ],
             ),
             if (isActive)
               Container(
@@ -166,7 +190,7 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
         onDestinationSelected: _navigate,
         backgroundColor: Theme.of(context).colorScheme.surface,
         indicatorColor: Theme.of(context).colorScheme.primary,
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home, color: Colors.white),
@@ -178,8 +202,13 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
             label: 'Consultas',
           ),
           NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble, color: Colors.white),
+            icon: ref.watch(chatProvider).totalUnreadCount > 0
+                ? Badge(
+                    label: Text(ref.watch(chatProvider).totalUnreadCount.toString()),
+                    child: const Icon(Icons.chat_bubble_outline),
+                  )
+                : const Icon(Icons.chat_bubble_outline),
+            selectedIcon: const Icon(Icons.chat_bubble, color: Colors.white),
             label: 'Chat',
           ),
           NavigationDestination(

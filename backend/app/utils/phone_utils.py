@@ -49,30 +49,52 @@ def find_patient_by_messaging_phone(db: Session, wa_from: Optional[str]) -> Opti
 
     # Normalizar para busca
     target = digits_only(wa_from)
+    # Tenta também sem o DDI (55) se estiver presente
+    target_no_ddi = target[2:] if target.startswith("55") and len(target) >= 12 else target
     
-    # Busca direta por whatsapp ou phone, ordenando para pegar quem tem user_id primeiro
+    # 1. Busca direta (mais rápida e exata)
     patient = (
         db.query(Patient)
-        .filter((Patient.whatsapp == wa_from) | (Patient.phone == wa_from) | (Patient.whatsapp == target) | (Patient.phone == target))
+        .filter(
+            (Patient.whatsapp == wa_from) | 
+            (Patient.phone == wa_from) | 
+            (Patient.whatsapp == target) | 
+            (Patient.phone == target) |
+            (Patient.whatsapp == target_no_ddi) |
+            (Patient.phone == target_no_ddi)
+        )
         .order_by(Patient.user_id.desc().nulls_last())
         .first()
     )
     if patient:
         return patient
 
-    # Busca avançada por similaridade (key de 11 dígitos)
+    # 2. Busca avançada por similaridade (key de 10-11 dígitos)
+    key_wa = br_mobile_key(wa_from)
     q = (
         db.query(Patient)
         .options(joinedload(Patient.user))
         .filter(Patient.is_active.is_(True))
-        .order_by(Patient.user_id.desc().nulls_last())
     )
     
+    candidates = []
     for p in q.all():
         if same_messaging_line(wa_from, p.whatsapp) or same_messaging_line(wa_from, p.phone):
-            return p
-        if p.user and p.user.phone and same_messaging_line(wa_from, p.user.phone):
-            return p
+            candidates.append(p)
+        elif p.user and p.user.phone and same_messaging_line(wa_from, p.user.phone):
+            candidates.append(p)
+            
+    if candidates:
+        # Ordena candidatos: 
+        # 1. Quem tem user_id (conta vinculada)
+        # 2. Quem tem o whatsapp mais similar (apenas dígitos)
+        # 3. ID menor (criado antes)
+        candidates.sort(key=lambda x: (
+            x.user_id is not None,
+            digits_only(x.whatsapp) == target,
+            -x.id
+        ), reverse=True)
+        return candidates[0]
             
     return None
 

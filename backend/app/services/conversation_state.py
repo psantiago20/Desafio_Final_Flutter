@@ -27,17 +27,28 @@ class ConversationState:
         self.last_interaction_at: Optional[datetime] = None
         self.cpf_coletado: Optional[str] = None
         self.aguardando_cpf: bool = False
+        self.aguardando_confirmacao: bool = False
+        self.aguardando_confirmacao_paciente: bool = False
         self.operacao_pendente: Optional[str] = None  # "agendamento", "cancelamento", "consulta_agendamentos"
         self.mensagem_pendente: Optional[str] = None   # mensagem original que disparou o pedido de CPF
         self.boas_vindas_enviada: bool = False
+        self.patient_id_pendente: Optional[int] = None
 
     def to_dict(self) -> dict:
+        # Mascarar CPF para evitar vazamento em APIs de debug
+        masked_cpf = None
+        if self.cpf_coletado and len(self.cpf_coletado) == 11:
+            masked_cpf = f"***.{self.cpf_coletado[3:6]}.***-{self.cpf_coletado[9:]}"
+        elif self.cpf_coletado:
+            masked_cpf = "***"
+
         return {
             "last_interaction_at": self.last_interaction_at.isoformat() if self.last_interaction_at else None,
-            "cpf_coletado": self.cpf_coletado,
+            "cpf_coletado": masked_cpf,
             "aguardando_cpf": self.aguardando_cpf,
             "operacao_pendente": self.operacao_pendente,
             "boas_vindas_enviada": self.boas_vindas_enviada,
+            "patient_id_pendente": self.patient_id_pendente,
         }
 
 
@@ -115,6 +126,45 @@ class ConversationManager:
         """Verifica se estamos esperando o CPF do paciente."""
         state = self._get_or_create(wa_from)
         return state.aguardando_cpf
+
+    def set_awaiting_confirmation(self, wa_from: str, awaiting: bool):
+        """Marca se estamos aguardando confirmação de agendamento."""
+        state = self._get_or_create(wa_from)
+        state.aguardando_confirmacao = awaiting
+        logger.info(f"[ConvState] {wa_from}: aguardando confirmação = {awaiting}")
+
+    def is_awaiting_confirmation(self, wa_from: str) -> bool:
+        """Verifica se estamos esperando confirmação."""
+        state = self._get_or_create(wa_from)
+        return getattr(state, "aguardando_confirmacao", False)
+
+    def set_awaiting_patient_confirmation(self, wa_from: str, awaiting: bool):
+        """Marca se estamos aguardando confirmação do paciente."""
+        state = self._get_or_create(wa_from)
+        state.aguardando_confirmacao_paciente = awaiting
+        logger.info(f"[ConvState] {wa_from}: aguardando confirmação paciente = {awaiting}")
+
+    def is_awaiting_patient_confirmation(self, wa_from: str) -> bool:
+        """Verifica se estamos esperando confirmação do paciente."""
+        state = self._get_or_create(wa_from)
+        return getattr(state, "aguardando_confirmacao_paciente", False)
+
+    def set_pending_patient_id(self, wa_from: str, patient_id: int):
+        """Armazena o ID do paciente selecionado para a conversa."""
+        state = self._get_or_create(wa_from)
+        state.patient_id_pendente = patient_id
+        logger.info(f"[ConvState] {wa_from}: patient_id pendente = {patient_id}")
+
+    def get_pending_patient_id(self, wa_from: str) -> Optional[int]:
+        """Retorna o ID do paciente selecionado."""
+        state = self._get_or_create(wa_from)
+        return getattr(state, "patient_id_pendente", None)
+
+    def clear_pending_patient_id(self, wa_from: str):
+        """Limpa o ID do paciente selecionado."""
+        state = self._get_or_create(wa_from)
+        state.patient_id_pendente = None
+        logger.info(f"[ConvState] {wa_from}: patient_id pendente limpo")
 
     def get_cpf(self, wa_from: str) -> Optional[str]:
         """Retorna o CPF coletado (se já coletou)."""

@@ -29,12 +29,13 @@ class AppointmentFilters {
     int? patientId,
     bool clearStatus = false,
     bool clearPatient = false,
+    bool clearDoctor = false,
   }) {
     return AppointmentFilters(
       statusFilter: clearStatus ? null : (statusFilter ?? this.statusFilter),
       dateFrom: dateFrom ?? this.dateFrom,
       dateTo: dateTo ?? this.dateTo,
-      doctorId: doctorId ?? this.doctorId,
+      doctorId: clearDoctor ? null : (doctorId ?? this.doctorId),
       patientId: clearPatient ? null : (patientId ?? this.patientId),
     );
   }

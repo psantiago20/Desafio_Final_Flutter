@@ -8,6 +8,9 @@ import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
 import 'package:frontend/features/patients/providers/patients_provider.dart';
 import 'package:frontend/features/dashboard/providers/dashboard_provider.dart';
+import 'package:frontend/features/dashboard/widgets/doctor_sidebar.dart';
+import 'package:frontend/features/auth/providers/auth_provider.dart';
+import 'package:frontend/features/patients/screens/patient_history_screen.dart';
 
 class AppointmentDetailScreen extends ConsumerStatefulWidget {
   final AppointmentModel appointment;
@@ -38,7 +41,8 @@ class _AppointmentDetailScreenState
     _appointment = widget.appointment;
     _symptomsCtrl.text = _appointment.symptoms ?? '';
     _diagnosisCtrl.text = _appointment.diagnosis ?? '';
-    _prescriptionCtrl.text = _appointment.prescription ?? '';
+    // If prescription was already sent (has HTML), don't load the draft text back into the box
+    _prescriptionCtrl.text = (_appointment.prescriptionHtml != null) ? '' : (_appointment.prescription ?? '');
     _weightCtrl.text = _appointment.weight ?? ''; 
     _heightCtrl.text = _appointment.height ?? '';
     _bpmCtrl.text = _appointment.heartRate ?? '';
@@ -115,271 +119,287 @@ class _AppointmentDetailScreenState
     final dateFmt = DateFormat("dd 'de' MMMM 'de' yyyy, HH:mm", 'pt_BR');
     final color = statusColor(_appointment.status);
 
+    final isDesktop = MediaQuery.of(context).size.width >= 768;
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Detalhes da Consulta'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () => context.pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(_editing ? Icons.close_rounded : Icons.edit_outlined),
-            onPressed: () => setState(() => _editing = !_editing),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.person_outline,
-                            color: AppColors.primary),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ref.watch(patientByIdProvider(_appointment.patientId)).when(
-                          data: (patient) => Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                patient.name,
-                                style: GoogleFonts.dmSans(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              Text(
-                                'Nascimento: ${patient.formattedDateOfBirth}',
-                                style: GoogleFonts.dmSans(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 13),
-                              ),
-                            ],
-                          ),
-                          loading: () => const Text('Carregando...'),
-                          error: (_, __) => Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Paciente #${_appointment.patientId}',
-                                style: GoogleFonts.dmSans(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              Text(
-                                typeLabel(_appointment.type),
-                                style: GoogleFonts.dmSans(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 13),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          statusLabel(_appointment.status),
-                          style: GoogleFonts.dmSans(
-                              color: color,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  const SizedBox(height: 12),
-                  _infoRow(Icons.calendar_today_outlined, 'Data e hora',
-                      dateFmt.format(_appointment.appointmentDate)),
-                  const SizedBox(height: 8),
-                  _infoRow(Icons.timer_outlined, 'Duração',
-                      '${_appointment.durationMinutes} minutos'),
-                  if (_appointment.reason != null) ...[
-                    const SizedBox(height: 8),
-                    _infoRow(Icons.notes_outlined, 'Motivo',
-                        _appointment.reason!),
-                  ],
-                  const SizedBox(height: 8),
-                  _infoRow(
-                    Icons.attach_money_rounded,
-                    'Valor',
-                    'R\$ ${_appointment.price.toStringAsFixed(2)}  •  ${_appointment.paid ? 'Pago' : 'Pendente'}',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Ações de status
-            Text('Atualizar status',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 10),
-            _StatusActions(
-              currentStatus: _appointment.status,
-              onUpdate: _updateStatus,
-            ),
-            const SizedBox(height: 24),
-
-            // Ferramentas
-            Text('Ferramentas',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 10),
-            _ToolActions(
-              patientId: _appointment.patientId,
-            ),
-            const SizedBox(height: 24),
-
-            // Anotações clínicas
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Row(
+        children: [
+          if (isDesktop) const DoctorSidebar(selectedIndex: 1), // Select Agenda/Appointments
+          Expanded(
+            child: Column(
               children: [
-                Text('Anotações clínicas',
-                    style: Theme.of(context).textTheme.titleMedium),
-                if (_editing)
-                  ElevatedButton.icon(
-                    onPressed: _saveNotes,
-                    icon: const Icon(Icons.save_rounded, size: 16),
-                    label: const Text('Salvar'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                AppBar(
+                  title: const Text('Detalhes da Consulta'),
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                    onPressed: () => context.pop(),
+                  ),
+                  actions: [
+                    IconButton(
+                      icon: Icon(_editing ? Icons.close_rounded : Icons.edit_outlined),
+                      onPressed: () => setState(() => _editing = !_editing),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header card
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(Icons.person_outline,
+                                        color: AppColors.primary),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: ref.watch(patientByIdProvider(_appointment.patientId)).when(
+                                      data: (patient) => Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            patient.name,
+                                            style: GoogleFonts.dmSans(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 16,
+                                              color: AppColors.textPrimary,
+                                            ),
+                                          ),
+                                          Text(
+                                            'Nascimento: ${patient.formattedDateOfBirth}',
+                                            style: GoogleFonts.dmSans(
+                                                color: AppColors.textSecondary,
+                                                fontSize: 13),
+                                          ),
+                                        ],
+                                      ),
+                                      loading: () => const Text('Carregando...'),
+                                      error: (_, __) => Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Paciente #${_appointment.patientId}',
+                                            style: GoogleFonts.dmSans(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 16,
+                                              color: AppColors.textPrimary,
+                                            ),
+                                          ),
+                                          Text(
+                                            typeLabel(_appointment.type),
+                                            style: GoogleFonts.dmSans(
+                                                color: AppColors.textSecondary,
+                                                fontSize: 13),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: color.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      statusLabel(_appointment.status),
+                                      style: GoogleFonts.dmSans(
+                                          color: color,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              const Divider(),
+                              const SizedBox(height: 12),
+                              _infoRow(Icons.calendar_today_outlined, 'Data e hora',
+                                  dateFmt.format(_appointment.appointmentDate)),
+                              const SizedBox(height: 8),
+                              _infoRow(Icons.timer_outlined, 'Duração',
+                                  '${_appointment.durationMinutes} minutos'),
+                              if (_appointment.reason != null) ...[
+                                const SizedBox(height: 8),
+                                _infoRow(Icons.notes_outlined, 'Motivo',
+                                    _appointment.reason!),
+                              ],
+                              const SizedBox(height: 8),
+                              _infoRow(
+                                Icons.attach_money_rounded,
+                                'Valor',
+                                'R\$ ${_appointment.price.toStringAsFixed(2)}  •  ${_appointment.paid ? 'Pago' : 'Pendente'}',
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Ações de status
+                        Text('Atualizar status',
+                            style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 10),
+                        _StatusActions(
+                          currentStatus: _appointment.status,
+                          onUpdate: _updateStatus,
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Ferramentas
+                        Text('Ferramentas',
+                            style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 10),
+                        _ToolActions(
+                          patientId: _appointment.patientId,
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Anotações clínicas
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Anotações clínicas',
+                                style: Theme.of(context).textTheme.titleMedium),
+                            if (_editing)
+                              ElevatedButton.icon(
+                                onPressed: _saveNotes,
+                                icon: const Icon(Icons.save_rounded, size: 16),
+                                label: const Text('Salvar'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Weight and Height small squares
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _SmallClinicalField(
+                                label: 'Peso',
+                                controller: _weightCtrl,
+                                unit: 'kg',
+                                icon: Icons.monitor_weight_outlined,
+                                enabled: _editing,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _SmallClinicalField(
+                                label: 'Altura',
+                                controller: _heightCtrl,
+                                unit: 'cm',
+                                icon: Icons.height_rounded,
+                                enabled: _editing,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _SmallClinicalField(
+                                label: 'Freq. Cardíaca',
+                                controller: _bpmCtrl,
+                                unit: 'BPM',
+                                icon: Icons.favorite_border_rounded,
+                                enabled: _editing,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _SmallClinicalField(
+                                label: 'Pressão Arterial',
+                                controller: _pressureCtrl,
+                                unit: 'mmHg',
+                                icon: Icons.speed_rounded,
+                                enabled: _editing,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _SmallClinicalField(
+                                label: 'Glicemia',
+                                controller: _glucoseCtrl,
+                                unit: 'mg/dL',
+                                icon: Icons.water_drop_outlined,
+                                enabled: _editing,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _SmallClinicalField(
+                                label: 'Temperatura',
+                                controller: _tempCtrl,
+                                unit: '°C',
+                                icon: Icons.thermostat_outlined,
+                                enabled: _editing,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _ClinicalField(
+                          label: 'Sintomas',
+                          controller: _symptomsCtrl,
+                          icon: Icons.sick_outlined,
+                          enabled: _editing,
+                        ),
+                        const SizedBox(height: 10),
+                        _ClinicalField(
+                          label: 'Diagnóstico',
+                          controller: _diagnosisCtrl,
+                          icon: Icons.medical_information_outlined,
+                          enabled: _editing,
+                        ),
+                        const SizedBox(height: 10),
+                        _PrescriptionField(
+                          appointmentId: _appointment.id,
+                          patientId: _appointment.patientId,
+                          controller: _prescriptionCtrl,
+                          enabled: true, // Always enabled for direct typing
+                          onSent: (updated) {
+                            if (updated != null) {
+                              setState(() => _appointment = updated);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 32),
+                      ],
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // Weight and Height small squares
-            Row(
-              children: [
-                Expanded(
-                  child: _SmallClinicalField(
-                    label: 'Peso',
-                    controller: _weightCtrl,
-                    unit: 'kg',
-                    icon: Icons.monitor_weight_outlined,
-                    enabled: _editing,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _SmallClinicalField(
-                    label: 'Altura',
-                    controller: _heightCtrl,
-                    unit: 'cm',
-                    icon: Icons.height_rounded,
-                    enabled: _editing,
-                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _SmallClinicalField(
-                    label: 'Freq. Cardíaca',
-                    controller: _bpmCtrl,
-                    unit: 'BPM',
-                    icon: Icons.favorite_border_rounded,
-                    enabled: _editing,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _SmallClinicalField(
-                    label: 'Pressão Arterial',
-                    controller: _pressureCtrl,
-                    unit: 'mmHg',
-                    icon: Icons.speed_rounded,
-                    enabled: _editing,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _SmallClinicalField(
-                    label: 'Glicemia',
-                    controller: _glucoseCtrl,
-                    unit: 'mg/dL',
-                    icon: Icons.water_drop_outlined,
-                    enabled: _editing,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _SmallClinicalField(
-                    label: 'Temperatura',
-                    controller: _tempCtrl,
-                    unit: '°C',
-                    icon: Icons.thermostat_outlined,
-                    enabled: _editing,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _ClinicalField(
-              label: 'Sintomas',
-              controller: _symptomsCtrl,
-              icon: Icons.sick_outlined,
-              enabled: _editing,
-            ),
-            const SizedBox(height: 10),
-            _ClinicalField(
-              label: 'Diagnóstico',
-              controller: _diagnosisCtrl,
-              icon: Icons.medical_information_outlined,
-              enabled: _editing,
-            ),
-            const SizedBox(height: 10),
-            _PrescriptionField(
-              appointmentId: _appointment.id,
-              controller: _prescriptionCtrl,
-              enabled: _editing,
-              onSent: (updated) {
-                if (updated != null) {
-                  setState(() => _appointment = updated);
-                }
-              },
-            ),
-            const SizedBox(height: 32),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -489,7 +509,7 @@ class _ToolActions extends StatelessWidget {
       children: [
         GestureDetector(
           onTap: () {
-            context.push('/patients/$patientId/exams');
+            context.push('/patients/$patientId/history');
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
@@ -502,7 +522,7 @@ class _ToolActions extends StatelessWidget {
               ),
             ),
             child: Text(
-              'Exames do paciente',
+              'Exames e Histórico',
               style: GoogleFonts.dmSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w400,
@@ -668,12 +688,14 @@ class _SmallClinicalField extends StatelessWidget {
 
 class _PrescriptionField extends ConsumerWidget {
   final int appointmentId;
+  final int patientId;
   final TextEditingController controller;
   final bool enabled;
   final Function(AppointmentModel?) onSent;
 
   const _PrescriptionField({
     required this.appointmentId,
+    required this.patientId,
     required this.controller,
     required this.enabled,
     required this.onSent,
@@ -708,37 +730,60 @@ class _PrescriptionField extends ConsumerWidget {
                       fontSize: 13,
                     )),
                 const Spacer(),
-                if (!enabled)
-                  TextButton.icon(
-                    onPressed: isLoading
-                        ? null
-                        : () async {
-                            final updated = await ref
-                                .read(appointmentActionsProvider.notifier)
-                                .sendPrescription(appointmentId);
+                TextButton.icon(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          final notifier = ref.read(appointmentActionsProvider.notifier);
+                          
+                          // 1. Save current prescription text to DB
+                          await notifier.updateAppointment(appointmentId, {
+                            'prescription': controller.text,
+                          });
+                          
+                          // 2. Trigger the send (PDF generation/WhatsApp)
+                          final updated = await notifier.sendPrescription(appointmentId);
+                          
+                          // 3. Invalidate history to ensure archived shows up if they navigate there
+                          ref.invalidate(archivedPrescriptionsProvider(patientId));
+                          ref.invalidate(appointmentsListProvider);
+                          
+                          if (updated != null) {
+                            // Get patient name for the snackbar
+                            final patient = ref.read(patientByIdProvider(patientId)).value;
+                            final name = patient?.name ?? "Paciente";
+                            
+                            controller.clear(); // Use clear() for safety
                             onSent(updated);
-                            if (updated != null && context.mounted) {
+                            
+                            // Forçar atualização de todos os providers relacionados
+                            ref.invalidate(appointmentsListProvider);
+                            ref.invalidate(archivedPrescriptionsProvider(patientId));
+                            
+                            if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text(
-                                        'Prescrição enviada com sucesso!')),
+                                SnackBar(
+                                  content: Text('Prescrição enviada com sucesso para $name!'),
+                                  backgroundColor: Colors.green,
+                                ),
                               );
                             }
-                          },
-                    icon: isLoading
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: AppColors.primary),
-                          )
-                        : const Icon(Icons.send_rounded, size: 14),
-                    label: Text(isLoading ? 'Enviando...' : 'Enviar ao Paciente'),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      visualDensity: VisualDensity.compact,
-                    ),
+                          }
+                        },
+                  icon: isLoading
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: AppColors.primary),
+                        )
+                      : const Icon(Icons.send_rounded, size: 14),
+                  label: Text(isLoading ? 'Enviando...' : 'Enviar ao Paciente'),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    visualDensity: VisualDensity.compact,
                   ),
+                ),
               ],
             ),
           ),
@@ -752,7 +797,7 @@ class _PrescriptionField extends ConsumerWidget {
             decoration: InputDecoration(
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(14),
-              hintText: enabled ? 'Toque para editar...' : 'Nenhuma informação',
+              hintText: 'Digite a prescrição aqui...',
               hintStyle:
                   GoogleFonts.dmSans(color: AppColors.textHint, fontSize: 13),
               filled: false,

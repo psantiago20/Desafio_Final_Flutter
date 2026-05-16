@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
+import asyncio
 
 from app.db.database import get_db
 from app.models.appointment import Appointment
@@ -13,6 +14,7 @@ from app.schemas.appointment import (
 )
 from app.api.endpoints.auth import get_current_user
 from app.models.user import User
+from app.models.message import Message, MessageType, MessageSource
 from app.services.prescription_service import prescription_service
 
 router = APIRouter()
@@ -33,7 +35,8 @@ def list_appointments(
     from sqlalchemy.orm import joinedload
     query = db.query(Appointment).options(
         joinedload(Appointment.doctor),
-        joinedload(Appointment.medico)
+        joinedload(Appointment.medico),
+        joinedload(Appointment.patient)
     )
     
     # Se for paciente, filtra apenas os seus agendamentos
@@ -45,7 +48,8 @@ def list_appointments(
             return {"total": 0, "appointments": []}
     
     # Se for médico e não especificou um doctor_id no filtro, filtra apenas os dele
-    if current_user.role == "doctor" and not doctor_id:
+    # EXCETO se ele estiver buscando o histórico de um paciente específico
+    if current_user.role == "doctor" and not doctor_id and not patient_id:
         query = query.filter(Appointment.doctor_id == current_user.id)
     
     if patient_id:
@@ -66,6 +70,7 @@ def list_appointments(
     for app in appointments:
         app.doctor_name = app.doctor.full_name if app.doctor else f"Médico {app.doctor_id}"
         app.medico_name = app.medico.nome_completo if app.medico else app.doctor_name
+        app.patient_name = app.patient.name if app.patient else f"Paciente #{app.patient_id}"
         # Hack para o front-end antigo: já envia o tipo traduzido
         if app.type == "consultation":
             app.type = "Consulta"
@@ -86,7 +91,8 @@ def get_appointment(
     from sqlalchemy.orm import joinedload
     appointment = db.query(Appointment).options(
         joinedload(Appointment.doctor),
-        joinedload(Appointment.medico)
+        joinedload(Appointment.medico),
+        joinedload(Appointment.patient)
     ).filter(Appointment.id == appointment_id).first()
     
     if not appointment:
@@ -94,6 +100,7 @@ def get_appointment(
     
     appointment.doctor_name = appointment.doctor.full_name if appointment.doctor else f"Médico {appointment.doctor_id}"
     appointment.medico_name = appointment.medico.nome_completo if appointment.medico else appointment.doctor_name
+    appointment.patient_name = appointment.patient.name if appointment.patient else f"Paciente #{appointment.patient_id}"
     
     if appointment.type == "consultation":
         appointment.type = "Consulta"
@@ -184,7 +191,7 @@ def update_appointment_status(
     old_status = db_appointment.status
     db_appointment.status = status_update.status
     if status_update.status == "completed":
-        db_appointment.completed_at = datetime.utcnow()
+        db_appointment.completed_at = datetime.now()
     
     db.commit()
     db.refresh(db_appointment)
@@ -243,11 +250,12 @@ def delete_appointment(
 
 
 @router.post("/{appointment_id}/send-prescription", response_model=AppointmentResponse)
-def send_prescription(
+async def send_prescription(
     appointment_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    print(f"\n>>> [DEBUG] RECEBIDA REQUISIÇÃO DE ENVIO PARA CONSULTA ID: {appointment_id}")
     from sqlalchemy.orm import joinedload
     db_appointment = db.query(Appointment).options(
         joinedload(Appointment.patient),
@@ -256,7 +264,10 @@ def send_prescription(
     ).filter(Appointment.id == appointment_id).first()
     
     if not db_appointment:
+        print(f">>> [DEBUG] ERRO: Consulta {appointment_id} não encontrada!")
         raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    print(f">>> [DEBUG] Consulta encontrada. Paciente: {db_appointment.patient.name if db_appointment.patient else 'N/A'}")
     
     # Gerar HTML da prescrição
     html_content = prescription_service.generate_html(
@@ -266,9 +277,57 @@ def send_prescription(
     )
     
     db_appointment.prescription_html = html_content
+    
+    # Arquiva a prescrição nas mensagens para manter o histórico caso o médico envie múltiplas
+    if db_appointment.prescription:
+        # 1. Mensagem para o Histórico Interno (Texto completo da Receita)
+        archive_msg = Message(
+            patient_id=db_appointment.patient_id,
+            sender_id=current_user.id,
+            content=db_appointment.prescription,
+            message_type=MessageType.TEXT.value,
+            source=MessageSource.SYSTEM.value,
+            meta="prescription_archive",
+            created_at=datetime.now()
+        )
+        db.add(archive_msg)
+
+        # 2. Mensagem para o Chat (Isis informando o envio)
+        isis_notification = Message(
+            patient_id=db_appointment.patient_id,
+            sender_id=current_user.id, # O médico enviou, mas no chat aparece como aviso do sistema/Isis
+            content="📄 Uma nova prescrição foi enviada para você! Acesse a aba 'Prescrições' para visualizar os detalhes e baixar o PDF.",
+            message_type=MessageType.TEXT.value,
+            source=MessageSource.SYSTEM.value, # Usando SYSTEM pois AI não existe no Enum
+            created_at=datetime.now()
+        )
+        db.add(isis_notification)
+        
+        # 3. Disparo para WhatsApp (Em segundo plano para não travar o Dashboard)
+        from fastapi import BackgroundTasks
+        
+        async def send_wa_async(phone, msg):
+            try:
+                from app.services.whatsapp_service import wa_service
+                print(f"[WHATSAPP] Enviando em segundo plano para {phone}...")
+                await wa_service.send_message(phone, msg)
+                print(f"[WHATSAPP] Sucesso no envio para {phone}")
+            except Exception as e:
+                print(f"[WHATSAPP] Erro no envio em segundo plano: {e}")
+
+        if db_appointment.patient and db_appointment.patient.phone:
+            patient_phone = db_appointment.patient.phone
+            wa_message = f"Olá {db_appointment.patient.name}, o Dr. {current_user.full_name} acabou de enviar uma nova prescrição para você no portal OmniConnect. Acesse para conferir!"
+            # Usamos o asyncio.create_task como "fire and forget" seguro
+            asyncio.create_task(send_wa_async(patient_phone, wa_message))
+
+        # Agora podemos limpar o campo de rascunho
+        db_appointment.prescription = ""
+    
     db.commit()
     db.refresh(db_appointment)
     
+    print(f">>> [DEBUG] SUCESSO: Prescrição enviada e arquivada para consulta {appointment_id}")
     return db_appointment
 
 @router.get("/{appointment_id}/prescription/pdf")

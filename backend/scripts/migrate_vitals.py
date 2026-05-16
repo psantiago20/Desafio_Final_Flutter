@@ -8,32 +8,23 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.db.database import engine
 
 def migrate():
-    with engine.connect() as conn:
-        print("Adicionando colunas de sinais vitais na tabela patients...")
-        
-        # heart_rate = Column(String(10))
+    print("Adicionando colunas de sinais vitais na tabela patients...")
+    
+    columns = [
+        ("heart_rate", "VARCHAR(10)"),
+        ("blood_pressure", "VARCHAR(20)"),
+        ("glucose", "VARCHAR(10)")
+    ]
+    
+    for col_name, col_type in columns:
         try:
-            conn.execute(text("ALTER TABLE patients ADD COLUMN heart_rate VARCHAR(10)"))
-            print("Coluna heart_rate adicionada.")
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE patients ADD COLUMN {col_name} {col_type}"))
+            print(f"Coluna {col_name} adicionada.")
         except Exception as e:
-            print(f"Erro ao adicionar heart_rate: {e}")
+            print(f"Erro ao adicionar {col_name} (pode já existir): {e}")
             
-        # blood_pressure = Column(String(20))
-        try:
-            conn.execute(text("ALTER TABLE patients ADD COLUMN blood_pressure VARCHAR(20)"))
-            print("Coluna blood_pressure adicionada.")
-        except Exception as e:
-            print(f"Erro ao adicionar blood_pressure: {e}")
-
-        # glucose = Column(String(10))
-        try:
-            conn.execute(text("ALTER TABLE patients ADD COLUMN glucose VARCHAR(10)"))
-            print("Coluna glucose adicionada.")
-        except Exception as e:
-            print(f"Erro ao adicionar glucose: {e}")
-        
-        conn.commit()
-        print("Migração concluída.")
+    print("Migração concluída.")
 
 if __name__ == "__main__":
     migrate()

@@ -61,4 +61,11 @@ class AuthRepository {
     TokenStorage.clear();
     ApiClient.clearToken();
   }
+
+  Future<void> refreshToken() async {
+    final data = await ApiClient.post('/api/auth/refresh', {});
+    final token = data['access_token'] as String;
+    TokenStorage.saveToken(token);
+    ApiClient.setToken(token);
+  }
 }

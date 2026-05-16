@@ -28,6 +28,7 @@ class MessageCreate(MessageBase):
 class MessageUpdate(BaseModel):
     is_read: Optional[bool] = None
     is_delivered: Optional[bool] = None
+    content: Optional[str] = None
 
 
 class MessageResponse(MessageBase):

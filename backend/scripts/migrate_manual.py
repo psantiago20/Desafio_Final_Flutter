@@ -8,28 +8,23 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.db.database import engine
 
 def migrate():
-    with engine.connect() as conn:
-        print("Adicionando colunas de verificação na tabela users...")
+    print("Adicionando colunas de verificação na tabela users...")
+    
+    columns = [
+        ("is_verified", "BOOLEAN DEFAULT FALSE"),
+        ("verification_code", "VARCHAR(10)"),
+        ("verification_code_expires_at", "TIMESTAMP")
+    ]
+    
+    for col_name, col_type in columns:
         try:
-            conn.execute(text("ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT FALSE"))
-            print("Coluna is_verified adicionada.")
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
+            print(f"Coluna {col_name} adicionada.")
         except Exception as e:
-            print(f"Erro ao adicionar is_verified: {e}")
+            print(f"Erro ao adicionar {col_name} (pode já existir): {e}")
             
-        try:
-            conn.execute(text("ALTER TABLE users ADD COLUMN verification_code VARCHAR(10)"))
-            print("Coluna verification_code adicionada.")
-        except Exception as e:
-            print(f"Erro ao adicionar verification_code: {e}")
-
-        try:
-            conn.execute(text("ALTER TABLE users ADD COLUMN verification_code_expires_at TIMESTAMP"))
-            print("Coluna verification_code_expires_at adicionada.")
-        except Exception as e:
-            print(f"Erro ao adicionar verification_code_expires_at: {e}")
-        
-        conn.commit()
-        print("Migração concluída.")
+    print("Migração concluída.")
 
 if __name__ == "__main__":
     migrate()

@@ -47,6 +47,11 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     phone_clean = "".join(filter(str.isdigit, user.phone))
     if not phone_clean.startswith("55") and len(phone_clean) >= 10:
         phone_clean = "55" + phone_clean
+    
+    # 3. Verificar se o telefone já está em uso por outro User
+    db_user = db.query(User).filter(User.phone == phone_clean).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Phone number already registered")
 
     hashed_password = get_password_hash(user.password)
     db_user = User(
@@ -77,17 +82,34 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         db.add(db_medico)
         db.commit()
     
-    # Se for paciente, cria perfil de paciente
+    # Se for paciente, vincula ou cria perfil de paciente
     elif user.role == "patient":
         from app.models.patient import Patient
-        db_patient = Patient(
-            user_id=db_user.id,
-            name=user.full_name or user.username,
-            email=user.email,
-            phone=phone_clean,
-            whatsapp=phone_clean, # O número do celular será o WhatsApp
-        )
-        db.add(db_patient)
+        from app.utils.phone_utils import find_patient_by_messaging_phone
+        
+        # Tenta localizar paciente pré-existente (ex: vindo do WhatsApp)
+        existing_patient = find_patient_by_messaging_phone(db, phone_clean)
+        
+        if existing_patient:
+            # Vincula o usuário ao paciente existente
+            existing_patient.user_id = db_user.id
+            # Atualiza dados se estiverem genéricos
+            if existing_patient.name.startswith("WhatsApp User") or existing_patient.name.startswith("App User"):
+                existing_patient.name = user.full_name or user.username
+            if not existing_patient.email:
+                existing_patient.email = user.email
+            db.add(existing_patient)
+        else:
+            # Cria novo paciente
+            db_patient = Patient(
+                user_id=db_user.id,
+                name=user.full_name or user.username,
+                email=user.email,
+                phone=phone_clean,
+                whatsapp=phone_clean,
+            )
+            db.add(db_patient)
+        
         db.commit()
 
     return db_user
@@ -112,6 +134,18 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+
+@router.post("/refresh", response_model=Token)
+def refresh_token(current_user: User = Depends(get_current_user)):
+    """
+    Renova o token para usuários ativos.
+    """
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": str(current_user.id), "role": current_user.role}, 
+        expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @router.get("/me", response_model=UserResponse)
 def read_users_me(current_user: User = Depends(get_current_user)):

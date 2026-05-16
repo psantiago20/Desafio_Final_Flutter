@@ -56,6 +56,7 @@ class AppointmentResponse(AppointmentBase):
     patient: Optional[PatientInfo] = None
     doctor_name: Optional[str] = None
     medico_name: Optional[str] = None
+    patient_name: Optional[str] = None
     symptoms: Optional[str] = None
     diagnosis: Optional[str] = None
     prescription: Optional[str] = None

@@ -32,8 +32,19 @@ def list_messages(
             query = query.filter(Message.patient_id == patient.id)
         else:
             return {"total": 0, "messages": []}
-    elif patient_id:
-        query = query.filter(Message.patient_id == patient_id)
+    else:
+        # Lógica para médicos
+        if patient_id:
+            query = query.filter(Message.patient_id == patient_id)
+            
+        # Garante que o médico só veja:
+        # 1. Mensagens que têm um remetente ou destinatário definido
+        # Isso esconde a conversa privada do paciente com a IA (onde ambos são null)
+        query = query.filter((Message.sender_id.isnot(None)) | (Message.receiver_id.isnot(None)))
+        
+        # Se for especificamente o chat da Isis (ID 15), filtra apenas o histórico deste médico
+        if patient_id == 15:
+            query = query.filter((Message.sender_id == current_user.id) | (Message.receiver_id == current_user.id))
     
     if unread_only:
         query = query.filter(Message.is_read == False)
@@ -57,7 +68,7 @@ def get_message(
 
 
 @router.post("", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
-def create_message(
+async def create_message(
     message: MessageCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -72,38 +83,30 @@ def create_message(
     
     # --- FCM Notification Logic ---
     if db_message.receiver_id:
-        # Debounce: check if sender sent a message to this receiver in the last 1 minute
-        one_minute_ago = datetime.utcnow() - timedelta(minutes=1)
-        recent_msg_count = db.query(Message).filter(
-            Message.sender_id == current_user.id,
-            Message.receiver_id == db_message.receiver_id,
-            Message.created_at >= one_minute_ago,
-            Message.id != db_message.id
-        ).count()
+        from app.services.fcm_service import fcm_service
+        from app.models.user import User
+        receiver = db.query(User).filter(User.id == db_message.receiver_id).first()
+        if receiver and receiver.fcm_token:
+            sender_name = current_user.full_name or current_user.username or "A user"
+            fcm_service.send_notification(
+                token=receiver.fcm_token,
+                title=f"Nova mensagem de {sender_name}",
+                body=db_message.content if db_message.message_type == "text" else "Enviou um anexo",
+                data={"type": "chat_message", "sender_id": str(current_user.id)}
+            )
 
-        if recent_msg_count == 0:
-            receiver = db.query(User).filter(User.id == db_message.receiver_id).first()
-            if receiver and receiver.fcm_token:
-                # Payload limits handling
-                if db_message.message_type != "text":
-                    body_text = f"Sent an attachment ({db_message.message_type})"
-                else:
-                    body_text = db_message.content
+    # --- WhatsApp Notification Logic (Web Only) ---
+    from app.services.whatsapp_service import wa_service
+    from app.models.patient import Patient
+    import asyncio
 
-                sender_name = current_user.full_name or current_user.username or "A user"
-                
-                # Check online status (if we had a websocket, but for now we just use the token)
-                fcm_service.send_notification(
-                    token=receiver.fcm_token,
-                    title=f"New message from {sender_name}",
-                    body=body_text,
-                    data={
-                        "type": "chat_message",
-                        "message_id": str(db_message.id),
-                        "sender_id": str(current_user.id)
-                    }
-                )
-                
+    patient = db.query(Patient).filter(Patient.id == db_message.patient_id).first()
+    
+    if current_user.role == "doctor" and patient and patient.phone:
+        wa_message = f"Olá {patient.name}, o Dr. {current_user.full_name} enviou uma nova mensagem para você no portal. Acesse para responder!"
+        print(f"[WHATSAPP] Gatilho de mensagem de chat acionado via WEB para: {patient.name} ({patient.phone})")
+        asyncio.create_task(wa_service.send_message(patient.phone, wa_message))
+
     return db_message
 
 
@@ -127,16 +130,25 @@ def update_message(
     return db_message
 
 
-@router.patch("/{message_id}/read", status_code=status.HTTP_204_NO_CONTENT)
-def mark_as_read(
-    message_id: int,
+@router.patch("/read-all/{patient_id}", status_code=status.HTTP_204_NO_CONTENT)
+def mark_patient_messages_as_read(
+    patient_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    db_message = db.query(Message).filter(Message.id == message_id).first()
-    if not db_message:
-        raise HTTPException(status_code=404, detail="Message not found")
+    query = db.query(Message).filter(
+        Message.patient_id == patient_id,
+        Message.is_read == False
+    )
     
-    db_message.is_read = True
+    if current_user.role == "patient":
+        # Paciente lendo mensagens recebidas (bot ou médico)
+        # Excluímos as enviadas por ele
+        query = query.filter(Message.sender_id != current_user.id)
+    else:
+        # Médico lendo mensagens do paciente
+        query = query.filter(Message.sender_id != current_user.id)
+        
+    query.update({Message.is_read: True})
     db.commit()
     return None

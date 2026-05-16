@@ -17,7 +17,7 @@ class PatientInfo {
       id: json['id'] as int,
       name: json['name'] as String,
       dateOfBirth: json['date_of_birth'] != null
-          ? DateTime.parse(json['date_of_birth'] as String)
+          ? DateTime.parse("${json['date_of_birth']}Z").toLocal()
           : null,
     );
   }
@@ -27,6 +27,7 @@ class AppointmentModel {
   final int id;
   final int patientId;
   final int doctorId;
+  final String? patientNameFromApi;
   final String? doctorNameFromApi;
   final String? medicoName;
   final DateTime appointmentDate;
@@ -58,6 +59,7 @@ class AppointmentModel {
     required this.id,
     required this.patientId,
     required this.doctorId,
+    this.patientNameFromApi,
     this.doctorNameFromApi,
     this.medicoName,
     required this.appointmentDate,
@@ -91,9 +93,10 @@ class AppointmentModel {
       id: json['id'] as int,
       patientId: json['patient_id'] as int,
       doctorId: json['doctor_id'] as int,
+      patientNameFromApi: json['patient_name'] as String?,
       doctorNameFromApi: json['doctor_name'] as String?,
       medicoName: json['medico_name'] as String?,
-      appointmentDate: DateTime.parse(json['appointment_date'] as String),
+      appointmentDate: _parseDateTime(json['appointment_date'] as String),
       durationMinutes: json['duration_minutes'] as int? ?? 30,
       type: json['type'] as String? ?? 'consultation',
       status: json['status'] as String? ?? 'pending',
@@ -117,9 +120,17 @@ class AppointmentModel {
       patient: json['patient'] != null
           ? PatientInfo.fromJson(json['patient'] as Map<String, dynamic>)
           : null,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: _parseDateTime(json['created_at'] as String),
+      updatedAt: _parseDateTime(json['updated_at'] as String),
     );
+  }
+
+  static DateTime _parseDateTime(String dateStr) {
+    if (dateStr.contains('Z') || dateStr.contains('+') || dateStr.contains('-')) {
+      return DateTime.parse(dateStr).toLocal();
+    }
+    // If no TZ info, assume it's already in local time (Brasília)
+    return DateTime.parse(dateStr);
   }
 
   AppointmentModel copyWith({
@@ -144,6 +155,7 @@ class AppointmentModel {
       id: id,
       patientId: patientId,
       doctorId: doctorId,
+      patientNameFromApi: patientNameFromApi,
       doctorNameFromApi: doctorNameFromApi,
       medicoName: medicoName,
       appointmentDate: appointmentDate,
@@ -174,7 +186,7 @@ class AppointmentModel {
 
   String get doctorName => medicoName ?? doctorNameFromApi ?? 'Médico $doctorId';
 
-  String get patientName => patient?.name ?? 'Paciente #$patientId';
+  String get patientName => patient?.name ?? patientNameFromApi ?? 'Paciente #$patientId';
   String get patientDob {
     if (patient?.dateOfBirth == null) return 'N/A';
     final dob = patient!.dateOfBirth!;

@@ -23,6 +23,9 @@ class PatientBase(BaseModel):
     allergies: Optional[str] = None
     chronic_conditions: Optional[str] = None
     medications: Optional[str] = None
+    heart_rate: Optional[str] = None
+    blood_pressure: Optional[str] = None
+    glucose: Optional[str] = None
 
 
 class PatientCreate(PatientBase):
@@ -49,6 +52,9 @@ class PatientUpdate(BaseModel):
     allergies: Optional[str] = None
     chronic_conditions: Optional[str] = None
     medications: Optional[str] = None
+    heart_rate: Optional[str] = None
+    blood_pressure: Optional[str] = None
+    glucose: Optional[str] = None
     is_active: Optional[bool] = None
 
 

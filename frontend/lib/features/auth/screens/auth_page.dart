@@ -35,7 +35,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     }
     final ok = await ref.read(authProvider.notifier).login(username, password);
     if (ok && mounted) {
-      // O redirect do GoRouter lidará com o redirecionamento automático baseado no novo estado
+      // O GoRouter fará o redirecionamento automaticamente baseado no papel do usuário.
     }
   }
 

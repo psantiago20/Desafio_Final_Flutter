@@ -65,7 +65,14 @@ def get_dashboard_stats(
         completed_appointments = db.query(Appointment).filter(Appointment.patient_id == patient.id, Appointment.status == "completed").count()
         cancelled_appointments = db.query(Appointment).filter(Appointment.patient_id == patient.id, Appointment.status == "cancelled").count()
         
-        unread_messages = db.query(Message).filter(Message.patient_id == patient.id, Message.is_read == False).count()
+        # Para o paciente, contamos mensagens recebidas (de médicos ou bot)
+        # EXCLUÍMOS mensagens de arquivamento (meta='prescription_archive')
+        unread_messages = db.query(Message).filter(
+            Message.patient_id == patient.id, 
+            Message.is_read == False,
+            Message.sender_id != patient.user_id,
+            Message.meta != 'prescription_archive'
+        ).count()
         
         from app.models.exam import Exam
         last_exam = db.query(Exam).filter(Exam.patient_id == patient.id).order_by(Exam.created_at.desc()).first()
@@ -111,7 +118,11 @@ def get_dashboard_stats(
     completed_appointments = db.query(Appointment).filter(Appointment.status == "completed").count()
     cancelled_appointments = db.query(Appointment).filter(Appointment.status == "cancelled").count()
     
-    unread_messages = db.query(Message).filter(Message.is_read == False).count()
+    # Para Admin/Médico, contamos mensagens que NÃO foram enviadas por ele
+    unread_messages = db.query(Message).filter(
+        Message.is_read == False,
+        Message.sender_id != current_user.id
+    ).count()
     
     total_services = db.query(Service).count()
     
@@ -215,3 +226,67 @@ def get_system_status():
         "whatsapp_status": whatsapp_status,
         "ia_engine": ia_engine
     }
+
+@router.get("/financial")
+def get_financial_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from sqlalchemy import extract
+    
+    # Revenue metrics
+    today = datetime.utcnow().date()
+    month_start = today.replace(day=1)
+    year_start = today.replace(month=1, day=1)
+    
+    # Query builder for revenue
+    def get_revenue(start_date=None, end_date=None):
+        query = db.query(func.sum(Appointment.price)).filter(
+            (Appointment.paid == True) | (Appointment.status == "completed")
+        )
+        if start_date:
+            query = query.filter(Appointment.appointment_date >= datetime.combine(start_date, datetime.min.time()))
+        if end_date:
+            query = query.filter(Appointment.appointment_date <= datetime.combine(end_date, datetime.max.time()))
+            
+        if current_user.role == "doctor":
+            query = query.filter(Appointment.doctor_id == current_user.id)
+            
+        return query.scalar() or 0.0
+
+    revenue_today = get_revenue(start_date=today, end_date=today)
+    revenue_month = get_revenue(start_date=month_start)
+    revenue_year = get_revenue(start_date=year_start)
+    total_revenue = get_revenue()
+    
+    # Appointments by Day of Week
+    # PostgreSQL / SQLite extract dow / isodow or just group by
+    # For SQLite, it's safer to pull the last year's appointments and count in python to avoid dialect issues
+    
+    query_appts = db.query(Appointment.appointment_date)
+    if current_user.role == "doctor":
+        query_appts = query_appts.filter(Appointment.doctor_id == current_user.id)
+        
+    all_dates = [a[0] for a in query_appts.all()]
+    
+    days_of_week = [0] * 7 # Mon-Sun
+    hours_of_day = [0] * 24 # 0-23
+    
+    for dt in all_dates:
+        if dt:
+            days_of_week[dt.weekday()] += 1
+            hours_of_day[dt.hour] += 1
+            
+    # Format for charts
+    day_labels = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+    appointments_by_day = [{"day": day_labels[i], "count": days_of_week[i]} for i in range(7)]
+    appointments_by_time = [{"hour": f"{i:02d}:00", "count": hours_of_day[i]} for i in range(24) if hours_of_day[i] > 0 or (8 <= i <= 18)]
+
+    return {
+        "revenue_today": float(revenue_today),
+        "revenue_month": float(revenue_month),
+        "revenue_year": float(revenue_year),
+        "total_revenue": float(total_revenue),
+        "appointments_by_day_of_week": appointments_by_day,
+        "appointments_by_time_of_day": appointments_by_time
+    }

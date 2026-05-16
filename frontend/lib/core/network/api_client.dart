@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../constants/app_constants.dart';
 
@@ -18,6 +17,9 @@ class ApiClient {
 
   static void setToken(String token) => _token = token;
   static void clearToken() => _token = null;
+
+  static void Function()? onUnauthorized;
+  static void Function()? onActivity;
 
   static Map<String, String> get _headers => {
         'Content-Type': 'application/json',
@@ -41,9 +43,6 @@ class ApiClient {
       final response =
           await http.get(_uri(path, queryParams), headers: _headers);
       return _handleResponse(response);
-    } on SocketException {
-      throw ApiException(
-          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
           statusCode: 0, message: _mapClientError(e.message));
@@ -64,7 +63,7 @@ class ApiClient {
         return response.bodyBytes;
       }
       return _handleResponse(response);
-    } on SocketException {
+    } on http.ClientException {
       throw ApiException(
           statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } catch (e) {
@@ -81,9 +80,6 @@ class ApiClient {
         body: jsonEncode(body),
       );
       return _handleResponse(response);
-    } on SocketException {
-      throw ApiException(
-          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
           statusCode: 0, message: _mapClientError(e.message));
@@ -105,9 +101,6 @@ class ApiClient {
         body: body,
       );
       return _handleResponse(response);
-    } on SocketException {
-      throw ApiException(
-          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
           statusCode: 0, message: _mapClientError(e.message));
@@ -125,9 +118,6 @@ class ApiClient {
         body: jsonEncode(body),
       );
       return _handleResponse(response);
-    } on SocketException {
-      throw ApiException(
-          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
           statusCode: 0, message: _mapClientError(e.message));
@@ -145,9 +135,6 @@ class ApiClient {
         body: jsonEncode(body),
       );
       return _handleResponse(response);
-    } on SocketException {
-      throw ApiException(
-          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
           statusCode: 0, message: _mapClientError(e.message));
@@ -164,9 +151,6 @@ class ApiClient {
       if (response.statusCode != 204 && response.statusCode != 200) {
         _handleResponse(response);
       }
-    } on SocketException {
-      throw ApiException(
-          statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } on http.ClientException catch (e) {
       throw ApiException(
           statusCode: 0, message: _mapClientError(e.message));
@@ -187,11 +171,13 @@ class ApiClient {
 
   static dynamic _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
+      onActivity?.call();
       if (response.body.isEmpty) return null;
       return jsonDecode(utf8.decode(response.bodyBytes));
     }
 
     if (response.statusCode == 401) {
+      Future.microtask(() => onUnauthorized?.call());
       throw ApiException(statusCode: 401, message: 'Sua sessão expirou ou os dados de acesso estão incorretos.');
     }
 
