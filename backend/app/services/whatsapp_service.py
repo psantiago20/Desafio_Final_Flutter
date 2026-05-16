@@ -73,5 +73,23 @@ class WhatsAppService:
                 logger.error(f"Unexpected error sending template: {e}")
                 raise
 
+    async def get_media_url(self, media_id: str) -> str:
+        """Busca a URL de download de uma mídia via ID."""
+        url = f"{self.base_url}/{media_id}"
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers)
+            response.raise_for_status()
+            return response.json().get("url")
+
+    async def download_media(self, media_url: str) -> bytes:
+        """Faz o download dos bytes da mídia usando a URL fornecida pela Meta."""
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+        async with httpx.AsyncClient() as client:
+            response = await client.get(media_url, headers=headers)
+            response.raise_for_status()
+            return response.content
+
 
 wa_service = WhatsAppService()

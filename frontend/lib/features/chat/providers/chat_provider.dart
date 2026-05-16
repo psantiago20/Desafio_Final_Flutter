@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/phone_utils.dart';
+import '../../../core/utils/token_storage.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/providers/medicos_provider.dart';
 import '../../../shared/models/medico_model.dart';
@@ -125,12 +127,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
   }
 
   Future<void> fetchMessages() async {
-    if (state.isFetching) return;
+    // Se estiver enviando algo ou já buscando, não faz nada para evitar 'atropelar' o estado local
+    if (state.isFetching || state.isLoading) return;
     
     if (!mounted) return;
     state = state.copyWith(isFetching: true);
     try {
       final response = await ApiClient.get('/api/messages');
+      
+      // VERIFICAÇÃO DUPLA: Se o usuário começou a enviar um áudio enquanto a rede buscava as mensagens,
+      // nós abortamos a atualização para não apagar o 'Enviando...' da tela.
+      if (state.isLoading || !mounted) return;
+
       final List<dynamic> msgs = response['messages'];
 
       int patientId = 0;
@@ -434,6 +442,79 @@ class ChatNotifier extends StateNotifier<ChatState> {
       state = state.copyWith(
         messages: [...state.messages, errorMessage],
         isLoading: false,
+      );
+    }
+  }
+
+  Future<void> sendAudioMessage(String fileName, Uint8List bytes, {bool toDoctor = false}) async {
+    final userMessage = ChatMessage(text: 'Enviando áudio ($fileName)...', isMe: true);
+    state = state.copyWith(
+      messages: [...state.messages, userMessage],
+      isisMessages: toDoctor ? state.isisMessages : [...state.isisMessages, userMessage],
+      doctorMessages: toDoctor ? [...state.doctorMessages, userMessage] : state.doctorMessages,
+      isLoading: true,
+    );
+
+    try {
+      final authState = ref.read(authProvider);
+      final waFrom = canonicalWaFrom(authState.user?.phone);
+      if (waFrom.isEmpty) {
+        state = state.copyWith(isLoading: false);
+        return;
+      }
+
+      final url = Uri.parse('${AppConstants.baseUrl}/api/rag/audio-query');
+      var request = http.MultipartRequest('POST', url);
+      request.fields['wa_from'] = waFrom;
+      request.fields['source'] = 'app';
+      
+      final token = TokenStorage.getToken();
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      final isWav = fileName.endsWith('.wav');
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file', 
+          bytes, 
+          filename: fileName,
+          contentType: isWav ? MediaType('audio', 'wav') : MediaType('audio', 'webm'),
+        ),
+      );
+
+      var response = await request.send();
+      var responseBody = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(responseBody);
+        final transcribedMsg = ChatMessage(text: data['query'] as String, isMe: true);
+        final aiMessage = ChatMessage(text: data['response'] as String, isMe: false);
+        
+        final cleanAll = state.messages.where((m) => !m.text.contains('Enviando')).toList();
+        final cleanIsis = state.isisMessages.where((m) => !m.text.contains('Enviando')).toList();
+        final cleanDoctor = state.doctorMessages.where((m) => !m.text.contains('Enviando')).toList();
+
+        state = state.copyWith(
+          messages: [...cleanAll, transcribedMsg, aiMessage],
+          isisMessages: toDoctor ? cleanIsis : [...cleanIsis, transcribedMsg, aiMessage],
+          doctorMessages: toDoctor ? [...cleanDoctor, transcribedMsg, aiMessage] : cleanDoctor,
+          isLoading: false,
+        );
+      } else {
+        debugPrint('Erro no envio de áudio: ${response.statusCode} - $responseBody');
+        final cleanIsis = state.isisMessages.where((m) => !m.text.contains('Enviando')).toList();
+        state = state.copyWith(
+          isisMessages: cleanIsis,
+          isLoading: false
+        );
+      }
+    } catch (e) {
+      debugPrint('Exceção no envio de áudio: $e');
+      final cleanIsis = state.isisMessages.where((m) => !m.text.contains('Enviando')).toList();
+      state = state.copyWith(
+        isisMessages: cleanIsis,
+        isLoading: false
       );
     }
   }

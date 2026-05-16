@@ -11,6 +11,7 @@ from app.models.patient import Patient
 from app.models.message import Message
 from app.core.config import settings
 from app.services.whatsapp_service import wa_service
+from app.services.transcription_service import transcription_service
 from app.utils.phone_utils import find_patient_by_messaging_phone, ensure_canonical_whatsapp
 
 router = APIRouter()
@@ -118,7 +119,10 @@ async def handle_webhook(request: Request, background_tasks: BackgroundTasks, db
     """Receber eventos do WhatsApp"""
     try:
         body = await request.json()
-        logger.info(f"Webhook received: {body}")
+        if settings.DEBUG:
+            logger.info(f"Webhook received: {body}")
+        else:
+            logger.info("Webhook received (Payload hidden in production)")
 
         entry = body.get("entry", [])
         if not entry:
@@ -137,8 +141,37 @@ async def handle_webhook(request: Request, background_tasks: BackgroundTasks, db
             wa_id = msg_data.get("id")
             timestamp = msg_data.get("timestamp")
             
-            text_data = msg_data.get("text", {})
-            content = text_data.get("body", "")
+            # Detectar tipo de mensagem
+            msg_type = msg_data.get("type")
+            content = ""
+
+            if msg_type == "text":
+                text_data = msg_data.get("text", {})
+                content = text_data.get("body", "")
+            elif msg_type == "audio":
+                audio_data = msg_data.get("audio", {})
+                media_id = audio_data.get("id")
+                logger.info(f"Recebido áudio do WhatsApp. Media ID: {media_id}")
+                
+                try:
+                    # Fluxo de áudio: baixar e transcrever
+                    media_url = await wa_service.get_media_url(media_id)
+                    audio_bytes = await wa_service.download_media(media_url)
+                    content = await transcription_service.transcribe_audio(audio_bytes)
+                    if content.startswith("[Silêncio") or content.startswith("[Áudio muito curto"):
+                        logger.warning(f"Ignorando áudio silêncio/curto do WhatsApp: {wa_from}")
+                        continue # Pula o processamento dessa mensagem
+                    logger.info(f"Áudio transcrito com sucesso: {content[:50]}...")
+                except Exception as e:
+                    logger.error(f"Erro ao processar áudio do WhatsApp: {e}")
+                    content = "[Erro ao processar áudio]"
+            else:
+                logger.warning(f"Tipo de mensagem não suportado: {msg_type}")
+                continue # Pula outros tipos por enquanto
+
+            if not content:
+                logger.warning("Mensagem sem conteúdo (texto ou áudio). Ignorando.")
+                continue
 
             # Salvar no banco (mesmo paciente do app se o telefone cadastrado bater)
             patient = find_patient_by_messaging_phone(db, wa_from)
@@ -154,19 +187,21 @@ async def handle_webhook(request: Request, background_tasks: BackgroundTasks, db
                 db.refresh(patient)
             else:
                 ensure_canonical_whatsapp(db, patient, wa_from)
-
             # Criar mensagem
             message = Message(
                 patient_id=patient.id,
                 content=content,
-                message_type="text",
+                message_type=msg_type,
                 source="whatsapp",
                 wa_message_id=wa_id,
                 wa_from=wa_from
             )
             db.add(message)
             db.commit()
-            logger.info(f"Message saved from {wa_from}: {content}")
+            if settings.DEBUG:
+                logger.info(f"Message saved from {wa_from}: {content}")
+            else:
+                logger.info(f"Message saved from {wa_from} (Content hidden)")
 
             logger.info(f"Message saved from {wa_from}")
 
@@ -459,7 +494,8 @@ async def chat_direct(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="Direct chat is only available in development/debug mode."
         )
-    logger.info(f"Direct chat received from {request.to}: {request.message}")
+    if settings.DEBUG:
+        logger.info(f"Direct chat received from {request.to}: {request.message}")
     
     wa_from = request.to
     content = request.message

@@ -542,7 +542,7 @@ def buscar_horarios(
         return "Desculpe, tive um erro ao consultar a agenda. Tente novamente em instantes."
 
 
-def buscar_agendamentos(db: Session, cpf: str = "", wa_from: str = None) -> str:
+def buscar_agendamentos(db: Session, cpf: str = "", wa_from: str = None, patient_id: int = None) -> str:
     """
     Busca os agendamentos (consultas) de um paciente pelo CPF ou WhatsApp.
     """
@@ -559,9 +559,13 @@ def buscar_agendamentos(db: Session, cpf: str = "", wa_from: str = None) -> str:
         cpf_formatado = f"{cpf_limpo[:3]}.{cpf_limpo[3:6]}.{cpf_limpo[6:9]}-{cpf_limpo[9:]}"
 
     try:
-        # 1. Tentar por CPF se fornecido
+        # 0. Tentar por ID de paciente (Prioridade Máxima se estiver logado)
         patient = None
-        if cpf and len(cpf.strip()) > 5:
+        if patient_id:
+            patient = db.query(Patient).filter(Patient.id == patient_id).first()
+
+        # 1. Tentar por CPF se fornecido
+        if not patient and cpf and len(cpf.strip()) > 5:
             patient = db.query(Patient).filter(
                 (Patient.cpf == cpf_limpo) | (Patient.cpf == cpf_formatado) | (Patient.cpf == cpf)
             ).first()
@@ -734,7 +738,7 @@ def buscar_info_paciente(db: Session, nome_ou_cpf: str) -> str:
 #  EXECUTOR DE TOOLS
 # ------------------------------------------------------------------ #
 
-def execute_tool(tool_name: str, arguments: dict, db: Session, wa_from: str = None) -> str:
+def execute_tool(tool_name: str, arguments: dict, db: Session, wa_from: str = None, patient_id: int = None) -> str:
     """
     Executa uma tool pelo nome e retorna o resultado como string.
     
@@ -1029,7 +1033,8 @@ def execute_tool(tool_name: str, arguments: dict, db: Session, wa_from: str = No
             return buscar_agendamentos(
                 db=db,
                 cpf=arguments.get("cpf", ""),
-                wa_from=wa_from
+                wa_from=wa_from,
+                patient_id=patient_id
             )
 
         elif tool_name == "listar_especialidades":
