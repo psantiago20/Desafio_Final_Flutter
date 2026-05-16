@@ -74,6 +74,7 @@ agents_registry:
     constraints:
       - must_handle_webhook_events
       - must_validate_payloads
+      - must_support_audio_transcription_via_groq_whisper
     
   frontend:
     agent: flutter-frontend-agent

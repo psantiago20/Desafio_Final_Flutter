@@ -35,26 +35,24 @@ app = FastAPI(
 @app.middleware("http")
 async def log_requests(request, call_next):
     try:
-        logger.info(f"[DEBUG] Request: {request.method} {request.url}")
+        # Log simplificado para evitar vazamento de PII em URLs
+        logger.info(f"Request: {request.method} {request.url.path}")
         response = await call_next(request)
-        # Forçar CORS headers em todas as respostas
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "*"
-        response.headers["Access-Control-Allow-Headers"] = "*"
         return response
     except Exception as e:
         import traceback
         error_msg = traceback.format_exc()
         logger.error(f"[CRITICAL ERROR] {error_msg}")
+        
+        # Só retorna o traceback completo se estiver em modo DEBUG
+        content = {"detail": "Internal Server Error"}
+        if settings.DEBUG:
+            content["traceback"] = error_msg
+            
         from fastapi.responses import JSONResponse
         return JSONResponse(
             status_code=500,
-            content={"detail": "Internal Server Error", "traceback": error_msg},
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "*",
-                "Access-Control-Allow-Headers": "*"
-            }
+            content=content
         )
 
 app.add_middleware(

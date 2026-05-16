@@ -25,11 +25,17 @@ from langchain_core.messages import HumanMessage
 from app.core.config import settings
 
 from app.db.database import get_db
+from app.api.endpoints.auth import get_current_user
+from app.models.user import User
+from app.models.message import Message, MessageSource
 from app.models.patient import Patient
 from app.models.appointment import Appointment
 from app.models.exam import Exam
+from app.api.endpoints.whatsapp import find_patient_by_messaging_phone
 from app.services.ingest_faq import ingest_doctor_faq, ingest_all_doctors, get_collection_stats
 from app.services.rag_service import rag_service
+from app.services.transcription_service import transcription_service
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -152,7 +158,8 @@ def search_faq(request: SearchRequest):
 @router.post("/query", response_model=RAGQueryResponse)
 async def query_rag(
     request: RAGQueryRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Pipeline RAG completo: busca FAQ + dados do médico → LLM → resposta.
@@ -161,11 +168,14 @@ async def query_rag(
     try:
         from app.models.message import Message, MessageSource
         from app.models.patient import Patient
-        from app.utils.phone_utils import find_patient_by_messaging_phone
+        from app.api.endpoints.whatsapp import find_patient_by_messaging_phone
 
-        # 1. Identificar o paciente
+        # 1. Identificar o paciente (Prioridade: Usuário Logado)
         patient = None
-        if request.wa_from:
+        if request.source == "app" and current_user:
+            patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
+        
+        if not patient and request.wa_from:
             patient = find_patient_by_messaging_phone(db, request.wa_from)
 
         # 2. Salvar mensagem do usuário no banco (se paciente identificado)
@@ -192,7 +202,10 @@ async def query_rag(
             wa_to=request.wa_to,
             db=db,
             wa_from=request.wa_from,
-            source=request.source
+            source=request.source,
+            user_name=current_user.full_name if current_user else None,
+            user_id=current_user.id if current_user else None,
+            patient_id=patient.id if patient else None
         )
 
         # 5. Salvar resposta da IA no banco (se paciente identificado)
@@ -235,7 +248,8 @@ def rag_stats():
 async def upload_exam(
     wa_from: str = Form(...),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Recebe um exame médico em formato de imagem ou PDF, passa pela IA,
@@ -336,9 +350,13 @@ async def upload_exam(
 
         public_url = f"/static/exams/{unique_filename}"
         
-        # 4. Procurar o paciente
-        from app.utils.phone_utils import find_patient_for_contact
-        patient = find_patient_for_contact(db, wa_from)
+        # 4. Procurar o paciente (Prioridade: Usuário Logado)
+        from app.models.patient import Patient
+        patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
+        
+        if not patient:
+            from app.utils.phone_utils import find_patient_for_contact
+            patient = find_patient_for_contact(db, wa_from)
         
         if not patient:
             return {"status": "error", "message": "Paciente não encontrado."}
@@ -378,4 +396,134 @@ async def upload_exam(
             
     except Exception as e:
         logger.error(f"Erro ao processar exame: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/audio-query")
+async def audio_query(
+    wa_from: str = Form(...),
+    wa_to: Optional[str] = Form(None),
+    source: str = Form("app"),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Recebe um áudio via upload direto (Web), transcreve e processa no RAG.
+    """
+    logger.info(f"--- [DEBUG AUDIO] Início da requisição ---")
+    logger.info(f"wa_from: {wa_from} | source: {source} | file: {file.filename}")
+    if current_user:
+        logger.info(f"Usuário Autenticado: {current_user.full_name} (ID: {current_user.id})")
+    else:
+        logger.error(f"AVISO: Requisição sem usuário autenticado (current_user is None)")
+
+    try:
+        # 1. Ler bytes do áudio
+        audio_bytes = await file.read()
+        logger.info(f"Áudio lido: {len(audio_bytes)} bytes")
+        
+        # 2. Identificar o paciente ANTES de tudo (para poder gravar erros no banco)
+        from app.models.message import Message, MessageSource
+        from app.models.patient import Patient
+        from app.api.endpoints.whatsapp import find_patient_by_messaging_phone
+        
+        patient = None
+        if source == "app" and current_user:
+            logger.info(f"Buscando paciente vinculado ao User ID: {current_user.id}")
+            patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
+        
+        if not patient:
+            logger.info(f"Paciente não encontrado via User ID, tentando via Telefone: {wa_from}")
+            patient = find_patient_by_messaging_phone(db, wa_from)
+
+        # 3. Transcrever
+        content = await transcription_service.transcribe_audio(audio_bytes, filename=file.filename)
+        if settings.DEBUG:
+            logger.info(f"Resultado da Transcrição: '{content}'")
+        
+        if content:
+            content = content.strip().rstrip('.').strip()
+        
+        # 4. Tratar erros de transcrição salvando no banco
+        error_msg = None
+        if not content or content.startswith("[Erro"):
+             error_msg = "Não foi possível transcrever o áudio no momento."
+        elif content.startswith("[Silêncio") or content.startswith("[Áudio muito curto"):
+             error_msg = "Não consegui te ouvir. O áudio parece estar mudo ou muito curto. Pode repetir?"
+
+        if error_msg:
+            if patient:
+                # Grava a tentativa e o erro para não "sumir" do chat
+                display_content = "🎤 Áudio"
+                if content and not content.startswith("["):
+                    display_content = content
+                
+                db.add(Message(
+                    patient_id=patient.id,
+                    sender_id=current_user.id if current_user else None,
+                    content=display_content,
+                    message_type="audio",
+                    source="app",
+                    wa_from=wa_from
+                ))
+                db.add(Message(
+                    patient_id=patient.id,
+                    content=error_msg,
+                    source="system",
+                    wa_from="isis_ia"
+                ))
+                db.commit()
+                logger.info("Erro de transcrição registrado no banco de dados.")
+            
+            return {"status": "error" if "possível" in error_msg else "success", "query": "", "response": error_msg}
+
+        # 5. Pipeline RAG completo (Transcrição com sucesso)
+        if patient:
+            logger.info(f"Gravando mensagem transcrita: {content}")
+            user_msg = Message(
+                patient_id=patient.id,
+                sender_id=current_user.id if current_user else None,
+                content=content,
+                message_type="audio",
+                source="app",
+                wa_from=wa_from
+            )
+            db.add(user_msg)
+            db.commit()
+        else:
+            logger.error(f"FALHA CRÍTICA: Não foi possível identificar o paciente no banco de dados!")
+
+        # 4. Pipeline RAG completo
+        response = await rag_service.get_rag_response(
+            query=content,
+            wa_to="isis_ia",
+            db=db,
+            wa_from=wa_from,
+            source=source,
+            user_name=current_user.full_name if current_user else None,
+            user_id=current_user.id if current_user else None,
+            patient_id=patient.id if patient else None
+        )
+
+        # 5. Salvar resposta da IA
+        if patient:
+            ai_msg = Message(
+                patient_id=patient.id,
+                content=response,
+                source="system", # OBRIGATÓRIO para aparecer na aba da Isis
+                wa_from="isis_ia"
+            )
+            db.add(ai_msg)
+            db.commit()
+            logger.info(f"Resposta da IA salva no banco (ID: {ai_msg.id})")
+
+        return {
+            "query": content,
+            "response": response,
+            "status": "success"
+        }
+
+    except Exception as e:
+        logger.error(f"Erro no Audio RAG query: {e}")
         raise HTTPException(status_code=500, detail=str(e))

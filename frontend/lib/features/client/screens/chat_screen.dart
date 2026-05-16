@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:record/record.dart';
+import 'package:http/http.dart' as http;
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/custom_app_bar.dart';
 import '../../chat/providers/chat_provider.dart';
@@ -20,7 +22,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _picker = ImagePicker();
+  final AudioRecorder _audioRecorder = AudioRecorder();
   String _selectedChat = 'isis'; // 'isis' ou 'doctor'
+  bool _isRecording = false;
+  DateTime? _recordingStartTime;
 
   @override
   void initState() {
@@ -37,6 +42,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   void dispose() {
+    _audioRecorder.dispose();
     // Para de suprimir notificações quando sair da tela
     ref.read(chatProvider.notifier).setActiveChat('none');
     _controller.dispose();
@@ -63,6 +69,84 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _scrollToBottom();
     } catch (e) {
       debugPrint('Erro ao selecionar imagem: $e');
+    }
+  }
+
+  Future<void> _toggleRecording() async {
+    try {
+      if (_isRecording) {
+        // Trava para evitar gravações acidentais de milissegundos
+        if (_recordingStartTime != null) {
+          final duration = DateTime.now().difference(_recordingStartTime!);
+          if (duration.inMilliseconds < 1500) {
+            debugPrint('Gravação muito curta ignorada: ${duration.inMilliseconds}ms');
+            await _audioRecorder.stop();
+            setState(() => _isRecording = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Por favor, segure o botão por pelo menos 2 segundos.')),
+            );
+            return;
+          }
+          debugPrint('Duração da gravação: ${duration.inSeconds}s ${duration.inMilliseconds % 1000}ms');
+        }
+
+        final path = await _audioRecorder.stop();
+        // Pequeno delay para o navegador finalizar o blob
+        await Future.delayed(const Duration(milliseconds: 300));
+        
+        setState(() => _isRecording = false);
+        
+        if (path != null) {
+          debugPrint('Gravado em: $path');
+          final response = await http.get(Uri.parse(path));
+          final bytes = response.bodyBytes;
+          debugPrint('Tamanho do áudio capturado: ${bytes.length} bytes');
+          
+          if (bytes.length < 500) {
+            debugPrint('ERRO: Arquivo muito pequeno (${bytes.length} bytes).');
+            return;
+          }
+
+          const extension = 'webm';
+          await ref.read(chatProvider.notifier).sendAudioMessage(
+            'web_audio_${DateTime.now().millisecondsSinceEpoch}.$extension', 
+            bytes, 
+            toDoctor: _selectedChat == 'doctor'
+          );
+          _scrollToBottom();
+        }
+      } else {
+        if (await _audioRecorder.hasPermission()) {
+          // Usando 44.1kHz que é o padrão nativo do Firefox, evitando erros de re-amostragem
+          const config = RecordConfig(
+            encoder: AudioEncoder.opus,
+            numChannels: 1,
+            sampleRate: 44100,
+            bitRate: 128000,
+          );
+          
+          if (await _audioRecorder.isRecording()) {
+            await _audioRecorder.stop();
+          }
+
+          debugPrint('Iniciando gravação de alta qualidade (44.1k/128k)...');
+          _recordingStartTime = DateTime.now();
+          await _audioRecorder.start(config, path: '');
+          setState(() => _isRecording = true);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Permissão de microfone negada.')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Erro na gravação: $e');
+      setState(() => _isRecording = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro na gravação: $e')),
+        );
+      }
     }
   }
 
@@ -332,6 +416,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     ),
                     onPressed: _sendMessage,
                   ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: Icon(
+                      _isRecording ? Icons.stop : Icons.mic,
+                      color: _isRecording ? Colors.red : AppTheme.primaryBlueDark,
+                    ),
+                    onPressed: _toggleRecording,
+                  ),
                 ],
               ),
             ),
@@ -443,6 +535,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             child: IconButton(
               icon: const Icon(Icons.send, color: Colors.white),
               onPressed: _sendMessage,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: _isRecording ? Colors.red : AppTheme.primaryBlueDark,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: Icon(_isRecording ? Icons.stop : Icons.mic, color: Colors.white),
+              onPressed: _toggleRecording,
             ),
           ),
         ],

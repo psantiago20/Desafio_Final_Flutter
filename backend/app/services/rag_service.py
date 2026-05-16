@@ -47,6 +47,7 @@ class AgentState(TypedDict):
     user_role: Optional[str]
     user_name: Optional[str]
     user_id: Optional[int]
+    patient_id: Optional[int]
 
 # Tools LangChain (Mapeamento Simples)
 @tool
@@ -83,26 +84,25 @@ def cancelar_consulta_tool(data_hora: str, cpf: str = None):
     return "Cancelamento em processamento..."
 
 @tool
-def buscar_agendamentos_tool(cpf: str = None):
+def buscar_agendamentos_tool(cpf: Optional[str] = None, patient_id: Optional[int] = None):
     """
-    Busca os agendamentos (consultas) de um paciente pelo CPF ou identificação automática.
-    Retorna: data/hora, status, tipo, médico, motivo.
-    Use quando o paciente quiser ver, cancelar ou remarcar suas consultas.
+    Busca os agendamentos (consultas e exames) de um paciente.
+    Pode buscar pelo CPF ou pelo ID do paciente.
+    Use esta ferramenta quando o usuário perguntar 'quais são minhas consultas', 'quando é meu próximo exame' ou similar.
     """
     from app.services.agent_tools import buscar_agendamentos
-    return buscar_agendamentos(db=None, cpf=cpf)
+    # wa_from será injetado pelo orchestrator se necessário, aqui focamos nos params da LLM
+    return buscar_agendamentos(cpf=cpf, patient_id=patient_id)
 
 @tool
 def buscar_consultas_medico_tool(medico_id: int):
     """Busca as próximas consultas (agendamentos) de um médico."""
-    from app.services.agent_tools import buscar_consultas_medico
-    return buscar_consultas_medico(db=None, medico_id=medico_id)
+    return "Buscando consultas do médico..."
 
 @tool
 def buscar_info_paciente_tool(nome_ou_cpf: str):
     """Busca informações de um paciente e seus exames pelo nome ou CPF."""
-    from app.services.agent_tools import buscar_info_paciente
-    return buscar_info_paciente(db=None, nome_ou_cpf=nome_ou_cpf)
+    return "Buscando informações do paciente..."
 
 langchain_tools = [
     buscar_faq_tool, 
@@ -117,10 +117,10 @@ langchain_tools = [
 
 class RAGService:
     def __init__(self):
-        # Configuração de Modelos (Groq como primário)
+        # Configuração de Modelos (Upgrade para 70B para garantir estabilidade nas ferramentas)
         if settings.GROQ_API_KEY:
-            self.llm = ChatGroq(model="llama-3.1-8b-instant", api_key=settings.GROQ_API_KEY, temperature=0.1, max_tokens=400).bind_tools(langchain_tools)
-            self.llm_base = ChatGroq(model="llama-3.1-8b-instant", api_key=settings.GROQ_API_KEY, temperature=0.1, max_tokens=400)
+            self.llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=settings.GROQ_API_KEY, temperature=0.1, max_tokens=600).bind_tools(langchain_tools)
+            self.llm_base = ChatGroq(model="llama-3.3-70b-versatile", api_key=settings.GROQ_API_KEY, temperature=0.1, max_tokens=600)
         else:
             self.llm = ChatNVIDIA(model="meta/llama-3.1-8b-instruct", nvidia_api_key=settings.NVIDIA_API_KEY, temperature=0.1).bind_tools(langchain_tools)
             self.llm_base = ChatNVIDIA(model="meta/llama-3.1-8b-instruct", nvidia_api_key=settings.NVIDIA_API_KEY, temperature=0.1)
@@ -242,7 +242,7 @@ class RAGService:
             doctor_tools = [buscar_consultas_medico_tool, buscar_info_paciente_tool, agendar_consulta_tool]
             doctor_llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=settings.GROQ_API_KEY, temperature=0.1, max_tokens=400).bind_tools(doctor_tools)
             
-            from datetime import datetime
+            patient_id = state.get("patient_id")
             sys_prompt = (
                 f"Você é o Assistente Pessoal do(a) Dr(a). {user_name or 'Médico'}. 🩺\n"
                 f"Hoje é {datetime.now().strftime('%A, %Y-%m-%d %H:%M')} (use isso como referência para datas relativas como 'segunda', 'amanhã').\n"
@@ -256,40 +256,45 @@ class RAGService:
                 "Se ele pedir informações sobre pacientes ou exames, use a ferramenta buscar_info_paciente_tool.\n"
                 "Responda de forma profissional, direta e prestativa. Você NÃO é a Isis."
             )
-            messages = [SystemMessage(content=sys_prompt)] + all_messages[-6:]
+            messages = [SystemMessage(content=sys_prompt)] + list(state["messages"])[-6:]
             try:
-                response = await asyncio.wait_for(doctor_llm.ainvoke(messages), timeout=25)
+                response = await asyncio.wait_for(doctor_llm.ainvoke(messages), timeout=45)
                 return {"messages": [response]}
             except Exception as e:
                 logger.error(f"Erro no Doctor Agent: {e}")
                 return {"messages": [AIMessage(content="Desculpe Doutor, tive um erro ao processar sua solicitação.")]}
         
         else:
-            # IA 1: Isis (Assistente de Pacientes)
+            patient_id = state.get("patient_id")
             sys_prompt = (
                 "Você é a Isis, assistente virtual doce, prestativa e organizada da clínica. ✨\n"
+                f"O usuário está LOGADO. Nome: {user_name or 'Paciente'}. ID do Paciente: {patient_id or 'desconhecido'}.\n"
+                "Sempre trate o paciente pelo nome. Como ele está logado, você JÁ TEM acesso aos agendamentos dele via ferramenta `buscar_agendamentos`. NÃO peça CPF.\n"
                 "Sempre comece a conversa se identificando: 'Oi! Sou a Isis, assistente virtual da clínica.' se for a primeira mensagem.\n"
                 "REGRA DE OURO: Você SÓ fala sobre assuntos da clínica (médicos, horários, exames, convênios e saúde).\n"
                 "Se o usuário pedir para cancelar uma consulta, use a ferramenta de cancelar_consulta. Se pedir para remarcar, cancele a anterior e agende a nova.\n"
                 "Se o usuário perguntar sobre QUALQUER outro assunto (esportes, política, notícias, etc), negue educadamente e diga que você está aqui apenas para ajudar com os atendimentos da clínica.\n"
                 "Responda sempre baseada nos dados das ferramentas. Se não houver dados, peça para falar com a recepção. ✨\n"
-                "REGRA CRÍTICA: Se uma ferramenta pedir um CPF e você não souber o do paciente, NÃO invente um número! Em vez disso, peça educadamente o CPF para o usuário."
+                "REGRA CRÍTICA: Se uma ferramenta pedir um CPF e você não souber o do paciente, NÃO invente um número! Como ele está logado, use o patient_id na ferramenta `buscar_agendamentos`."
             )
             active_doc = state.get("active_doctor_name")
             active_id = state.get("active_doctor_id")
             context = f"\n[Contexto: Médico {active_doc or 'Geral'} (ID: {active_id or 'Não selecionado'})]"
             
-            messages = [SystemMessage(content=sys_prompt + context)] + all_messages[-6:]
+            messages = [SystemMessage(content=sys_prompt + context)] + list(state["messages"])[-6:]
             
             try:
-                response = await asyncio.wait_for(self.llm.ainvoke(messages), timeout=25)
+                logger.info(f"[Agent] Enviando {len(messages)} mensagens para a LLM...")
+                response = await asyncio.wait_for(self.llm.ainvoke(messages), timeout=45)
+                logger.info(f"[Agent] Resposta recebida da LLM: {response.content[:50]}...")
+                
                 content = response.content
                 if any(k in content.lower() for k in ["localhost", "11434", "ollama", "aula", ".pdf"]):
                     return {"messages": [AIMessage(content="Sabe o que é? Não localizei essa info exata agora. 😅 Por favor, fale com nossa recepção! ✨")]}
                 return {"messages": [response]}
             except Exception as e:
-                logger.error(f"Erro no Patient Agent: {e}")
-                return {"messages": [AIMessage(content="Desculpe, tive um erro ao processar.")]}
+                logger.error(f"ERRO NA CHAMADA DA LLM (Groq): {e}", exc_info=True)
+                return {"messages": [AIMessage(content=f"Puxa, tive um erro técnico aqui (IA): {str(e)}")]}
 
     def _force_search_node(self, state: AgentState, config: RunnableConfig = None):
         """Busca automática com separação rígida de intenções."""
@@ -300,7 +305,7 @@ class RAGService:
         # 1. VALOR / PREÇO (Prioridade: Banco de Médicos)
         if any(k in query for k in ["valor", "preço", "quanto", "custo"]):
             logger.info("[Force Search] Intenção de VALOR detectada.")
-            res = execute_tool("buscar_medico", {"nome": state.get("active_doctor_name")} if target_id else {}, db, wa_from=state["wa_from"])
+            res = execute_tool("buscar_medico", {"nome": state.get("active_doctor_name")} if target_id else {}, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
             tid = f"v_{uuid.uuid4().hex[:4]}"
             return {"messages": [AIMessage(content="", tool_calls=[{"name":"v","args":{},"id":tid}]), ToolMessage(tool_call_id=tid, content=res, name="v")]}
 
@@ -310,7 +315,7 @@ class RAGService:
             
             # Se a dúvida for sobre CONVÊNIOS, buscamos nos MÉDICOS primeiro (onde estão os dados reais)
             if "convênio" in query or "convenio" in query:
-                res_medicos = execute_tool("buscar_medico", {}, db, wa_from=state["wa_from"])
+                res_medicos = execute_tool("buscar_medico", {}, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
                 res_faq = execute_tool("buscar_faq", {"pergunta": "Quais os convênios aceitos?"}, db, wa_from=state["wa_from"])
                 
                 # Agregamos os dois para uma resposta completa
@@ -340,11 +345,11 @@ class RAGService:
                 messages = []
                 for i, m in enumerate(medicos):
                     tid = f"b{i}_{uuid.uuid4().hex[:4]}"
-                    res = execute_tool("buscar_horarios", {"medico_id": m.id}, db, wa_from=state["wa_from"])
+                    res = execute_tool("buscar_horarios", {"medico_id": m.id}, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
                     tool_calls.append({"name": f"b{i}", "args": {}, "id": tid})
                     messages.append(ToolMessage(tool_call_id=tid, content=res, name=f"b{i}"))
                 return {"messages": [AIMessage(content="", tool_calls=tool_calls)] + messages}
-            res = execute_tool("buscar_horarios", {"medico_id": target_id}, db, wa_from=state["wa_from"])
+            res = execute_tool("buscar_horarios", {"medico_id": target_id}, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
             tid = f"c_{uuid.uuid4().hex[:4]}"
             return {"messages": [AIMessage(content="", tool_calls=[{"name":"b","args":{},"id":tid}]), ToolMessage(tool_call_id=tid, content=res, name="b")]}
 
@@ -362,7 +367,7 @@ class RAGService:
         results = []
         db = config["configurable"].get("db")
         for tc in last_msg.tool_calls:
-            res = execute_tool(tc["name"].replace("_tool",""), tc["args"], db, wa_from=state["wa_from"])
+            res = execute_tool(tc["name"].replace("_tool",""), tc["args"], db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
             results.append(ToolMessage(tool_call_id=tc["id"], content=str(res)))
         return {"messages": results}
 
@@ -373,7 +378,7 @@ class RAGService:
             return "continue" if state["loop_count"] <= 1 else "end"
         return "end"
 
-    async def get_rag_response(self, query: str, wa_to: str, db, wa_from: str = "anonymous", source: str = "whatsapp", user_name: str = None, user_id: int = None) -> str:
+    async def get_rag_response(self, query: str, wa_to: str, db, wa_from: str = "anonymous", source: str = "whatsapp", user_name: str = None, user_id: int = None, patient_id: int = None) -> str:
         if query.lower() in ["reset", "limpar"]:
             self.clear_conversation(wa_from)
             return "Sessão reiniciada! ✨"
@@ -387,10 +392,14 @@ class RAGService:
         logger.info(f"[FastTrack] Source: {source}, Query: '{query_clean}'")
         
         # Só aplica fasttrack para pacientes (source != "doctor")
-        if source != "doctor" and (source == "app" or source == "whatsapp") and query_clean in saudacoes:
-            self.clear_conversation(wa_from)
-            from app.services.standard_messages import get_welcome_message_without_doctor
-            return get_welcome_message_without_doctor()
+        if source != "doctor" and (source == "app" or source == "whatsapp"):
+            if query_clean in saudacoes:
+                logger.info(f"[FastTrack] Saudação detectada: {query_clean}")
+                from app.services.standard_messages import get_welcome_message_without_doctor
+                return get_welcome_message_without_doctor()
+            
+            if query_clean == "consulta" or query_clean == "consultas":
+                return "Você gostaria de ver seus agendamentos ou marcar uma nova consulta? ✨"
             
         conversation_manager.update_activity(wa_from)
         config = {"configurable": {"thread_id": wa_from, "db": db}, "recursion_limit": 5}
@@ -399,9 +408,14 @@ class RAGService:
             "wa_from": wa_from,
             "user_role": source,
             "user_name": user_name,
-            "user_id": user_id
+            "user_id": user_id,
+            "patient_id": patient_id
         }
-        final_state = await self.app.ainvoke(inputs, config=config)
+        try:
+            final_state = await self.app.ainvoke(inputs, config=config)
+        except Exception as e:
+            logger.error(f"ERRO CRÍTICO NO RAG FLOW: {e}", exc_info=True)
+            return "Sabe o que é? Tive um probleminha técnico aqui. 😅 Pode tentar perguntar de novo em um instante? ✨"
         
         for msg in reversed(final_state["messages"]):
             if isinstance(msg, AIMessage) and msg.content:
