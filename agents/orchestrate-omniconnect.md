@@ -359,3 +359,37 @@ session_rules:
     - POST /api/webhooks/chat-direct { new_session: true } -> reset + nova conversa
     - POST /api/webhooks/clear-conversation?wa_from=X   -> reset manual para testes externos
     - GET  /api/webhooks/conversation-state?wa_from=X   -> inspecionar estado atual
+
+---
+
+# 14. Moderação de Segurança e Guardrails (Políticas de Conteúdo)
+
+## Políticas Aplicadas em Tempo Real
+Todas as interações de entrada (chat do app, WhatsApp, áudios, imagens e documentos PDF) são interceptadas por um sistema de segurança de tolerância zero baseado em IA (Llama-3.3-70B e Llama-Vision-11B):
+
+1. **Pornografia e Conteúdo Adulto**: Bloqueio de qualquer imagem, nudez explícita ou termos eróticos.
+2. **Pornografia Infantil / CSAM**: **Tolerância Zero Absoluta**. Nenhuma referência ou conteúdo visual de abuso infantil é processado ou persistido no banco de dados.
+3. **Discurso de Ódio e Assédio**: Bloqueio de assédio moral/sexual, xingamentos explícitos e qualquer discriminação (racial, gênero, religiosa).
+4. **Violência Extrema e Automutilação**: Bloqueio de apologia ao suicídio, automutilação, armas ou terrorismo.
+5. **Golpes e Fraudes**: Bloqueio de links maliciosos e tentativas de engenharia social.
+
+## Exceções Clínicas Válidas
+Para não prejudicar o atendimento médico legítimo de pacientes reais, a moderação **permite**:
+- Termos clínicos e anatômicos normais (ex: ginecologia, urologia, mastologia).
+- Imagens dermatológicas (fotos de manchas na pele, ferimentos reais ou lesões para diagnóstico).
+- Relatos de sintomas e acidentes físicos para triagem.
+
+## Ações de Interceptação e Mascaramento no Banco de Dados
+- **Chat Direto e RAG Query**: A mensagem inadequada é bloqueada imediatamente. Retorna um alerta de segurança e grava o log mascarado no banco de dados como `[MENSAGEM BLOQUEADA PELO FILTRO DE SEGURANÇA]` para evitar persistência de texto ilícito.
+- **WhatsApp Webhook**: A background task intercepta, mascara o conteúdo ofensivo no banco de dados retroativamente e envia uma resposta formal no celular do paciente notificando a violação de segurança.
+- **Upload de Exames (Imagem e PDF)**: Bloqueia o processamento, impede o salvamento no disco físico, avisa a Isis IA para registrar o bloqueio no histórico e retorna o status `blocked`.
+
+## Componentes Responsáveis
+- **Serviço Central**: `app.services.content_moderation_service.ContentModerationService`
+- **Endpoints Protegidos**:
+  - `POST /api/rag/query` (RAG chat)
+  - `POST /api/rag/upload-exam` (imagens e PDFs de exames)
+  - `POST /api/rag/audio-query` (áudio do webchat)
+  - `process_rag_background` (WhatsApp webhook)
+  - `POST /api/webhooks/chat-direct` (simulador web)
+
