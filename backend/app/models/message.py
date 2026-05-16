@@ -41,7 +41,7 @@ class Message(Base):
     
     meta = Column(Text)
     
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
 
     patient = relationship("Patient", back_populates="messages")
     sender = relationship("User", foreign_keys=[sender_id], back_populates="messages_sent")

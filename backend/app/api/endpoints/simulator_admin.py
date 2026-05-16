@@ -18,6 +18,8 @@ from app.models.user import User
 from app.models.medico import Medico
 from app.models.patient import Patient
 from app.models.appointment import Appointment
+from app.core.config import settings
+from fastapi import status
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -26,6 +28,8 @@ logger = logging.getLogger(__name__)
 @router.get("/data")
 def get_all_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
     """Retorna todos os médicos, pacientes, agendamentos e usuários."""
+    if not settings.DEBUG:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Disabled in production")
     try:
         medicos = db.query(Medico).all()
         pacientes = db.query(Patient).all()
@@ -83,6 +87,8 @@ def get_all_data(db: Session = Depends(get_db)) -> Dict[str, Any]:
 @router.delete("/delete/{table}/{item_id}")
 def delete_record(table: str, item_id: int, db: Session = Depends(get_db)):
     """Deleta um registro de uma tabela específica."""
+    if not settings.DEBUG:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Disabled in production")
     try:
         if table == "medicos":
             item = db.query(Medico).filter(Medico.id == item_id).first()
@@ -116,6 +122,8 @@ class EditPayload(BaseModel):
 @router.put("/edit/{table}/{item_id}")
 def edit_record(table: str, item_id: int, payload: EditPayload, db: Session = Depends(get_db)):
     """Edita um registro de uma tabela específica."""
+    if not settings.DEBUG:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Disabled in production")
     try:
         if table == "usuarios":
             item = db.query(User).filter(User.id == item_id).first()
@@ -155,6 +163,8 @@ def edit_record(table: str, item_id: int, payload: EditPayload, db: Session = De
 @router.get("/debug")
 def debug_db(db: Session = Depends(get_db)):
     """Retorna um resumo detalhado do banco de dados para depuração."""
+    if not settings.DEBUG:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Disabled in production")
     try:
         users = db.query(User).all()
         medicos = db.query(Medico).all()
@@ -189,5 +199,7 @@ def restart_server(background_tasks: BackgroundTasks):
     Aciona o reinício do servidor (funciona apenas se rodando com --reload).
     Usa BackgroundTasks para retornar o status 200 antes de reiniciar.
     """
+    if not settings.DEBUG:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Disabled in production")
     background_tasks.add_task(_touch_main_file)
     return {"status": "success", "message": "Reiniciando servidor em 1 segundo..."}

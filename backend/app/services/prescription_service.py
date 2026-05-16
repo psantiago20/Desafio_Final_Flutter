@@ -7,7 +7,10 @@ class PrescriptionService:
     def generate_html(self, appointment: Appointment, patient: Patient, medico: Medico = None) -> str:
         patient_name = patient.name
         patient_dob = patient.date_of_birth.strftime("%d/%m/%Y") if patient.date_of_birth else "Não informada"
-        prescription_date = datetime.now().strftime("%d/%m/%Y")
+        from datetime import timedelta
+        # Ajusta para Horário de Brasília (GMT-3)
+        br_time = datetime.utcnow() - timedelta(hours=3)
+        prescription_date = br_time.strftime("%d/%m/%Y")
         
         doctor_name = medico.nome_completo if medico else (appointment.doctor.full_name if appointment.doctor else "Médico")
         doc_reg_label = "CRBM"

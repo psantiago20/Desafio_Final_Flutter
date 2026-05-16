@@ -18,6 +18,9 @@ class ApiClient {
   static void setToken(String token) => _token = token;
   static void clearToken() => _token = null;
 
+  static void Function()? onUnauthorized;
+  static void Function()? onActivity;
+
   static Map<String, String> get _headers => {
         'Content-Type': 'application/json',
         'ngrok-skip-browser-warning': 'true', // Bypass ngrok interstitial page
@@ -60,7 +63,7 @@ class ApiClient {
         return response.bodyBytes;
       }
       return _handleResponse(response);
-    } on SocketException {
+    } on http.ClientException {
       throw ApiException(
           statusCode: 0, message: 'Não conseguimos conectar ao servidor. Verifique sua internet.');
     } catch (e) {
@@ -168,11 +171,13 @@ class ApiClient {
 
   static dynamic _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
+      onActivity?.call();
       if (response.body.isEmpty) return null;
       return jsonDecode(utf8.decode(response.bodyBytes));
     }
 
     if (response.statusCode == 401) {
+      Future.microtask(() => onUnauthorized?.call());
       throw ApiException(statusCode: 401, message: 'Sua sessão expirou ou os dados de acesso estão incorretos.');
     }
 

@@ -65,7 +65,14 @@ def get_dashboard_stats(
         completed_appointments = db.query(Appointment).filter(Appointment.patient_id == patient.id, Appointment.status == "completed").count()
         cancelled_appointments = db.query(Appointment).filter(Appointment.patient_id == patient.id, Appointment.status == "cancelled").count()
         
-        unread_messages = db.query(Message).filter(Message.patient_id == patient.id, Message.is_read == False).count()
+        # Para o paciente, contamos mensagens recebidas (de médicos ou bot)
+        # EXCLUÍMOS mensagens de arquivamento (meta='prescription_archive')
+        unread_messages = db.query(Message).filter(
+            Message.patient_id == patient.id, 
+            Message.is_read == False,
+            Message.sender_id != patient.user_id,
+            Message.meta != 'prescription_archive'
+        ).count()
         
         from app.models.exam import Exam
         last_exam = db.query(Exam).filter(Exam.patient_id == patient.id).order_by(Exam.created_at.desc()).first()
@@ -111,7 +118,11 @@ def get_dashboard_stats(
     completed_appointments = db.query(Appointment).filter(Appointment.status == "completed").count()
     cancelled_appointments = db.query(Appointment).filter(Appointment.status == "cancelled").count()
     
-    unread_messages = db.query(Message).filter(Message.is_read == False).count()
+    # Para Admin/Médico, contamos mensagens que NÃO foram enviadas por ele
+    unread_messages = db.query(Message).filter(
+        Message.is_read == False,
+        Message.sender_id != current_user.id
+    ).count()
     
     total_services = db.query(Service).count()
     

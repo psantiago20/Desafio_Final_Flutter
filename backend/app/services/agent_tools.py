@@ -542,9 +542,9 @@ def buscar_horarios(
         return "Desculpe, tive um erro ao consultar a agenda. Tente novamente em instantes."
 
 
-def buscar_agendamentos(db: Session, cpf: str) -> str:
+def buscar_agendamentos(db: Session, cpf: str = "", wa_from: str = None) -> str:
     """
-    Busca agendamentos de um paciente pelo CPF.
+    Busca os agendamentos (consultas) de um paciente pelo CPF ou WhatsApp.
     """
     from app.models.patient import Patient
     from app.models.appointment import Appointment
@@ -559,49 +559,80 @@ def buscar_agendamentos(db: Session, cpf: str) -> str:
         cpf_formatado = f"{cpf_limpo[:3]}.{cpf_limpo[3:6]}.{cpf_limpo[6:9]}-{cpf_limpo[9:]}"
 
     try:
-        # Buscar paciente
-        patient = db.query(Patient).filter(
-            (Patient.cpf == cpf_limpo) | (Patient.cpf == cpf_formatado) | (Patient.cpf == cpf)
-        ).first()
+        # 1. Tentar por CPF se fornecido
+        patient = None
+        if cpf and len(cpf.strip()) > 5:
+            patient = db.query(Patient).filter(
+                (Patient.cpf == cpf_limpo) | (Patient.cpf == cpf_formatado) | (Patient.cpf == cpf)
+            ).first()
+
+        # 2. Tentar por wa_from (WhatsApp) como fallback
+        if not patient and wa_from:
+            wa_digits = "".join(c for c in wa_from if c.isdigit())
+            if len(wa_digits) >= 8:
+                suffix = wa_digits[-8:]
+                patient = db.query(Patient).filter(
+                    (Patient.whatsapp.like(f"%{suffix}%")) | 
+                    (Patient.phone.like(f"%{suffix}%"))
+                ).first()
 
         if not patient:
-            return f"Nenhum paciente encontrado com CPF {cpf}. Verifique se o CPF está correto."
+            if cpf:
+                return f"Nenhum paciente encontrado com CPF {cpf}. Verifique se o CPF está correto."
+            else:
+                return "Não consegui identificar seu cadastro automaticamente. Por favor, me informe seu CPF para que eu possa localizar suas consultas."
 
-        # Buscar agendamentos
-        agendamentos = db.query(Appointment).filter(
-            Appointment.patient_id == patient.id
-        ).order_by(Appointment.appointment_date.desc()).limit(10).all()
+        from datetime import datetime
+        now = datetime.now()
+        
+        # 1. Buscar as 5 próximas consultas (Futuro)
+        proximas = db.query(Appointment).filter(
+            Appointment.patient_id == patient.id,
+            Appointment.appointment_date >= now,
+            Appointment.status.in_(["pending", "confirmed"])
+        ).order_by(Appointment.appointment_date.asc()).limit(5).all()
+        
+        # 2. Buscar as 5 consultas mais recentes (Passado)
+        passadas = db.query(Appointment).filter(
+            Appointment.patient_id == patient.id,
+            Appointment.appointment_date < now
+        ).order_by(Appointment.appointment_date.desc()).limit(5).all()
+        
+        agendamentos = proximas + passadas
+
+        if not agendamentos:
+            return f"Não encontrei nenhum registro de consulta para o paciente {patient.name}."
+
+        resultado = {
+            "paciente": patient.name,
+            "proximas_consultas": len(proximas),
+            "consultas_passadas": len(passadas),
+            "agendamentos": []
+        }
+
+        for ag in agendamentos:
+            periodo = "Próxima" if ag.appointment_date >= now else "Anterior"
+            entry = {
+                "periodo": periodo,
+                "data_hora": ag.appointment_date.strftime("%d/%m/%Y %H:%M"),
+                "status": ag.status,
+                "tipo": ag.type or "consulta",
+                "motivo": ag.reason or "Não informado",
+            }
+
+            # Buscar nome do médico
+            if ag.medico_id:
+                medico = db.query(Medico).filter(Medico.id == ag.medico_id).first()
+                if medico:
+                    entry["medico"] = medico.nome_completo
+
+            resultado["agendamentos"].append(entry)
+
+        return json.dumps(resultado, ensure_ascii=False)
     except Exception as e:
         db.rollback()
         logger.error(f"Erro no banco de dados em buscar_agendamentos: {e}")
-        return "Erro temporário ao acessar os agendamentos. Tente novamente."
-
-    if not agendamentos:
-        return f"Paciente {patient.name} encontrado, mas não possui agendamentos registrados."
-
-    resultado = {
-        "paciente": patient.name,
-        "total_agendamentos": len(agendamentos),
-        "agendamentos": []
-    }
-
-    for ag in agendamentos:
-        entry = {
-            "data_hora": ag.appointment_date.strftime("%d/%m/%Y %H:%M"),
-            "status": ag.status,
-            "tipo": ag.type or "consulta",
-            "motivo": ag.reason or "Não informado",
-        }
-
-        # Buscar nome do médico
-        if ag.medico_id:
-            medico = db.query(Medico).filter(Medico.id == ag.medico_id).first()
-            if medico:
-                entry["medico"] = medico.nome_completo
-
-        resultado["agendamentos"].append(entry)
-
-    return json.dumps(resultado, ensure_ascii=False)
+        return "Desculpe, tive um erro ao consultar o histórico de consultas. Tente novamente em instantes."
 
 
 def buscar_consultas_medico(db: Session, medico_id: int) -> str:
@@ -997,7 +1028,8 @@ def execute_tool(tool_name: str, arguments: dict, db: Session, wa_from: str = No
         elif tool_name == "buscar_agendamentos":
             return buscar_agendamentos(
                 db=db,
-                cpf=arguments.get("cpf", "")
+                cpf=arguments.get("cpf", ""),
+                wa_from=wa_from
             )
 
         elif tool_name == "listar_especialidades":

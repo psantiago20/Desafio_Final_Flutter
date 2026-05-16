@@ -13,6 +13,7 @@ import 'features/appointments/screens/new_appointment_screen.dart';
 import 'features/profile/screens/profile_screen.dart';
 import 'features/patients/screens/patients_screen.dart';
 import 'features/patients/screens/patient_appointments_screen.dart';
+import 'features/patients/screens/patient_history_screen.dart';
 import 'shared/models/patient_model.dart';
 import 'shared/models/appointment_model.dart';
 import 'shared/widgets/main_shell.dart';
@@ -151,6 +152,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final patientId = int.parse(state.pathParameters['id']!);
           return ResultsScreen(patientId: patientId);
+        },
+      ),
+      GoRoute(
+        path: '/patients/:id/history',
+        builder: (context, state) {
+          final patientId = int.parse(state.pathParameters['id']!);
+          return PatientHistoryScreen(patientId: patientId);
         },
       ),
       GoRoute(

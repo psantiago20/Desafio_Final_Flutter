@@ -52,8 +52,8 @@ Crie este arquivo na raiz do projeto. Ele é usado pelo Docker Compose e pelo co
 NVIDIA_API_KEY=sua_chave_nvapi_aqui
 SECRET_KEY=uma_chave_secreta_aleatoria
 DEBUG=True
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
+POSTGRES_USER=omniconnect
+POSTGRES_PASSWORD=omniconnect123
 POSTGRES_DB=omniconnect
 ```
 

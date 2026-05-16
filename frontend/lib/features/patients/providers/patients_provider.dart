@@ -97,3 +97,10 @@ final patientByIdProvider =
   final repository = ref.watch(patientsRepositoryProvider);
   return repository.getPatientById(id);
 });
+
+// Provider for archived prescriptions from messages table
+final archivedPrescriptionsProvider = FutureProvider.family<List<Map<String, dynamic>>, int>((ref, patientId) async {
+  // Use a direct API call or repository
+  final response = await ref.read(patientsRepositoryProvider).getArchivedPrescriptions(patientId);
+  return response;
+});

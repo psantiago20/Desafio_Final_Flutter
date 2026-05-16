@@ -4,6 +4,7 @@ import 'package:frontend/core/theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:frontend/core/network/api_client.dart';
 import 'package:frontend/features/auth/providers/auth_provider.dart';
+import 'dart:async';
 
 class DoctorMessagesScreen extends ConsumerStatefulWidget {
   final int? initialPatientId;
@@ -24,6 +25,8 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
   bool _isSidebarOpen = true;
   int? _selectedPatientId;
   final TextEditingController _msgController = TextEditingController();
+  final ScrollController _chatScrollController = ScrollController();
+  Timer? _refreshTimer;
 
   final List<Map<String, dynamic>> _patients = [
     {
@@ -39,6 +42,34 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
   void initState() {
     super.initState();
     _loadConversations();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) {
+        _loadConversations();
+        if (_selectedPatientId != null) {
+          _loadMessages(_selectedPatientId!);
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _msgController.dispose();
+    _chatScrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.animateTo(
+          _chatScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _loadConversations() async {
@@ -47,26 +78,41 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
       final List<dynamic> msgs = response['messages'];
       
       final Map<int, Map<String, dynamic>> conversations = {};
-      
+      final authState = ref.read(authProvider);
+      final currentUserId = authState.user?.id;
+
       for (final m in msgs) {
         final patientId = m['patient_id'];
-        if (patientId != null && patientId != 15 && !conversations.containsKey(patientId)) {
+        if (patientId != null) {
           final patient = m['patient'];
           final name = patient != null ? patient['name'] : 'Paciente $patientId';
           
-          String timeStr = '...';
-          try {
-            final dt = DateTime.parse(m['created_at']);
-            timeStr = "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
-          } catch (e) {}
+          if (!conversations.containsKey(patientId)) {
+            String timeStr = '...';
+            try {
+              // Ajuste para Horário de Brasília: Backend envia UTC sem 'Z', forçamos e convertemos
+              final dt = DateTime.parse("${m['created_at']}Z").toLocal();
+              timeStr = "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+            } catch (e) {}
+            
+            conversations[patientId] = {
+              'id': patientId,
+              'name': name,
+              'lastMessage': m['content'],
+              'time': timeStr,
+              'hasChat': true,
+              'unreadCount': 0,
+            };
+          }
           
-          conversations[patientId] = {
-            'id': patientId,
-            'name': name,
-            'lastMessage': m['content'],
-            'time': timeStr,
-            'hasChat': true,
-          };
+          // Contagem de não lidas (qualquer mensagem não lida vinda do paciente ou whatsapp)
+          final isFromMe = m['sender_id'] == currentUserId;
+          final isRead = m['is_read'] == true;
+          final source = m['source'];
+          
+          if (!isRead && !isFromMe && (source == 'app_doctor' || source == 'whatsapp' || m['sender_id'] != null)) {
+            conversations[patientId]!['unreadCount'] = (conversations[patientId]!['unreadCount'] as int) + 1;
+          }
         }
       }
       
@@ -139,6 +185,20 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
       final authState = ref.read(authProvider);
       final currentUserId = authState.user?.id;
 
+      // Marcar todas como lidas no backend
+      try {
+        await ApiClient.patch('/api/messages/read-all/$targetId', {});
+        // Atualiza localmente a contagem de não lidas na lista de pacientes
+        setState(() {
+          final pIndex = _patients.indexWhere((p) => p['id'] == patientId);
+          if (pIndex != -1) {
+            _patients[pIndex]['unreadCount'] = 0;
+          }
+        });
+      } catch (e) {
+        print('Erro ao marcar mensagens como lidas: $e');
+      }
+
       setState(() {
         _messagesByPatient[patientId] = msgs.map((m) {
           final content = m['content'];
@@ -146,7 +206,7 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
           final senderId = m['sender_id'];
           
           String sender = 'patient';
-          if (waFrom == 'isis_ia' || m['source'] == 'system') {
+          if (waFrom == 'isis_ia' || m['source'] == 'system' || m['source'] == 'bot') {
             sender = 'isis';
           } else if (senderId == currentUserId) {
             sender = 'doctor';
@@ -156,7 +216,8 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
           
           String timeStr = '...';
           try {
-            final dt = DateTime.parse(m['created_at']).toLocal();
+            // Ajuste para Horário de Brasília
+            final dt = DateTime.parse("${m['created_at']}Z").toLocal();
             timeStr = "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
           } catch (e) {
             // fallback
@@ -176,6 +237,7 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
         
         _isLoadingMessages = false;
       });
+      _scrollToBottom();
     } catch (e) {
       print('Erro ao carregar mensagens: $e');
       setState(() {
@@ -221,7 +283,8 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
       });
       _msgController.clear();
     });
-
+    _scrollToBottom();
+    
     if (patientId == 0) {
       try {
         final response = await ApiClient.post('/api/chat/ia', {
@@ -241,6 +304,7 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
           isis['lastMessage'] = response['response'];
           isis['time'] = 'Agora';
         });
+        _scrollToBottom();
       } catch (e) {
         setState(() {
           _messagesByPatient[0]?.add({
@@ -249,6 +313,7 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
             'time': 'Agora',
           });
         });
+        _scrollToBottom();
       } finally {
         if (mounted) {
           setState(() {
@@ -385,15 +450,37 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
                                     color: AppColors.primaryLight,
                                   ),
                                 ),
-                          trailing: p['hasChat']
-                              ? Text(
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (p['hasChat'])
+                                Text(
                                   p['time'],
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: AppColors.textSecondary,
                                   ),
-                                )
-                              : null,
+                                ),
+                              if (p['unreadCount'] != null && p['unreadCount'] > 0)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 4),
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    p['unreadCount'].toString(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                           onTap: () {
                             if (!isDesktop) {
                               setState(() => _isSidebarOpen = false);
@@ -503,6 +590,7 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
                             child: _isLoadingMessages
                                 ? const Center(child: CircularProgressIndicator())
                                 : ListView.builder(
+                                    controller: _chatScrollController,
                                     padding: const EdgeInsets.all(16),
                                     itemCount: _messagesByPatient[_selectedPatientId!]?.length ?? 0,
                               itemBuilder: (context, index) {

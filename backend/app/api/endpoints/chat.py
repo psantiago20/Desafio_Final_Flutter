@@ -11,6 +11,8 @@ from app.api.endpoints.auth import get_current_user
 from app.models.user import User
 from app.services.rag_service import rag_service
 from app.utils.phone_utils import find_patient_by_messaging_phone
+from app.core.config import settings
+from fastapi import status
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -109,6 +111,8 @@ async def chat_whatsapp_ia(
     """
     Endpoint legado ou de integração direta para simulação WhatsApp.
     """
+    if not settings.DEBUG:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Disabled in production")
     patient = find_patient_by_messaging_phone(db, wa_from)
 
     if not patient:

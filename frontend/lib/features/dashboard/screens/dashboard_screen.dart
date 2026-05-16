@@ -13,6 +13,7 @@ import 'package:frontend/features/dashboard/screens/prontuarios_screen.dart';
 import 'package:frontend/features/messages/screens/doctor_messages_screen.dart';
 import 'package:frontend/features/patients/screens/patients_screen.dart';
 import 'package:frontend/features/dashboard/screens/financial_screen.dart';
+import 'package:frontend/features/dashboard/widgets/doctor_sidebar.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
 
 import 'package:frontend/shared/models/dashboard_stats_model.dart';
@@ -61,7 +62,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       backgroundColor: _bg,
       body: Row(
         children: [
-          if (isDesktop) _buildSidebar(),
+          if (isDesktop) DoctorSidebar(selectedIndex: _selectedNavIndex),
           Expanded(
             child: _buildMainContent(isDesktop, user?.displayName ?? '', statsAsync, todayAsync),
           ),
@@ -252,166 +253,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildSidebar() {
-    return Container(
-      width: 280,
-      decoration: const BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.only(
-          topRight: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x0F191C1E),
-            blurRadius: 40,
-            offset: Offset(10, 0),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(
-                  color: _primaryFixed,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    'S',
-                    style: GoogleFonts.manrope(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      color: _primary,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Clinica Alpha',
-                      style: GoogleFonts.manrope(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: _onSurface,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      'Medical Management',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: _onSurfaceVariant,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'v2.4.0',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: _outline,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSidebarItem(0, Icons.grid_view, 'Painel'),
-                  _buildSidebarItem(1, Icons.calendar_today, 'Agenda'),
-                  _buildSidebarItem(2, Icons.group, 'Pacientes'),
-                  _buildSidebarItem(3, Icons.chat, 'Chat'),
-                  _buildSidebarItem(6, Icons.payments, 'Financeiro'),
-                ],
-              ),
-            ),
-          ),
-          const Divider(color: _surfaceLow),
-          const SizedBox(height: 16),
-          _buildSidebarItem(5, Icons.settings, 'Configurações'),
-          _buildSidebarItem(7, Icons.help_outline, 'Suporte'),
-          const SizedBox(height: 16),
-          InkWell(
-            onTap: () {
-              ref.read(authProvider.notifier).logout();
-              context.go('/login');
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  const Icon(Icons.logout, color: _onSurfaceVariant),
-                  const SizedBox(width: 16),
-                  Text(
-                    'Sair',
-                    style: GoogleFonts.manrope(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: _onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildSidebarItem(int index, IconData icon, String title) {
-    final isActive = _selectedNavIndex == index;
-    return InkWell(
-      onTap: () {
-        setState(() => _selectedNavIndex = index);
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: isActive ? _secondaryFixed : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: isActive ? _onSecondaryFixed : _onSurfaceVariant,
-            ),
-            const SizedBox(width: 16),
-            Text(
-              title,
-              style: GoogleFonts.manrope(
-                fontSize: 16,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
-                color: isActive ? _onSecondaryFixed : _onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildHeader(String name) {
     final now = DateTime.now();
@@ -472,6 +314,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           circleColor: _tertiaryFixed,
         ),
         _buildStatCard(
+          title: 'Mensagens',
+          value: '${stats.unreadMessages}',
+          icon: Icons.chat_bubble_outline,
+          iconColor: _primary,
+          circleColor: _primaryFixed,
+          badge: stats.unreadMessages > 0,
+        ),
+        _buildStatCard(
           title: 'Concluídas',
           value: '${stats.completedAppointments}',
           icon: Icons.check_circle,
@@ -495,6 +345,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     required IconData icon,
     required Color iconColor,
     required Color circleColor,
+    bool badge = false,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -534,7 +385,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     color: circleColor,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, color: iconColor, size: 24),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(icon, color: iconColor, size: 24),
+                      if (badge)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
                 const Spacer(),
                 FittedBox(

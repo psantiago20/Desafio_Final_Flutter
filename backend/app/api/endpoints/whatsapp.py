@@ -454,6 +454,11 @@ async def chat_direct(
     db: Session = Depends(get_db)
 ):
     """Endpoint for testing the RAG bot directly from the frontend, bypassing WhatsApp Meta API."""
+    if not settings.DEBUG:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Direct chat is only available in development/debug mode."
+        )
     logger.info(f"Direct chat received from {request.to}: {request.message}")
     
     wa_from = request.to
@@ -482,7 +487,8 @@ async def chat_direct(
         source="whatsapp", # Pretend it's from whatsapp so it shows up similarly
         wa_message_id=f"simulated_{datetime.now().timestamp()}",
         wa_from=wa_from,
-        is_delivered=True
+        is_delivered=True,
+        is_read=True
     )
     db.add(db_message)
     db.commit()
@@ -514,7 +520,8 @@ async def chat_direct(
             source="bot",
             wa_from=settings.WHATSAPP_PHONE_NUMBER_ID or "BOT",
             wa_message_id=f"simulated_resp_{datetime.now().timestamp()}",
-            is_delivered=True
+            is_delivered=True,
+            is_read=True
         )
         db.add(bot_message)
         db.commit()
@@ -533,6 +540,11 @@ def clear_conversation(
     wa_from: str = Query(..., description="Número WhatsApp do paciente")
 ):
     """Limpa o estado da conversa (para testes — simula nova conversa)."""
+    if not settings.DEBUG:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Debug endpoints are disabled in production."
+        )
     from app.services.rag_service import rag_service
     rag_service.clear_conversation(wa_from)
     return {"status": "success", "message": f"Estado da conversa de {wa_from} limpo"}
@@ -543,6 +555,11 @@ def get_conversation_state(
     wa_from: str = Query(..., description="Número WhatsApp do paciente")
 ):
     """Retorna o estado da conversa de um número (para debug)."""
+    if not settings.DEBUG:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Debug endpoints are disabled in production."
+        )
     from app.services.rag_service import rag_service
     state = rag_service.get_conversation_state(wa_from)
     return {"wa_from": wa_from, "state": state}

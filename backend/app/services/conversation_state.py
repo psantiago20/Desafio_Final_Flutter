@@ -35,9 +35,16 @@ class ConversationState:
         self.patient_id_pendente: Optional[int] = None
 
     def to_dict(self) -> dict:
+        # Mascarar CPF para evitar vazamento em APIs de debug
+        masked_cpf = None
+        if self.cpf_coletado and len(self.cpf_coletado) == 11:
+            masked_cpf = f"***.{self.cpf_coletado[3:6]}.***-{self.cpf_coletado[9:]}"
+        elif self.cpf_coletado:
+            masked_cpf = "***"
+
         return {
             "last_interaction_at": self.last_interaction_at.isoformat() if self.last_interaction_at else None,
-            "cpf_coletado": self.cpf_coletado,
+            "cpf_coletado": masked_cpf,
             "aguardando_cpf": self.aguardando_cpf,
             "operacao_pendente": self.operacao_pendente,
             "boas_vindas_enviada": self.boas_vindas_enviada,

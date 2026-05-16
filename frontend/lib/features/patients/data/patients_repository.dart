@@ -21,4 +21,13 @@ class PatientsRepository {
     final data = await ApiClient.get('${AppConstants.patientsEndpoint}/$id');
     return PatientModel.fromJson(data as Map<String, dynamic>);
   }
+
+  Future<List<Map<String, dynamic>>> getArchivedPrescriptions(int patientId) async {
+    final response = await ApiClient.get('/api/messages', {'patient_id': patientId, 'limit': 100});
+    final msgs = response['messages'] as List<dynamic>;
+    return msgs
+        .where((m) => m['meta'] == 'prescription_archive')
+        .map((m) => m as Map<String, dynamic>)
+        .toList();
+  }
 }

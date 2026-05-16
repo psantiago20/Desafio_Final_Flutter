@@ -83,16 +83,37 @@ def cancelar_consulta_tool(data_hora: str, cpf: str = None):
     return "Cancelamento em processamento..."
 
 @tool
+def buscar_agendamentos_tool(cpf: str = None):
+    """
+    Busca os agendamentos (consultas) de um paciente pelo CPF ou identificação automática.
+    Retorna: data/hora, status, tipo, médico, motivo.
+    Use quando o paciente quiser ver, cancelar ou remarcar suas consultas.
+    """
+    from app.services.agent_tools import buscar_agendamentos
+    return buscar_agendamentos(db=None, cpf=cpf)
+
+@tool
 def buscar_consultas_medico_tool(medico_id: int):
     """Busca as próximas consultas (agendamentos) de um médico."""
-    pass
+    from app.services.agent_tools import buscar_consultas_medico
+    return buscar_consultas_medico(db=None, medico_id=medico_id)
 
 @tool
 def buscar_info_paciente_tool(nome_ou_cpf: str):
     """Busca informações de um paciente e seus exames pelo nome ou CPF."""
-    pass
+    from app.services.agent_tools import buscar_info_paciente
+    return buscar_info_paciente(db=None, nome_ou_cpf=nome_ou_cpf)
 
-langchain_tools = [buscar_faq_tool, buscar_medico_tool, buscar_horarios_tool, agendar_consulta_tool, cancelar_consulta_tool, buscar_consultas_medico_tool, buscar_info_paciente_tool]
+langchain_tools = [
+    buscar_faq_tool, 
+    buscar_medico_tool, 
+    buscar_horarios_tool, 
+    agendar_consulta_tool, 
+    cancelar_consulta_tool, 
+    buscar_agendamentos_tool,
+    buscar_consultas_medico_tool, 
+    buscar_info_paciente_tool
+]
 
 class RAGService:
     def __init__(self):
@@ -148,8 +169,7 @@ class RAGService:
         elif any(k in query for k in ["convênio", "aceita"]): state["last_search_type"] = "convênio"
 
         user_role = state.get("user_role", "patient")
-        logger.info(f"[_triage_node] user_role: {user_role}, query: '{query}'")
-        if user_role != "patient":
+        if user_role == "doctor":
             # Médicos e funcionários vão DIRETO para o agente para evitar regras rígidas de pacientes
             return {"next_node": "agent"}
 
@@ -201,29 +221,12 @@ class RAGService:
         all_messages = state["messages"]
         last_is_tool = len(all_messages) > 0 and isinstance(all_messages[-1], ToolMessage)
 
-        # AGGREGAÇÃO DE FERRAMENTAS (Limpa e Humana)
-        if last_is_tool:
-            tool_results = []
-            seen_contents = set()
-            for msg in reversed(all_messages):
-                if isinstance(msg, HumanMessage): break
-                if isinstance(msg, ToolMessage) and msg.content not in seen_contents:
-                    # Limpeza de strings técnicas na resposta final
-                    clean_res = msg.content.replace("[Fonte: FAQ]", "").replace("[Fonte: Clínica]", "").strip()
-                    tool_results.insert(0, clean_res)
-                    seen_contents.add(msg.content)
-            
-            if tool_results:
-                return {"messages": [AIMessage(content="\n\n".join(tool_results))]}
-
         # Prompt baseado no papel do usuário (2 IAs distintas)
         user_role = state.get("user_role", "patient")
         user_name = state.get("user_name", "")
         user_id = state.get("user_id")
         
-        logger.info(f"[_agent_node] user_role: {user_role}, user_name: {user_name}, user_id: {user_id}")
-        
-        if user_role != "patient":
+        if user_role == "doctor":
             # IA 2: Assistente do Médico
             # Buscar o ID do médico logado
             doctor_id = None
@@ -269,7 +272,8 @@ class RAGService:
                 "REGRA DE OURO: Você SÓ fala sobre assuntos da clínica (médicos, horários, exames, convênios e saúde).\n"
                 "Se o usuário pedir para cancelar uma consulta, use a ferramenta de cancelar_consulta. Se pedir para remarcar, cancele a anterior e agende a nova.\n"
                 "Se o usuário perguntar sobre QUALQUER outro assunto (esportes, política, notícias, etc), negue educadamente e diga que você está aqui apenas para ajudar com os atendimentos da clínica.\n"
-                "Responda sempre baseada nos dados das ferramentas. Se não houver dados, peça para falar com a recepção. ✨"
+                "Responda sempre baseada nos dados das ferramentas. Se não houver dados, peça para falar com a recepção. ✨\n"
+                "REGRA CRÍTICA: Se uma ferramenta pedir um CPF e você não souber o do paciente, NÃO invente um número! Em vez disso, peça educadamente o CPF para o usuário."
             )
             active_doc = state.get("active_doctor_name")
             active_id = state.get("active_doctor_id")

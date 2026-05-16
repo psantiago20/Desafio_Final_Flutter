@@ -28,6 +28,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // A busca inicial já é feita no construtor do Notifier, 
     // mas garantimos que o scroll vá para o final após o build inicial
     _scrollToBottom();
+    
+    // Marca como lido o chat inicial (Isis)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(chatProvider.notifier).setActiveChat('isis');
+    });
+  }
+
+  @override
+  void dispose() {
+    // Para de suprimir notificações quando sair da tela
+    ref.read(chatProvider.notifier).setActiveChat('none');
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _sendMessage() {
@@ -88,30 +102,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final activeMessages = _selectedChat == 'doctor' ? chatState.doctorMessages : chatState.isisMessages;
 
     final medicosAsync = ref.watch(medicosProvider);
-    String doctorName = 'Médico';
-    String? doctorPhotoUrl;
-
-    medicosAsync.whenData((medicos) {
-      if (medicos.isNotEmpty) {
-        // Tenta encontrar o médico das mensagens
-        final doctorMessages = chatState.doctorMessages;
-        if (doctorMessages.isNotEmpty) {
-          for (var m in doctorMessages) {
-            if (!m.isMe && m.senderName != null && m.senderName != 'Médico') {
-              doctorName = m.senderName!;
-              doctorPhotoUrl = m.senderPhotoUrl;
-              break;
-            }
-          }
-        }
-        
-        // Se ainda não encontrou por mensagens, usa o primeiro da lista
-        if (doctorName == 'Médico' && medicos.isNotEmpty) {
-          doctorName = medicos.first.nomeCompleto;
-          doctorPhotoUrl = medicos.first.fotoUrl;
-        }
-      }
-    });
+    String doctorName = chatState.doctorName ?? 'Atendimento Humano';
+    String? doctorPhotoUrl = chatState.doctorPhotoUrl;
 
     return Scaffold(
       body: Row(
@@ -147,13 +139,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           child: Text('I', style: TextStyle(color: Colors.white)),
                         ),
                         title: const Text('Isis (Assistente)'),
-                        subtitle: const Text('Atendimento Virtual'),
+                        subtitle: Text(
+                          chatState.lastIsisMessage ?? 'Atendimento Virtual',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        ),
+                        trailing: chatState.isisUnreadCount > 0 
+                          ? Badge(
+                              label: Text(chatState.isisUnreadCount.toString()),
+                              backgroundColor: Colors.red,
+                            )
+                          : null,
                         selected: _selectedChat == 'isis',
                         selectedTileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                         onTap: () {
                           setState(() {
                             _selectedChat = 'isis';
                           });
+                          ref.read(chatProvider.notifier).setActiveChat('isis');
                         },
                       ),
                       ListTile(
@@ -166,13 +170,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 child: Text('M', style: TextStyle(color: Colors.white)),
                               ),
                         title: Text(doctorName),
-                        subtitle: const Text('Atendimento Humano'),
+                        subtitle: Text(
+                          chatState.lastDoctorMessage ?? 'Atendimento Humano',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        ),
+                        trailing: chatState.doctorUnreadCount > 0 
+                          ? Badge(
+                              label: Text(chatState.doctorUnreadCount.toString()),
+                              backgroundColor: Colors.red,
+                            )
+                          : null,
                         selected: _selectedChat == 'doctor',
                         selectedTileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                         onTap: () {
                           setState(() {
                             _selectedChat = 'doctor';
                           });
+                          ref.read(chatProvider.notifier).setActiveChat('doctor');
                         },
                       ),
                     ],
@@ -191,28 +207,42 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     child: RefreshIndicator(
                       onRefresh: () =>
                           ref.read(chatProvider.notifier).fetchMessages(),
-                      child: ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(16.0),
-                        itemCount: activeMessages.length + (isLoading ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == activeMessages.length && isLoading) {
-                            return const Align(
-                              alignment: Alignment.centerLeft,
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: 16.0,
-                                  horizontal: 8.0,
-                                ),
-                                child: CircularProgressIndicator(),
+                      child: activeMessages.isEmpty && !isLoading
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.chat_outlined, size: 48, color: Theme.of(context).colorScheme.outline),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Nenhuma mensagem nesta conversa.',
+                                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                  ),
+                                ],
                               ),
-                            );
-                          }
-                          final msg = activeMessages[index];
-                          return _buildMessageBubble(msg);
-                        },
-                      ),
+                            )
+                          : ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              controller: _scrollController,
+                              padding: const EdgeInsets.all(16.0),
+                              itemCount: activeMessages.length + (isLoading ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index == activeMessages.length && isLoading) {
+                                  return const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 16.0,
+                                        horizontal: 8.0,
+                                      ),
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
+                                }
+                                final msg = activeMessages[index];
+                                return _buildMessageBubble(msg);
+                              },
+                            ),
                     ),
                   ),
                   _buildMessageInput(),

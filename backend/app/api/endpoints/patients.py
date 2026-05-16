@@ -47,22 +47,37 @@ def get_my_patient_profile(
     patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
     
     if not patient:
-        print(f"[DEBUG] Creating new patient record for user {current_user.id}")
+        print(f"[DEBUG] Creating/Linking patient record for user {current_user.id}")
+        from app.utils.phone_utils import find_patient_by_messaging_phone, digits_only
+        
         try:
-            patient = Patient(
-                user_id=current_user.id,
-                name=current_user.full_name or current_user.username or "Usuário",
-                email=current_user.email,
-                phone=current_user.phone or "00000000000",
-                whatsapp=current_user.phone or "00000000000",
-                is_active=True
-            )
-            db.add(patient)
+            # Tenta localizar paciente pré-existente pelo telefone do User
+            phone_clean = digits_only(current_user.phone) if current_user.phone else None
+            patient = find_patient_by_messaging_phone(db, phone_clean) if phone_clean else None
+            
+            if patient:
+                # Vincula paciente órfão ao usuário logado
+                patient.user_id = current_user.id
+                if not patient.email:
+                    patient.email = current_user.email
+                db.add(patient)
+            else:
+                # Cria novo paciente se não existir nada
+                patient = Patient(
+                    user_id=current_user.id,
+                    name=current_user.full_name or current_user.username or "Usuário",
+                    email=current_user.email,
+                    phone=current_user.phone or "00000000000",
+                    whatsapp=current_user.phone or "00000000000",
+                    is_active=True
+                )
+                db.add(patient)
+            
             db.commit()
             db.refresh(patient)
         except Exception as e:
             db.rollback()
-            print(f"[ERROR] Could not create patient record: {e}")
+            print(f"[ERROR] Could not create or link patient record: {e}")
             # Fallback para perfil virtual se a criação no banco falhar
             return {
                 "id": 0,
@@ -136,6 +151,19 @@ def create_patient(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    from app.utils.phone_utils import find_patient_by_messaging_phone
+    
+    # Verificar se já existe um paciente com este telefone ou whatsapp
+    existing = find_patient_by_messaging_phone(db, patient.phone)
+    if not existing and patient.whatsapp:
+        existing = find_patient_by_messaging_phone(db, patient.whatsapp)
+        
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Já existe um paciente cadastrado com este número (ID: {existing.id})"
+        )
+
     db_patient = Patient(**patient.model_dump())
     db.add(db_patient)
     db.commit()
