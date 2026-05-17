@@ -24,6 +24,40 @@ async def process_rag_background(wa_from: str, content: str, phone_number_id: st
         from app.services.rag_service import rag_service
         from app.services.doctor_mapper import doctor_mapper
         from app.services.whatsapp_service import wa_service
+        from app.services.content_moderation_service import content_moderation_service
+
+        # --- MODERAÇÃO DE SEGURANÇA ---
+        is_safe, reason = await content_moderation_service.check_text_safety(content)
+        if not is_safe:
+            ai_response = f"⚠️ Mensagem Bloqueada por Segurança: Identificamos conteúdo inadequado ({reason}) que viola nossas diretrizes de segurança."
+            
+            # Encontrar e mascarar a mensagem de entrada inadequada no banco para não manter conteúdo ilícito
+            unsafe_msg = db.query(Message).filter(
+                Message.patient_id == patient_id,
+                Message.content == content,
+                Message.source == "whatsapp"
+            ).order_by(Message.created_at.desc()).first()
+            
+            if unsafe_msg:
+                unsafe_msg.content = "[MENSAGEM BLOQUEADA PELO FILTRO DE SEGURANÇA]"
+                db.add(unsafe_msg)
+            
+            bot_message = Message(
+                patient_id=patient_id,
+                content=ai_response,
+                message_type="text",
+                source="ai",
+                wa_from="system"
+            )
+            db.add(bot_message)
+            db.commit()
+
+            try:
+                await wa_service.send_message(to=wa_from, message=ai_response)
+            except Exception as send_err:
+                logger.error(f"Failed to send block alert: {send_err}")
+            return
+        # -----------------------------
 
         doctor = doctor_mapper.get_doctor_by_phone_number_id(phone_number_id, db)
         wa_to = doctor.whatsapp if doctor else None
@@ -515,6 +549,41 @@ async def chat_direct(
         db.refresh(patient)
     else:
         ensure_canonical_whatsapp(db, patient, wa_from)
+
+    # --- MODERAÇÃO DE SEGURANÇA ---
+    from app.services.content_moderation_service import content_moderation_service
+    is_safe, reason = await content_moderation_service.check_text_safety(content)
+    if not is_safe:
+        ai_response = f"⚠️ Mensagem Bloqueada por Segurança: Identificamos conteúdo inadequado ({reason}) que viola nossas diretrizes de segurança."
+        
+        # Salva o log mascarado no banco
+        db.add(Message(
+            patient_id=patient.id,
+            content="[MENSAGEM BLOQUEADA PELO FILTRO DE SEGURANÇA]",
+            message_type="text",
+            source="whatsapp",
+            wa_message_id=f"simulated_{datetime.now().timestamp()}",
+            wa_from=wa_from,
+            is_delivered=True,
+            is_read=True
+        ))
+        db.add(Message(
+            patient_id=patient.id,
+            content=ai_response,
+            message_type="text",
+            source="bot",
+            wa_from=settings.WHATSAPP_PHONE_NUMBER_ID or "BOT",
+            wa_message_id=f"simulated_resp_{datetime.now().timestamp()}",
+            is_delivered=True,
+            is_read=True
+        ))
+        db.commit()
+
+        return {
+            "status": "blocked",
+            "response": ai_response
+        }
+    # -----------------------------
 
     db_message = Message(
         patient_id=patient.id,

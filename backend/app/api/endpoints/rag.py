@@ -26,7 +26,7 @@ from app.core.config import settings
 
 from app.db.database import get_db
 from app.api.endpoints.auth import get_current_user
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.message import Message, MessageSource
 from app.models.patient import Patient
 from app.models.appointment import Appointment
@@ -91,11 +91,16 @@ class RAGQueryResponse(BaseModel):
 # ------------------------------------------------------------------ #
 
 @router.post("/ingest/{doctor_id}", response_model=IngestResponse)
-def ingest_faq(doctor_id: int):
+def ingest_faq(
+    doctor_id: int,
+    current_user: User = Depends(get_current_user)
+):
     """
     Re-indexa os documentos FAQ de um médico específico.
     Lê os arquivos de faq/_global/ e faq/doctor_{id}/ e indexa no ChromaDB.
     """
+    if current_user.role not in [UserRole.ADMIN.value, UserRole.DOCTOR.value]:
+        raise HTTPException(status_code=403, detail="Apenas administradores ou médicos podem forçar a re-indexação.")
     try:
         logger.info(f"Iniciando ingestão da FAQ para doctor_id={doctor_id}")
         stats = ingest_doctor_faq(doctor_id)
@@ -110,11 +115,15 @@ def ingest_faq(doctor_id: int):
 
 
 @router.post("/ingest/all", response_model=IngestResponse)
-def ingest_all():
+def ingest_all(
+    current_user: User = Depends(get_current_user)
+):
     """
     Re-indexa os documentos FAQ de TODOS os médicos.
     Escaneia todas as pastas doctor_N/ em faq/.
     """
+    if current_user.role not in [UserRole.ADMIN.value, UserRole.DOCTOR.value]:
+        raise HTTPException(status_code=403, detail="Apenas administradores ou médicos podem forçar a re-indexação de todas as FAQs.")
     try:
         logger.info("Iniciando ingestão de todas as FAQs")
         results = ingest_all_doctors()
@@ -133,11 +142,16 @@ def ingest_all():
 # ------------------------------------------------------------------ #
 
 @router.post("/search", response_model=SearchResponse)
-def search_faq(request: SearchRequest):
+def search_faq(
+    request: SearchRequest,
+    current_user: User = Depends(get_current_user)
+):
     """
     Busca semântica na FAQ (sem chamar a LLM).
     Útil para testar a qualidade da busca do vector store.
     """
+    if current_user.role not in [UserRole.ADMIN.value, UserRole.DOCTOR.value]:
+        raise HTTPException(status_code=403, detail="Apenas administradores ou médicos podem realizar busca semântica direta.")
     try:
         results = rag_service.search_only(
             query=request.query,
@@ -169,6 +183,7 @@ async def query_rag(
         from app.models.message import Message, MessageSource
         from app.models.patient import Patient
         from app.api.endpoints.whatsapp import find_patient_by_messaging_phone
+        from app.services.content_moderation_service import content_moderation_service
 
         # 1. Identificar o paciente (Prioridade: Usuário Logado)
         patient = None
@@ -177,6 +192,32 @@ async def query_rag(
         
         if not patient and request.wa_from:
             patient = find_patient_by_messaging_phone(db, request.wa_from)
+
+        # --- MODERAÇÃO DE SEGURANÇA ---
+        is_safe, reason = await content_moderation_service.check_text_safety(request.query)
+        if not is_safe:
+            response_block = f"⚠️ Mensagem Bloqueada por Segurança: Identificamos conteúdo inadequado ({reason}) que viola nossas diretrizes de segurança. Por favor, envie uma mensagem adequada."
+            if patient:
+                db.add(Message(
+                    patient_id=patient.id,
+                    content="[MENSAGEM BLOQUEADA PELO FILTRO DE SEGURANÇA]",
+                    source=request.source,
+                    wa_from=request.wa_from
+                ))
+                db.add(Message(
+                    patient_id=patient.id,
+                    content=response_block,
+                    source=MessageSource.SYSTEM.value,
+                    wa_from="isis_ia"
+                ))
+                db.commit()
+            return RAGQueryResponse(
+                query=request.query,
+                wa_to=request.wa_to,
+                response=response_block,
+                faq_chunks_used=0
+            )
+        # -----------------------------
 
         # 2. Salvar mensagem do usuário no banco (se paciente identificado)
         if patient:
@@ -235,8 +276,12 @@ async def query_rag(
 # ------------------------------------------------------------------ #
 
 @router.get("/stats")
-def rag_stats():
+def rag_stats(
+    current_user: User = Depends(get_current_user)
+):
     """Retorna estatísticas do vector store (collections, contagem de documentos)."""
+    if current_user.role not in [UserRole.ADMIN.value, UserRole.DOCTOR.value]:
+        raise HTTPException(status_code=403, detail="Apenas administradores ou médicos podem acessar as estatísticas do RAG.")
     try:
         stats = get_collection_stats()
         return {"status": "success", "data": stats}
@@ -269,6 +314,42 @@ async def upload_exam(
         content = await file.read()
         mime_type, _ = mimetypes.guess_type(file.filename)
         is_pdf = mime_type == "application/pdf" or file.filename.lower().endswith(".pdf")
+
+        # --- MODERAÇÃO DE SEGURANÇA DO ARQUIVO ---
+        from app.services.content_moderation_service import content_moderation_service
+        if is_pdf:
+            is_safe, reason = await content_moderation_service.check_pdf_safety(content)
+        else:
+            is_safe, reason = await content_moderation_service.check_image_safety(content, mime_type or "image/png")
+
+        if not is_safe:
+            from app.models.patient import Patient
+            patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
+            if not patient:
+                from app.utils.phone_utils import find_patient_for_contact
+                patient = find_patient_for_contact(db, wa_from)
+
+            if patient:
+                from app.models.message import Message, MessageSource
+                db.add(Message(
+                    patient_id=patient.id,
+                    content=f"Enviou arquivo inadequado: {file.filename}",
+                    source=MessageSource.APP.value,
+                    wa_from=wa_from
+                ))
+                db.add(Message(
+                    patient_id=patient.id,
+                    content=f"⚠️ Arquivo Bloqueado por Segurança: O arquivo enviado ({file.filename}) violou nossas diretrizes de segurança ({reason}) e não pôde ser processado.",
+                    source=MessageSource.SYSTEM.value,
+                    wa_from="isis_ia"
+                ))
+                db.commit()
+
+            return {
+                "status": "blocked",
+                "message": f"O arquivo enviado violou as políticas de segurança: {reason}."
+            }
+        # -----------------------------------------
         
         # 2. Salvar o arquivo físico
         ext = os.path.splitext(file.filename)[1]
@@ -444,6 +525,35 @@ async def audio_query(
         
         if content:
             content = content.strip().rstrip('.').strip()
+
+        # --- MODERAÇÃO DE SEGURANÇA DA TRANSCRIÇÃO ---
+        from app.services.content_moderation_service import content_moderation_service
+        is_safe = True
+        reason = None
+        if content and not content.startswith("["):
+            is_safe, reason = await content_moderation_service.check_text_safety(content)
+
+        if not is_safe:
+            error_msg = f"⚠️ Áudio Bloqueado por Segurança: O áudio enviado foi detectado como inadequado ({reason})."
+            if patient:
+                db.add(Message(
+                    patient_id=patient.id,
+                    sender_id=current_user.id if current_user else None,
+                    content="🎤 [ÁUDIO BLOQUEADO PELO FILTRO DE SEGURANÇA]",
+                    message_type="audio",
+                    source="app",
+                    wa_from=wa_from
+                ))
+                db.add(Message(
+                    patient_id=patient.id,
+                    content=error_msg,
+                    source="system",
+                    wa_from="isis_ia"
+                ))
+                db.commit()
+                logger.warning(f"[Audio Moderation] Áudio de {wa_from} bloqueado por segurança: {reason}")
+            return {"status": "blocked", "query": "", "response": error_msg}
+        # ---------------------------------------------
         
         # 4. Tratar erros de transcrição salvando no banco
         error_msg = None
