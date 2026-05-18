@@ -346,7 +346,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 24,
       mainAxisSpacing: 24,
-      childAspectRatio: 1.2,
+      childAspectRatio: isDesktop ? 1.2 : 0.95,
       children: [
         _buildStatCard(
           title: 'Pacientes',
@@ -396,6 +396,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     required Color circleColor,
     bool badge = false,
   }) {
+    final isDesktop = MediaQuery.of(context).size.width >= 768;
     return Container(
       decoration: BoxDecoration(
         color: _surface,
@@ -423,7 +424,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(isDesktop ? 24 : 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

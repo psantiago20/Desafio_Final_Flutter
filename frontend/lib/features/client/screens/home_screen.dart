@@ -976,7 +976,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   mainAxisSpacing: 12,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  childAspectRatio: 1.5,
+                  childAspectRatio: 1.15,
                   children: [
                     _buildStatCard(
                       context,

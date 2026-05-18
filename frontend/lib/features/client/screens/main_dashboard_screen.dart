@@ -309,7 +309,7 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
             icon: const Icon(Icons.medication_outlined),
             selectedIcon:
                 const Icon(Icons.medication, color: Colors.white),
-            label: 'Prescricoes',
+            label: 'Receitas',
           ),
           NavigationDestination(
             icon: const Icon(Icons.person_outline),

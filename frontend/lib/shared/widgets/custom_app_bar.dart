@@ -13,6 +13,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final PreferredSizeWidget? bottom;
   final bool showProfileButton;
   final Widget? leading;
+  final bool showMenuButton;
 
   const CustomAppBar({
     super.key,
@@ -21,6 +22,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.bottom,
     this.showProfileButton = true,
     this.leading,
+    this.showMenuButton = false,
   });
 
   @override
@@ -35,26 +37,25 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       iconTheme: IconThemeData(color: Theme.of(context).colorScheme.primary),
-      leading:
-          leading ??
-          Builder(
-            builder: (context) => IconButton(
-              icon: Icon(
-                Icons.menu,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              onPressed: () {
-                if (MainShell.scaffoldKey.currentState != null) {
-                  MainShell.scaffoldKey.currentState?.openDrawer();
-                } else if (MainDashboardScreen.scaffoldKey.currentState !=
-                    null) {
-                  MainDashboardScreen.scaffoldKey.currentState?.openDrawer();
-                } else {
-                  Scaffold.of(context).openDrawer();
-                }
-              },
-            ),
+      automaticallyImplyLeading: leading == null,
+      leading: leading ?? (showMenuButton ? Builder(
+        builder: (context) => IconButton(
+          icon: Icon(
+            Icons.menu,
+            color: Theme.of(context).colorScheme.primary,
           ),
+          onPressed: () {
+            if (MainShell.scaffoldKey.currentState != null) {
+              MainShell.scaffoldKey.currentState?.openDrawer();
+            } else if (MainDashboardScreen.scaffoldKey.currentState !=
+                null) {
+              MainDashboardScreen.scaffoldKey.currentState?.openDrawer();
+            } else {
+              Scaffold.of(context).openDrawer();
+            }
+          },
+        ),
+      ) : null),
       title: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
