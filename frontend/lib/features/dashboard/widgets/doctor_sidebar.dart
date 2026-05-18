@@ -95,18 +95,18 @@ class DoctorSidebar extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSidebarItem(context, 0, Icons.grid_view, 'Painel'),
-                  _buildSidebarItem(context, 1, Icons.calendar_today, 'Agenda'),
-                  _buildSidebarItem(context, 2, Icons.group, 'Pacientes'),
-                  _buildSidebarItem(context, 3, Icons.chat, 'Chat', badgeCount: statsAsync.value?.unreadMessages),
-                  _buildSidebarItem(context, 6, Icons.payments, 'Financeiro'),
+                  _buildSidebarItem(context, ref, 0, Icons.grid_view, 'Painel'),
+                  _buildSidebarItem(context, ref, 1, Icons.calendar_today, 'Agenda'),
+                  _buildSidebarItem(context, ref, 2, Icons.group, 'Pacientes'),
+                  _buildSidebarItem(context, ref, 3, Icons.chat, 'Chat', badgeCount: statsAsync.value?.unreadMessages),
+                  _buildSidebarItem(context, ref, 6, Icons.payments, 'Financeiro'),
                 ],
               ),
             ),
           ),
           const Divider(color: _surfaceLow),
           const SizedBox(height: 16),
-          _buildSidebarItem(context, 5, Icons.settings, 'Configurações'),
+          _buildSidebarItem(context, ref, 5, Icons.settings, 'Configurações'),
           const SizedBox(height: 16),
           InkWell(
             onTap: () {
@@ -137,14 +137,12 @@ class DoctorSidebar extends ConsumerWidget {
     );
   }
 
-  Widget _buildSidebarItem(BuildContext context, int index, IconData icon, String title, {int? badgeCount}) {
+  Widget _buildSidebarItem(BuildContext context, WidgetRef ref, int index, IconData icon, String title, {int? badgeCount}) {
     final isActive = selectedIndex == index;
     return InkWell(
       onTap: () {
-        if (index == 0) context.go('/dashboard');
-        else if (index == 1) context.go('/appointments');
-        else if (index == 2) context.go('/patients');
-        // Add more as needed
+        ref.read(doctorNavIndexProvider.notifier).state = index;
+        context.go('/dashboard');
       },
       borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
