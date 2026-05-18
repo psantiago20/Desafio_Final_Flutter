@@ -73,8 +73,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final Color primaryColor = colorScheme.primary;
     final Color primaryContainer = colorScheme.primaryContainer;
 
+    // Same color constants as DoctorSidebar / DashboardScreen
+    const bg = Color(0xFFF7F9FB);
+    const primary = Color(0xFF003D9B);
+    const primaryFixed = Color(0xFFDAE2FF);
+    const secondaryFixed = Color(0xFF86F8C8);
+    const onSecondaryFixed = Color(0xFF007352);
+    const tertiaryFixed = Color(0xFFFFDBCF);
+    const tertiary = Color(0xFF7B2600);
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).colorScheme.surface
+          : bg,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final horizontalPadding = constraints.maxWidth >= 1200 ? 48.0 : 24.0;
@@ -146,31 +157,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         mainAxisSpacing: 24,
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        childAspectRatio: 1.4,
+                        childAspectRatio: 1.2,
                         children: [
-                          _buildWebStatCard(
-                            'Próximas consultas',
-                            stats.pendingAppointments.toString(),
-                            Icons.calendar_today,
-                            primaryColor,
+                          _buildDoctorStatCard(
+                            title: 'Consultas',
+                            value: stats.pendingAppointments.toString(),
+                            icon: Icons.calendar_today,
+                            iconColor: primary,
+                            circleColor: primaryFixed,
                           ),
-                          _buildWebStatCard(
-                            'Consultas realizadas',
-                            stats.completedAppointments.toString(),
-                            Icons.check_circle_outline,
-                            const Color(0xFF006C4D),
+                          _buildDoctorStatCard(
+                            title: 'Realizadas',
+                            value: stats.completedAppointments.toString(),
+                            icon: Icons.check_circle,
+                            iconColor: onSecondaryFixed,
+                            circleColor: secondaryFixed,
                           ),
-                          _buildWebStatCard(
-                            'Consultas canceladas',
-                            stats.cancelledAppointments.toString(),
-                            Icons.cancel_outlined,
-                            const Color(0xFFD97706),
+                          _buildDoctorStatCard(
+                            title: 'Canceladas',
+                            value: stats.cancelledAppointments.toString(),
+                            icon: Icons.cancel_outlined,
+                            iconColor: tertiary,
+                            circleColor: tertiaryFixed,
                           ),
-                          _buildWebStatCard(
-                            'Mensagens não lidas',
-                            stats.unreadMessages.toString(),
-                            Icons.chat_bubble_outline,
-                            const Color(0xFF9333EA),
+                          _buildDoctorStatCard(
+                            title: 'Mensagens',
+                            value: stats.unreadMessages.toString(),
+                            icon: Icons.chat_bubble_outline,
+                            iconColor: primary,
+                            circleColor: primaryFixed,
+                            badge: stats.unreadMessages > 0,
                           ),
                         ],
                       ),
@@ -258,56 +274,110 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildWebStatCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+  // Doctor-style stat card: circle icon top-left, decorative circle bg,
+  // large number, uppercase label — identical design to DashboardScreen.
+  Widget _buildDoctorStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+    required Color circleColor,
+    bool badge = false,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).colorScheme.surfaceContainerHighest
+            : const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Color(0x0F191C1E),
             blurRadius: 40,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 28),
+          // Decorative circle bleeding off top-right corner
+          Positioned(
+            right: -20,
+            top: -20,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: circleColor.withOpacity(0.4),
+                shape: BoxShape.circle,
               ),
-              Text(
-                value,
-                style: GoogleFonts.manrope(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w800,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ],
+            ),
           ),
-          SizedBox(height: 24),
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Icon circle
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: circleColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Center(
+                        child: Icon(icon, color: iconColor, size: 24),
+                      ),
+                      if (badge)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                // Value
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: GoogleFonts.manrope(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // Label
+                Text(
+                  title.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
