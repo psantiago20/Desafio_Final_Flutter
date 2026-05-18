@@ -43,3 +43,7 @@ final upcomingAppointmentsProvider =
 
   return ref.read(dashboardRepositoryProvider).getUpcomingAppointments();
 });
+
+// Controle da aba ativa do Dashboard (Usado para persistência de navegação no Desktop/Web)
+final activeDashboardTabProvider = StateProvider<int>((ref) => 0);
+

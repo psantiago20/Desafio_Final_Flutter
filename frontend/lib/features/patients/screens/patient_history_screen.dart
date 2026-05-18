@@ -9,9 +9,7 @@ import '../providers/patients_provider.dart';
 import '../../../shared/models/appointment_model.dart';
 import '../../../shared/models/patient_model.dart';
 import '../../client/screens/results_screen.dart';
-import '../../dashboard/providers/dashboard_provider.dart';
 import '../../dashboard/widgets/doctor_sidebar.dart';
-import '../../auth/providers/auth_provider.dart';
 import '../../../core/network/api_client.dart';
 
 class PatientHistoryScreen extends ConsumerStatefulWidget {
@@ -67,11 +65,13 @@ class _PatientHistoryScreenState extends ConsumerState<PatientHistoryScreen> wit
   Widget build(BuildContext context) {
     final patientAsync = ref.watch(patientByIdProvider(widget.patientId));
 
+    final isDesktop = MediaQuery.of(context).size.width >= 768;
+
     return Scaffold(
       backgroundColor: _bg,
       body: Row(
         children: [
-          const DoctorSidebar(selectedIndex: 1),
+          if (isDesktop) const DoctorSidebar(selectedIndex: 1),
           Expanded(
             child: patientAsync.when(
               data: (patient) => _buildContent(patient),

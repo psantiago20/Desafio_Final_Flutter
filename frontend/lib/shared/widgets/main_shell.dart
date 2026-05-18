@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/features/auth/providers/auth_provider.dart';
+import 'package:frontend/features/dashboard/providers/dashboard_provider.dart';
 
 class MainShell extends ConsumerWidget {
   final Widget child;
@@ -21,7 +22,6 @@ class MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // final user = ref.watch(authProvider).user;
-    final currentIndex = _currentIndex(context);
 
     return Scaffold(
       key: scaffoldKey,
@@ -88,6 +88,7 @@ class MainShell extends ConsumerWidget {
             ),
             onTap: () {
               Navigator.pop(context);
+              ref.read(activeDashboardTabProvider.notifier).state = 0;
               context.go('/dashboard');
             },
           ),

@@ -538,7 +538,6 @@ async def audio_query(
             if patient:
                 db.add(Message(
                     patient_id=patient.id,
-                    sender_id=current_user.id if current_user else None,
                     content="🎤 [ÁUDIO BLOQUEADO PELO FILTRO DE SEGURANÇA]",
                     message_type="audio",
                     source="app",
@@ -571,7 +570,6 @@ async def audio_query(
                 
                 db.add(Message(
                     patient_id=patient.id,
-                    sender_id=current_user.id if current_user else None,
                     content=display_content,
                     message_type="audio",
                     source="app",
@@ -593,7 +591,6 @@ async def audio_query(
             logger.info(f"Gravando mensagem transcrita: {content}")
             user_msg = Message(
                 patient_id=patient.id,
-                sender_id=current_user.id if current_user else None,
                 content=content,
                 message_type="audio",
                 source="app",

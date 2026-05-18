@@ -57,40 +57,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final user = ref.watch(authProvider).user;
     final statsAsync = ref.watch(dashboardStatsProvider);
     final todayAsync = ref.watch(appointmentsListProvider);
+    final selectedNavIndex = isDesktop ? ref.watch(activeDashboardTabProvider) : _selectedNavIndex;
 
     return Scaffold(
       backgroundColor: _bg,
       body: Row(
         children: [
-          if (isDesktop) DoctorSidebar(selectedIndex: _selectedNavIndex),
+          if (isDesktop) DoctorSidebar(selectedIndex: selectedNavIndex),
           Expanded(
-            child: _buildMainContent(isDesktop, user?.displayName ?? '', statsAsync, todayAsync),
+            child: _buildMainContent(isDesktop, user?.displayName ?? '', statsAsync, todayAsync, selectedNavIndex),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMainContent(bool isDesktop, String name, AsyncValue<DashboardStats> statsAsync, AsyncValue<List<AppointmentModel>> todayAsync) {
-    if (_selectedNavIndex == 1) {
+  Widget _buildMainContent(bool isDesktop, String name, AsyncValue<DashboardStats> statsAsync, AsyncValue<List<AppointmentModel>> todayAsync, int selectedNavIndex) {
+    if (selectedNavIndex == 1) {
       return const AppointmentsScreen();
     }
-    if (_selectedNavIndex == 2) {
+    if (selectedNavIndex == 2) {
       return const ProntuariosScreen();
     }
-    if (_selectedNavIndex == 3) {
+    if (selectedNavIndex == 3) {
       return DoctorMessagesScreen(
         initialPatientId: _selectedChatPatientId,
         initialPatientName: _selectedChatPatientName,
       );
     }
-    if (_selectedNavIndex == 5) {
+    if (selectedNavIndex == 5) {
       return const ProfileScreen();
     }
-    if (_selectedNavIndex == 6) {
+    if (selectedNavIndex == 6) {
       return const FinancialScreen();
     }
-    if (_selectedNavIndex != 0) {
+    if (selectedNavIndex != 0) {
 
       return Scaffold(
         backgroundColor: _bg,
@@ -290,14 +291,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildStatsGrid(DashboardStats stats, bool isDesktop) {
+    final screenWidth = MediaQuery.of(context).size.width;
     final currencyFmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$ ');
+    
+    // Choose columns and calculate dynamic aspect ratio for fixed height
+    int crossAxisCount = 4;
+    double cardHeight = 150.0;
+    
+    if (screenWidth >= 1100) {
+      crossAxisCount = 4;
+      cardHeight = screenWidth >= 1200 ? 175.0 : 150.0;
+    } else {
+      crossAxisCount = 2;
+      cardHeight = screenWidth >= 600 ? 140.0 : 130.0;
+    }
+    
+    // Calculate available width for the GridView
+    double horizontalPadding = isDesktop ? 40.0 : 24.0;
+    double sidebarWidth = isDesktop ? 280.0 : 0.0;
+    double gridWidth = screenWidth - sidebarWidth - (horizontalPadding * 2);
+    if (gridWidth <= 0) gridWidth = 300.0; // fallback safety
+    
+    // Width of a card = (gridWidth - spacingBetweenCards) / columns
+    double cardWidth = (gridWidth - (crossAxisCount - 1) * 24.0) / crossAxisCount;
+    if (cardWidth <= 0) cardWidth = 100.0; // fallback safety
+    
+    double childAspectRatio = cardWidth / cardHeight;
+    if (childAspectRatio <= 0.1) childAspectRatio = 1.0; // fallback safety
+
     return GridView.count(
-      crossAxisCount: isDesktop ? 4 : 2,
+      crossAxisCount: crossAxisCount,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 24,
       mainAxisSpacing: 24,
-      childAspectRatio: 1.2,
+      childAspectRatio: childAspectRatio,
       children: [
         _buildStatCard(
           title: 'Pacientes',
@@ -305,13 +333,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           icon: Icons.group,
           iconColor: _primary,
           circleColor: _primaryFixed,
-        ),
-        _buildStatCard(
-          title: 'Pendentes',
-          value: '${stats.pendingAppointments}',
-          icon: Icons.schedule,
-          iconColor: _tertiary,
-          circleColor: _tertiaryFixed,
+          screenWidth: screenWidth,
         ),
         _buildStatCard(
           title: 'Mensagens',
@@ -320,6 +342,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           iconColor: _primary,
           circleColor: _primaryFixed,
           badge: stats.unreadMessages > 0,
+          screenWidth: screenWidth,
         ),
         _buildStatCard(
           title: 'Concluídas',
@@ -327,6 +350,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           icon: Icons.check_circle,
           iconColor: _onSecondaryFixed,
           circleColor: _secondaryFixed,
+          screenWidth: screenWidth,
         ),
         _buildStatCard(
           title: 'Receita Hoje',
@@ -334,6 +358,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           icon: Icons.attach_money,
           iconColor: _onSurfaceVariant,
           circleColor: _surfaceHigh,
+          screenWidth: screenWidth,
         ),
       ],
     );
@@ -346,7 +371,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     required Color iconColor,
     required Color circleColor,
     bool badge = false,
+    required double screenWidth,
   }) {
+    final bool isLarge = screenWidth >= 1200;
+    final double valueFontSize = isLarge 
+        ? 32.0 
+        : (screenWidth < 600 ? 22.0 : 26.0);
+    final double titleFontSize = isLarge 
+        ? 12.0 
+        : (screenWidth < 600 ? 9.0 : 10.0);
+    final double iconContainerSize = isLarge 
+        ? 48.0 
+        : (screenWidth < 600 ? 36.0 : 40.0);
+    final double iconSize = isLarge 
+        ? 24.0 
+        : (screenWidth < 600 ? 18.0 : 20.0);
+    final double paddingValue = isLarge 
+        ? 24.0 
+        : (screenWidth < 600 ? 12.0 : 16.0);
+
     return Container(
       decoration: BoxDecoration(
         color: _surface,
@@ -374,21 +417,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(paddingValue),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: iconContainerSize,
+                  height: iconContainerSize,
                   decoration: BoxDecoration(
                     color: circleColor,
                     shape: BoxShape.circle,
                   ),
                   child: Stack(
                     clipBehavior: Clip.none,
+                    alignment: Alignment.center,
                     children: [
-                      Icon(icon, color: iconColor, size: 24),
+                      Icon(icon, color: iconColor, size: iconSize),
                       if (badge)
                         Positioned(
                           right: -2,
@@ -413,7 +457,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: Text(
                     value,
                     style: GoogleFonts.manrope(
-                      fontSize: 32,
+                      fontSize: valueFontSize,
                       fontWeight: FontWeight.w800,
                       color: _onSurface,
                     ),
@@ -423,7 +467,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Text(
                   title.toUpperCase(),
                   style: GoogleFonts.inter(
-                    fontSize: 12,
+                    fontSize: titleFontSize,
                     fontWeight: FontWeight.w600,
                     color: _onSurfaceVariant,
                     letterSpacing: 1,
@@ -438,6 +482,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildAppointmentsSection(AsyncValue<List<AppointmentModel>> todayAsync, bool isDesktop) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final showChipsInline = screenWidth >= 1100;
+
     return Container(
       padding: EdgeInsets.all(isDesktop ? 32 : 24),
       decoration: BoxDecoration(
@@ -447,18 +494,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Próximas consultas',
-                style: GoogleFonts.manrope(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: _onSurface,
+          if (showChipsInline)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Próximas consultas',
+                  style: GoogleFonts.manrope(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: _onSurface,
+                  ),
                 ),
-              ),
-              if (isDesktop)
                 Row(
                   children: [
                     _buildFilterChip('Todos', _selectedFilter == 'Todos'),
@@ -470,25 +517,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     _buildFilterChip('Concluído', _selectedFilter == 'Concluído'),
                   ],
                 ),
-            ],
-          ),
-          if (!isDesktop) ...[
-            const SizedBox(height: 16),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildFilterChip('Todos', _selectedFilter == 'Todos'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Pendente', _selectedFilter == 'Pendente'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Confirmado', _selectedFilter == 'Confirmado'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Concluído', _selectedFilter == 'Concluído'),
-                ],
-              ),
+              ],
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Próximas consultas',
+                  style: GoogleFonts.manrope(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: _onSurface,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildFilterChip('Todos', _selectedFilter == 'Todos'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Pendente', _selectedFilter == 'Pendente'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Confirmado', _selectedFilter == 'Confirmado'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Concluído', _selectedFilter == 'Concluído'),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
           const SizedBox(height: 24),
           todayAsync.when(
             data: (appointments) {
@@ -530,7 +589,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: InkWell(
-              onTap: () => setState(() => _selectedNavIndex = 1),
+              onTap: () {
+                if (isDesktop) {
+                  ref.read(activeDashboardTabProvider.notifier).state = 1;
+                } else {
+                  setState(() => _selectedNavIndex = 1);
+                }
+              },
               borderRadius: BorderRadius.circular(8),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -581,6 +646,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildAppointmentCard(AppointmentModel appointment, bool isDesktop) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final useDesktopLayout = screenWidth >= 1100;
+
     final timeFmt = DateFormat('HH:mm');
     final monthFmt = DateFormat('MMM.', 'pt_BR');
     final isCompleted = appointment.status == 'completed';
@@ -603,7 +671,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
-        padding: EdgeInsets.all(isDesktop ? 24 : 16),
+        padding: EdgeInsets.all(useDesktopLayout ? 24 : 16),
         decoration: BoxDecoration(
           color: _surface,
           borderRadius: BorderRadius.circular(16),
@@ -680,7 +748,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         color: _onSurfaceVariant.withOpacity(isCompleted ? 0.7 : 1),
                       ),
                     ),
-                    if (isDesktop) ...[
+                    if (useDesktopLayout) ...[
                       const SizedBox(width: 16),
                       Container(
                         width: 4,
@@ -704,7 +772,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ],
             ),
           ),
-          if (isDesktop) ...[
+          if (useDesktopLayout) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -725,8 +793,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             IconButton(
               icon: const Icon(Icons.chat_bubble_outline, color: _primary),
               onPressed: () {
+                ref.read(activeDashboardTabProvider.notifier).state = 3;
                 setState(() {
-                  _selectedNavIndex = 3;
                   _selectedChatPatientId = appointment.patientId;
                   _selectedChatPatientName = appointment.patientName;
                 });

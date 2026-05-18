@@ -305,9 +305,13 @@ class RAGService:
         # 1. VALOR / PREÇO (Prioridade: Banco de Médicos)
         if any(k in query for k in ["valor", "preço", "quanto", "custo"]):
             logger.info("[Force Search] Intenção de VALOR detectada.")
-            res = execute_tool("buscar_medico", {"nome": state.get("active_doctor_name")} if target_id else {}, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
-            tid = f"v_{uuid.uuid4().hex[:4]}"
-            return {"messages": [AIMessage(content="", tool_calls=[{"name":"v","args":{},"id":tid}]), ToolMessage(tool_call_id=tid, content=res, name="v")]}
+            args = {"nome": state.get("active_doctor_name")} if target_id else {}
+            res = execute_tool("buscar_medico", args, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
+            tid = f"m_{uuid.uuid4().hex[:4]}"
+            return {"messages": [
+                AIMessage(content="", tool_calls=[{"name": "buscar_medico_tool", "args": args, "id": tid}]),
+                ToolMessage(tool_call_id=tid, content=res, name="buscar_medico_tool")
+            ]}
 
         # 2. PARCELAMENTO / PAGAMENTO / CONVÊNIO
         if any(k in query for k in ["parcela", "pagamento", "pix", "cartão", "convênio", "convenio"]):
@@ -322,9 +326,12 @@ class RAGService:
                 tid_m, tid_f = f"m_{uuid.uuid4().hex[:4]}", f"f_{uuid.uuid4().hex[:4]}"
                 return {
                     "messages": [
-                        AIMessage(content="", tool_calls=[{"name":"m","args":{},"id":tid_m}, {"name":"f","args":{},"id":tid_f}]),
-                        ToolMessage(tool_call_id=tid_m, content=res_medicos, name="m"),
-                        ToolMessage(tool_call_id=tid_f, content=res_faq, name="f")
+                        AIMessage(content="", tool_calls=[
+                            {"name": "buscar_medico_tool", "args": {}, "id": tid_m},
+                            {"name": "buscar_faq_tool", "args": {"pergunta": "Quais os convênios aceitos?"}, "id": tid_f}
+                        ]),
+                        ToolMessage(tool_call_id=tid_m, content=res_medicos, name="buscar_medico_tool"),
+                        ToolMessage(tool_call_id=tid_f, content=res_faq, name="buscar_faq_tool")
                     ]
                 }
 
@@ -334,7 +341,10 @@ class RAGService:
             if not res or "Nenhuma informação" in res or len(res) < 15:
                 return {"messages": [AIMessage(content="Não tenho os detalhes de parcelamento aqui. 😅 Por favor, fale com nossa recepção! ✨")]}
             tid = f"f_{uuid.uuid4().hex[:4]}"
-            return {"messages": [AIMessage(content="", tool_calls=[{"name":"f","args":{},"id":tid}]), ToolMessage(tool_call_id=tid, content=res, name="f")]}
+            return {"messages": [
+                AIMessage(content="", tool_calls=[{"name": "buscar_faq_tool", "args": {"pergunta": pergunta}, "id": tid}]),
+                ToolMessage(tool_call_id=tid, content=res, name="buscar_faq_tool")
+            ]}
 
         # 3. DATAS / HORÁRIOS
         if any(k in query for k in ["datas", "horários", "horario", "os dois", "ambos"]):
@@ -345,20 +355,30 @@ class RAGService:
                 messages = []
                 for i, m in enumerate(medicos):
                     tid = f"b{i}_{uuid.uuid4().hex[:4]}"
-                    res = execute_tool("buscar_horarios", {"medico_id": m.id}, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
-                    tool_calls.append({"name": f"b{i}", "args": {}, "id": tid})
-                    messages.append(ToolMessage(tool_call_id=tid, content=res, name=f"b{i}"))
+                    args = {"medico_id": m.id}
+                    res = execute_tool("buscar_horarios", args, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
+                    tool_calls.append({"name": "buscar_horarios_tool", "args": args, "id": tid})
+                    messages.append(ToolMessage(tool_call_id=tid, content=res, name="buscar_horarios_tool"))
                 return {"messages": [AIMessage(content="", tool_calls=tool_calls)] + messages}
-            res = execute_tool("buscar_horarios", {"medico_id": target_id}, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
+            
+            args = {"medico_id": target_id}
+            res = execute_tool("buscar_horarios", args, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
             tid = f"c_{uuid.uuid4().hex[:4]}"
-            return {"messages": [AIMessage(content="", tool_calls=[{"name":"b","args":{},"id":tid}]), ToolMessage(tool_call_id=tid, content=res, name="b")]}
+            return {"messages": [
+                AIMessage(content="", tool_calls=[{"name": "buscar_horarios_tool", "args": args, "id": tid}]),
+                ToolMessage(tool_call_id=tid, content=res, name="buscar_horarios_tool")
+            ]}
 
         # 4. MÉDICOS
         if any(k in query for k in ['médico', 'medico', 'doutor', 'dra', 'dr', 'especialista']):
             nome_medico = state.get("active_doctor_name")
-            res = execute_tool("buscar_medico", {"nome": nome_medico} if nome_medico else {}, db, wa_from=state["wa_from"])
+            args = {"nome": nome_medico} if nome_medico else {}
+            res = execute_tool("buscar_medico", args, db, wa_from=state["wa_from"])
             tid = f"m_{uuid.uuid4().hex[:4]}"
-            return {"messages": [AIMessage(content="", tool_calls=[{"name":"m","args":{},"id":tid}]), ToolMessage(tool_call_id=tid, content=res, name="m")]}
+            return {"messages": [
+                AIMessage(content="", tool_calls=[{"name": "buscar_medico_tool", "args": args, "id": tid}]),
+                ToolMessage(tool_call_id=tid, content=res, name="buscar_medico_tool")
+            ]}
 
         return {"messages": [AIMessage(content="Não localizei essa informação específica. 😅 Por favor, fale com nossa recepção! ✨")]}
 
@@ -369,13 +389,14 @@ class RAGService:
         for tc in last_msg.tool_calls:
             res = execute_tool(tc["name"].replace("_tool",""), tc["args"], db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
             results.append(ToolMessage(tool_call_id=tc["id"], content=str(res)))
-        return {"messages": results}
+        # Incrementa loop_count aqui, pois o nó é persistido no estado do LangGraph!
+        return {"messages": results, "loop_count": state.get("loop_count", 0) + 1}
 
     def _agent_router(self, state: AgentState):
         last_msg = state["messages"][-1]
         if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
-            state["loop_count"] = state.get("loop_count", 0) + 1
-            return "continue" if state["loop_count"] <= 1 else "end"
+            # loop_count agora é incrementado de forma persistente dentro do _tools_node!
+            return "continue" if state.get("loop_count", 0) <= 1 else "end"
         return "end"
 
     async def get_rag_response(self, query: str, wa_to: str, db, wa_from: str = "anonymous", source: str = "whatsapp", user_name: str = None, user_id: int = None, patient_id: int = None) -> str:
@@ -399,10 +420,10 @@ class RAGService:
                 return get_welcome_message_without_doctor()
             
             if query_clean == "consulta" or query_clean == "consultas":
-                return "Você gostaria de ver seus agendamentos ou marcar uma nova consulta? ✨"
+                return "Você gostaria de ver seus agendamentos or marcar uma nova consulta? ✨"
             
         conversation_manager.update_activity(wa_from)
-        config = {"configurable": {"thread_id": wa_from, "db": db}, "recursion_limit": 5}
+        config = {"configurable": {"thread_id": wa_from, "db": db}, "recursion_limit": 15}
         inputs = {
             "messages": [HumanMessage(content=query)], 
             "wa_from": wa_from,
