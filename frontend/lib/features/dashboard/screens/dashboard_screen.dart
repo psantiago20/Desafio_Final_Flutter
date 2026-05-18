@@ -26,6 +26,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  int _selectedNavIndex = 0;
   String _selectedFilter = 'Todos';
   int? _selectedChatPatientId;
   String? _selectedChatPatientName;
