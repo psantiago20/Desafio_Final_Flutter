@@ -95,9 +95,10 @@ class FinancialScreen extends ConsumerWidget {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 24,
       mainAxisSpacing: 24,
-      childAspectRatio: 1.2,
+      childAspectRatio: isDesktop ? 1.2 : 0.95,
       children: [
         _buildStatCard(
+          isDesktop: isDesktop,
           title: 'Hoje',
           value: currencyFmt.format(data.revenueToday),
           icon: Icons.today,
@@ -105,6 +106,7 @@ class FinancialScreen extends ConsumerWidget {
           circleColor: AppColors.primaryLight,
         ),
         _buildStatCard(
+          isDesktop: isDesktop,
           title: 'Neste Mês',
           value: currencyFmt.format(data.revenueMonth),
           icon: Icons.calendar_month,
@@ -112,6 +114,7 @@ class FinancialScreen extends ConsumerWidget {
           circleColor: const Color(0xFF86F8C8), // secondaryFixed
         ),
         _buildStatCard(
+          isDesktop: isDesktop,
           title: 'Neste Ano',
           value: currencyFmt.format(data.revenueYear),
           icon: Icons.insert_chart_outlined,
@@ -119,6 +122,7 @@ class FinancialScreen extends ConsumerWidget {
           circleColor: const Color(0xFFFFDBCF), // tertiaryFixed
         ),
         _buildStatCard(
+          isDesktop: isDesktop,
           title: 'Total',
           value: currencyFmt.format(data.totalRevenue),
           icon: Icons.account_balance_wallet,
@@ -130,6 +134,7 @@ class FinancialScreen extends ConsumerWidget {
   }
 
   Widget _buildStatCard({
+    required bool isDesktop,
     required String title,
     required String value,
     required IconData icon,
@@ -163,7 +168,7 @@ class FinancialScreen extends ConsumerWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(isDesktop ? 24 : 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

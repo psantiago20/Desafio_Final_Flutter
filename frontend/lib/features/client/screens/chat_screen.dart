@@ -340,12 +340,46 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildMobile(List<ChatMessage> messages, bool isLoading) {
+    final chatState = ref.watch(chatProvider);
+    final activeMessages = _selectedChat == 'doctor'
+        ? chatState.doctorMessages
+        : chatState.isisMessages;
+
     return Scaffold(
-      appBar: kIsWeb ? null : const CustomAppBar(subtitle: 'Atendimento por IA'),
+      appBar: kIsWeb
+          ? null
+          : CustomAppBar(
+              subtitle: _selectedChat == 'doctor' ? 'Atendimento Médico' : 'Atendimento por IA',
+            ),
       body: Container(
         decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),
         child: Column(
           children: [
+            // ── Tab switcher (Isis / Doctor) ──────────────────────────────
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  _mobileTab(
+                    label: 'Isis IA',
+                    icon: Icons.smart_toy_outlined,
+                    value: 'isis',
+                  ),
+                  _mobileTab(
+                    label: 'Médico',
+                    icon: Icons.person_outlined,
+                    value: 'doctor',
+                    badgeCount: chatState.totalUnreadCount,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            // ── Message list ──────────────────────────────────────────────
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () =>
@@ -354,9 +388,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16.0),
-                  itemCount: messages.length + (isLoading ? 1 : 0),
+                  itemCount: activeMessages.length + (isLoading ? 1 : 0),
                   itemBuilder: (context, index) {
-                    if (index == messages.length && isLoading) {
+                    if (index == activeMessages.length && isLoading) {
                       return const Align(
                         alignment: Alignment.centerLeft,
                         child: Padding(
@@ -368,17 +402,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                       );
                     }
-                    final msg = messages[index];
+                    final msg = activeMessages[index];
                     return _buildMessageBubble(msg);
                   },
                 ),
               ),
             ),
+            // ── Input bar ─────────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-        border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outline)),
+                border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
               ),
               child: Row(
                 children: [
@@ -410,9 +445,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.send,
-                      color: AppTheme.primaryBlueDark,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     onPressed: _sendMessage,
                   ),
@@ -420,7 +455,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   IconButton(
                     icon: Icon(
                       _isRecording ? Icons.stop : Icons.mic,
-                      color: _isRecording ? Colors.red : AppTheme.primaryBlueDark,
+                      color: _isRecording
+                          ? Colors.red
+                          : Theme.of(context).colorScheme.primary,
                     ),
                     onPressed: _toggleRecording,
                   ),
@@ -428,6 +465,72 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // Segmented-control style tab for the mobile chat switcher.
+  Widget _mobileTab({
+    required String label,
+    required IconData icon,
+    required String value,
+    int badgeCount = 0,
+  }) {
+    final isSelected = _selectedChat == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedChat = value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.all(4),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: isSelected
+                    ? Colors.white
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected
+                      ? Colors.white
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              if (badgeCount > 0 && !isSelected) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.error,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$badgeCount',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

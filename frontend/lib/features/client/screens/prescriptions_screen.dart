@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:printing/printing.dart';
@@ -7,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/appointment_model.dart';
+import '../../../shared/widgets/custom_app_bar.dart';
 import '../../appointments/providers/appointments_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../patients/providers/patients_provider.dart';
@@ -57,11 +59,13 @@ class _PrescriptionsScreenState extends ConsumerState<PrescriptionsScreen> {
     final patientProfileAsync = ref.watch(patientProfileProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Minhas Prescrições'),
-        elevation: 0,
-      ),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: kIsWeb
+          ? null
+          : const CustomAppBar(
+              subtitle: 'Minhas Prescrições',
+              showProfileButton: false,
+            ),
       body: Column(
         children: [
           _buildFilterBar(),
@@ -135,8 +139,15 @@ class _PrescriptionsScreenState extends ConsumerState<PrescriptionsScreen> {
 
   Widget _buildFilterBar() {
     return Container(
-      padding: const EdgeInsets.all(12),
-      color: AppColors.surface,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.15),
+          ),
+        ),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

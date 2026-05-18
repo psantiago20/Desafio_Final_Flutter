@@ -73,8 +73,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final Color primaryColor = colorScheme.primary;
     final Color primaryContainer = colorScheme.primaryContainer;
 
+    // Same color constants as DoctorSidebar / DashboardScreen
+    const bg = Color(0xFFF7F9FB);
+    const primary = Color(0xFF003D9B);
+    const primaryFixed = Color(0xFFDAE2FF);
+    const secondaryFixed = Color(0xFF86F8C8);
+    const onSecondaryFixed = Color(0xFF007352);
+    const tertiaryFixed = Color(0xFFFFDBCF);
+    const tertiary = Color(0xFF7B2600);
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).colorScheme.surface
+          : bg,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final horizontalPadding = constraints.maxWidth >= 1200 ? 48.0 : 24.0;
@@ -140,37 +151,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const SizedBox(height: 48),
 
                     statsAsync.when(
-                      data: (stats) => GridView.count(
-                        crossAxisCount: 4,
-                        crossAxisSpacing: 24,
-                        mainAxisSpacing: 24,
+                      data: (stats) => GridView(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        childAspectRatio: 1.4,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          crossAxisSpacing: 24,
+                          mainAxisSpacing: 24,
+                          mainAxisExtent: 200,
+                        ),
                         children: [
-                          _buildWebStatCard(
-                            'Próximas consultas',
-                            stats.pendingAppointments.toString(),
-                            Icons.calendar_today,
-                            primaryColor,
+                          _buildDoctorStatCard(
+                            title: 'Consultas',
+                            value: stats.pendingAppointments.toString(),
+                            icon: Icons.calendar_today,
+                            iconColor: primary,
+                            circleColor: primaryFixed,
                           ),
-                          _buildWebStatCard(
-                            'Consultas realizadas',
-                            stats.completedAppointments.toString(),
-                            Icons.check_circle_outline,
-                            const Color(0xFF006C4D),
+                          _buildDoctorStatCard(
+                            title: 'Realizadas',
+                            value: stats.completedAppointments.toString(),
+                            icon: Icons.check_circle,
+                            iconColor: onSecondaryFixed,
+                            circleColor: secondaryFixed,
                           ),
-                          _buildWebStatCard(
-                            'Consultas canceladas',
-                            stats.cancelledAppointments.toString(),
-                            Icons.cancel_outlined,
-                            const Color(0xFFD97706),
+                          _buildDoctorStatCard(
+                            title: 'Canceladas',
+                            value: stats.cancelledAppointments.toString(),
+                            icon: Icons.cancel_outlined,
+                            iconColor: tertiary,
+                            circleColor: tertiaryFixed,
                           ),
-                          _buildWebStatCard(
-                            'Mensagens não lidas',
-                            stats.unreadMessages.toString(),
-                            Icons.chat_bubble_outline,
-                            const Color(0xFF9333EA),
+                          _buildDoctorStatCard(
+                            title: 'Mensagens',
+                            value: stats.unreadMessages.toString(),
+                            icon: Icons.chat_bubble_outline,
+                            iconColor: primary,
+                            circleColor: primaryFixed,
+                            badge: stats.unreadMessages > 0,
                           ),
                         ],
                       ),
@@ -181,71 +200,90 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(height: 48),
 
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            children: [
-                              upcomingAsync.when(
-                                data: (appointments) =>
-                                    _buildWebTimeline(context, appointments),
-                                loading: () =>
-                                    const CircularProgressIndicator(),
-                                error: (err, stack) =>
-                                    _buildInlineError(_cleanError(err)),
-                              ),
-                              const SizedBox(height: 32),
-                              statsAsync.when(
-                                data: (stats) => _buildWebHealthSection(stats),
-                                loading: () => const SizedBox(
-                                  height: 100,
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
+                    // Below 900 px the two panels stack vertically to avoid
+                    // horizontal overflow; above 900 px they sit side by side.
+                    if (constraints.maxWidth >= 900) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              children: [
+                                upcomingAsync.when(
+                                  data: (appointments) =>
+                                      _buildWebTimeline(context, appointments),
+                                  loading: () =>
+                                      const CircularProgressIndicator(),
+                                  error: (err, stack) =>
+                                      _buildInlineError(_cleanError(err)),
                                 ),
-                                error: (err, stack) =>
-                                    _buildWebHealthSection(null),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 48),
-                        Expanded(
-                          child: Column(
-                            children: [
-                              statsAsync.when(
-                                data: (stats) => _buildWebVitalsCard(stats),
-                                loading: () => const SizedBox(
-                                  height: 200,
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
+                                const SizedBox(height: 32),
+                                statsAsync.when(
+                                  data: (stats) => _buildWebHealthSection(stats),
+                                  loading: () => const SizedBox(
+                                    height: 100,
+                                    child: Center(child: CircularProgressIndicator()),
                                   ),
+                                  error: (err, stack) => _buildWebHealthSection(null),
                                 ),
-                                error: (err, stack) =>
-                                    _buildVitalsUnavailable(),
-                              ),
-                              const SizedBox(height: 32),
-                              _buildWebSideNavLink(
-                                Icons.history,
-                                'Histórico Médico',
-                              ),
-                              _buildWebSideNavLink(
-                                Icons.headset_mic_outlined,
-                                'Suporte ao Paciente',
-                              ),
-                              _buildWebSideNavLink(
-                                Icons.folder_shared_outlined,
-                                'Documentos Legais',
-                              ),
-                              const SizedBox(height: 32),
-                              _buildWebComplianceBadge(context),
-                            ],
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 32),
+                          Expanded(
+                            child: Column(
+                              children: [
+                                statsAsync.when(
+                                  data: (stats) => _buildWebVitalsCard(stats),
+                                  loading: () => const SizedBox(
+                                    height: 200,
+                                    child: Center(child: CircularProgressIndicator()),
+                                  ),
+                                  error: (err, stack) => _buildVitalsUnavailable(),
+                                ),
+                                const SizedBox(height: 32),
+                                _buildWebSideNavLink(Icons.history, 'Historico Medico'),
+                                _buildWebSideNavLink(Icons.headset_mic_outlined, 'Suporte ao Paciente'),
+                                _buildWebSideNavLink(Icons.folder_shared_outlined, 'Documentos Legais'),
+                                const SizedBox(height: 32),
+                                _buildWebComplianceBadge(context),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      upcomingAsync.when(
+                        data: (appointments) => _buildWebTimeline(context, appointments),
+                        loading: () => const CircularProgressIndicator(),
+                        error: (err, stack) => _buildInlineError(_cleanError(err)),
+                      ),
+                      const SizedBox(height: 32),
+                      statsAsync.when(
+                        data: (stats) => _buildWebHealthSection(stats),
+                        loading: () => const SizedBox(
+                          height: 100,
+                          child: Center(child: CircularProgressIndicator()),
                         ),
-                      ],
-                    ),
+                        error: (err, stack) => _buildWebHealthSection(null),
+                      ),
+                      const SizedBox(height: 32),
+                      statsAsync.when(
+                        data: (stats) => _buildWebVitalsCard(stats),
+                        loading: () => const SizedBox(
+                          height: 200,
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                        error: (err, stack) => _buildVitalsUnavailable(),
+                      ),
+                      const SizedBox(height: 32),
+                      _buildWebSideNavLink(Icons.history, 'Historico Medico'),
+                      _buildWebSideNavLink(Icons.headset_mic_outlined, 'Suporte ao Paciente'),
+                      _buildWebSideNavLink(Icons.folder_shared_outlined, 'Documentos Legais'),
+                      const SizedBox(height: 32),
+                      _buildWebComplianceBadge(context),
+                    ],
                     const SizedBox(height: 100),
                   ],
                 ),
@@ -258,56 +296,110 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildWebStatCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+  // Doctor-style stat card: circle icon top-left, decorative circle bg,
+  // large number, uppercase label — identical design to DashboardScreen.
+  Widget _buildDoctorStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+    required Color circleColor,
+    bool badge = false,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).colorScheme.surfaceContainerHighest
+            : const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Color(0x0F191C1E),
             blurRadius: 40,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 28),
+          // Decorative circle bleeding off top-right corner
+          Positioned(
+            right: -20,
+            top: -20,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: circleColor.withOpacity(0.4),
+                shape: BoxShape.circle,
               ),
-              Text(
-                value,
-                style: GoogleFonts.manrope(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w800,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ],
+            ),
           ),
-          SizedBox(height: 24),
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Icon circle
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: circleColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Center(
+                        child: Icon(icon, color: iconColor, size: 24),
+                      ),
+                      if (badge)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Value
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: GoogleFonts.manrope(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // Label
+                Text(
+                  title.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -836,15 +928,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.primaryBlue, AppTheme.primaryBlueDark],
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.75),
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -855,7 +950,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   children: [
                     Text(
                       'Olá, ${user?.fullName?.split(' ')[0] ?? user?.username ?? 'Paciente'}!',
-                      style: TextStyle(
+                      style: GoogleFonts.manrope(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -881,7 +976,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   mainAxisSpacing: 12,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  childAspectRatio: 1.5,
+                  childAspectRatio: 1.15,
                   children: [
                     _buildStatCard(
                       context,
@@ -941,22 +1036,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text(
+                                 Text(
                                       DateFormat('MMM', 'pt_BR')
                                           .format(nextApt.appointmentDate)
                                           .toUpperCase(),
                                       style: TextStyle(
-                                        color: AppTheme.primaryBlue,
+                                        color: Theme.of(context).colorScheme.primary,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    Text(
+                                     Text(
                                       DateFormat(
                                         'dd',
                                       ).format(nextApt.appointmentDate),
                                       style: TextStyle(
-                                        color: AppTheme.primaryBlue,
+                                        color: Theme.of(context).colorScheme.primary,
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -997,7 +1092,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               onPressed: () => widget.onNavigate(1),
                               style: TextButton.styleFrom(
                                 backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.12),
-                                foregroundColor: AppTheme.primaryBlue,
+                                foregroundColor: Theme.of(context).colorScheme.primary,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1048,7 +1143,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     icon: Icons.description_outlined,
                     color: AppTheme.successGreen,
                     lightColor: AppTheme.successGreenLight,
-                    onTap: () => widget.onNavigate(2),
+                    onTap: () => widget.onNavigate(3),
                   ),
                   _buildActionCard(
                     context,
@@ -1075,6 +1170,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ),
     );
   }
+  // Stat card matching the web's doctor-dashboard style:
+  // decorative circle bleed top-right, FittedBox value, uppercase label.
   Widget _buildStatCard(
     BuildContext context, {
     required String title,
@@ -1082,38 +1179,76 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     required IconData icon,
     required Color iconColor,
   }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final circleColor = iconColor.withValues(alpha: 0.15);
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -16,
+            top: -16,
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: circleColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, color: iconColor, size: 24),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: circleColor,
+                    shape: BoxShape.circle,
                   ),
+                  child: Icon(icon, color: iconColor, size: 20),
+                ),
+                const SizedBox(height: 12),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: GoogleFonts.manrope(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  title.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    letterSpacing: 0.8,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
-            const Spacer(),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              maxLines: 1,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1128,12 +1263,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(24),
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
               color: color.withValues(alpha: 0.05),
@@ -1151,13 +1286,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 color: lightColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: color, size: 24),
+              child: Icon(icon, color: color, size: 22),
             ),
-            const Spacer(),
+            const SizedBox(height: 12),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 16,
+              style: GoogleFonts.manrope(
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
