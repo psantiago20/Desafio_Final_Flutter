@@ -151,13 +151,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const SizedBox(height: 48),
 
                     statsAsync.when(
-                      data: (stats) => GridView.count(
-                        crossAxisCount: 4,
-                        crossAxisSpacing: 24,
-                        mainAxisSpacing: 24,
+                      data: (stats) => GridView(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        childAspectRatio: 1.2,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          crossAxisSpacing: 24,
+                          mainAxisSpacing: 24,
+                          mainAxisExtent: 200,
+                        ),
                         children: [
                           _buildDoctorStatCard(
                             title: 'Consultas',
@@ -197,71 +200,90 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(height: 48),
 
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            children: [
-                              upcomingAsync.when(
-                                data: (appointments) =>
-                                    _buildWebTimeline(context, appointments),
-                                loading: () =>
-                                    const CircularProgressIndicator(),
-                                error: (err, stack) =>
-                                    _buildInlineError(_cleanError(err)),
-                              ),
-                              const SizedBox(height: 32),
-                              statsAsync.when(
-                                data: (stats) => _buildWebHealthSection(stats),
-                                loading: () => const SizedBox(
-                                  height: 100,
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
+                    // Below 900 px the two panels stack vertically to avoid
+                    // horizontal overflow; above 900 px they sit side by side.
+                    if (constraints.maxWidth >= 900) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              children: [
+                                upcomingAsync.when(
+                                  data: (appointments) =>
+                                      _buildWebTimeline(context, appointments),
+                                  loading: () =>
+                                      const CircularProgressIndicator(),
+                                  error: (err, stack) =>
+                                      _buildInlineError(_cleanError(err)),
                                 ),
-                                error: (err, stack) =>
-                                    _buildWebHealthSection(null),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 48),
-                        Expanded(
-                          child: Column(
-                            children: [
-                              statsAsync.when(
-                                data: (stats) => _buildWebVitalsCard(stats),
-                                loading: () => const SizedBox(
-                                  height: 200,
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
+                                const SizedBox(height: 32),
+                                statsAsync.when(
+                                  data: (stats) => _buildWebHealthSection(stats),
+                                  loading: () => const SizedBox(
+                                    height: 100,
+                                    child: Center(child: CircularProgressIndicator()),
                                   ),
+                                  error: (err, stack) => _buildWebHealthSection(null),
                                 ),
-                                error: (err, stack) =>
-                                    _buildVitalsUnavailable(),
-                              ),
-                              const SizedBox(height: 32),
-                              _buildWebSideNavLink(
-                                Icons.history,
-                                'Histórico Médico',
-                              ),
-                              _buildWebSideNavLink(
-                                Icons.headset_mic_outlined,
-                                'Suporte ao Paciente',
-                              ),
-                              _buildWebSideNavLink(
-                                Icons.folder_shared_outlined,
-                                'Documentos Legais',
-                              ),
-                              const SizedBox(height: 32),
-                              _buildWebComplianceBadge(context),
-                            ],
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 32),
+                          Expanded(
+                            child: Column(
+                              children: [
+                                statsAsync.when(
+                                  data: (stats) => _buildWebVitalsCard(stats),
+                                  loading: () => const SizedBox(
+                                    height: 200,
+                                    child: Center(child: CircularProgressIndicator()),
+                                  ),
+                                  error: (err, stack) => _buildVitalsUnavailable(),
+                                ),
+                                const SizedBox(height: 32),
+                                _buildWebSideNavLink(Icons.history, 'Historico Medico'),
+                                _buildWebSideNavLink(Icons.headset_mic_outlined, 'Suporte ao Paciente'),
+                                _buildWebSideNavLink(Icons.folder_shared_outlined, 'Documentos Legais'),
+                                const SizedBox(height: 32),
+                                _buildWebComplianceBadge(context),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      upcomingAsync.when(
+                        data: (appointments) => _buildWebTimeline(context, appointments),
+                        loading: () => const CircularProgressIndicator(),
+                        error: (err, stack) => _buildInlineError(_cleanError(err)),
+                      ),
+                      const SizedBox(height: 32),
+                      statsAsync.when(
+                        data: (stats) => _buildWebHealthSection(stats),
+                        loading: () => const SizedBox(
+                          height: 100,
+                          child: Center(child: CircularProgressIndicator()),
                         ),
-                      ],
-                    ),
+                        error: (err, stack) => _buildWebHealthSection(null),
+                      ),
+                      const SizedBox(height: 32),
+                      statsAsync.when(
+                        data: (stats) => _buildWebVitalsCard(stats),
+                        loading: () => const SizedBox(
+                          height: 200,
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                        error: (err, stack) => _buildVitalsUnavailable(),
+                      ),
+                      const SizedBox(height: 32),
+                      _buildWebSideNavLink(Icons.history, 'Historico Medico'),
+                      _buildWebSideNavLink(Icons.headset_mic_outlined, 'Suporte ao Paciente'),
+                      _buildWebSideNavLink(Icons.folder_shared_outlined, 'Documentos Legais'),
+                      const SizedBox(height: 32),
+                      _buildWebComplianceBadge(context),
+                    ],
                     const SizedBox(height: 100),
                   ],
                 ),
@@ -352,7 +374,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ],
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(height: 12),
                 // Value
                 FittedBox(
                   fit: BoxFit.scaleDown,

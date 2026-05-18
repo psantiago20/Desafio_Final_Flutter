@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:printing/printing.dart';
@@ -58,10 +59,9 @@ class _PrescriptionsScreenState extends ConsumerState<PrescriptionsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Minhas Prescrições'),
-        elevation: 0,
-      ),
+      appBar: kIsWeb
+          ? null
+          : AppBar(title: const Text('Minhas Prescricoes'), elevation: 0),
       body: Column(
         children: [
           _buildFilterBar(),

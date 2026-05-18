@@ -62,10 +62,9 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
     return _buildMobileShell(context);
   }
 
-  // WEB SHELL: sidebar on the left, Column(topBar + pages) on the right.
-  // Using Column instead of Stack+Positioned so the IndexedStack gets
-  // the actual remaining height (Stack would size to its tallest
-  // non-positioned child = 64px, making the pages invisible).
+  // ─── WEB SHELL ────────────────────────────────────────────────────────────
+  // Desktop (>= 768px): persistent sidebar on the left.
+  // Narrow web (<  768px): sidebar hidden; hamburger in top bar opens a Drawer.
   Widget _buildWebShell(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 768;
@@ -75,23 +74,36 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
     final userName = user?.fullName ?? user?.username ?? 'Paciente';
 
     return Scaffold(
+      key: MainDashboardScreen.scaffoldKey,
       backgroundColor: isDark ? Theme.of(context).colorScheme.surface : _bg,
+      // Drawer is used on narrow web viewports as the sidebar alternative.
+      drawer: isDesktop
+          ? null
+          : Drawer(
+              width: 280,
+              child: PatientSidebar(
+                selectedIndex: _currentIndex,
+                onNavigate: (index) {
+                  // Close the drawer, then navigate.
+                  Navigator.of(context).pop();
+                  _navigate(index);
+                },
+              ),
+            ),
       body: Row(
         children: [
-          // Persistent sidebar (desktop only)
+          // Persistent sidebar on desktop only
           if (isDesktop)
             PatientSidebar(
               selectedIndex: _currentIndex,
               onNavigate: _navigate,
             ),
 
-          // Right panel: top bar + page content stacked vertically
+          // Right panel: top bar + page content
           Expanded(
             child: Column(
               children: [
-                // Fixed-height top bar
                 _buildTopBar(isDesktop, userName, isDark),
-                // Pages fill the rest of the available height
                 Expanded(
                   child: IndexedStack(
                     index: _currentIndex,
@@ -114,7 +126,7 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
     return Container(
       height: 64,
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 40 : 24),
+      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 40 : 16),
       decoration: BoxDecoration(
         color: bgColor,
         boxShadow: const [
@@ -126,83 +138,91 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Page title derived from current index
-          Text(
-            _pageTitle(_currentIndex),
-            style: GoogleFonts.manrope(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: isDark ? Colors.white : _primaryContainer,
-              letterSpacing: -0.5,
+          // Hamburger menu button — only shown when sidebar is hidden
+          if (!isDesktop)
+            IconButton(
+              icon: const Icon(Icons.menu, color: _onSurfaceVariant),
+              onPressed: () =>
+                  MainDashboardScreen.scaffoldKey.currentState?.openDrawer(),
+              splashRadius: 24,
+            ),
+          if (!isDesktop) const SizedBox(width: 4),
+
+          // Page title
+          Expanded(
+            child: Text(
+              _pageTitle(_currentIndex),
+              style: GoogleFonts.manrope(
+                fontSize: isDesktop ? 18 : 16,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : _primaryContainer,
+                letterSpacing: -0.5,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_none, color: _onSurfaceVariant),
-                onPressed: () => _navigate(5),
-                splashRadius: 24,
-              ),
-              const SizedBox(width: 4),
-              // Theme toggle
-              IconButton(
-                icon: Icon(
-                  isDark ? Icons.light_mode : Icons.dark_mode,
-                  color: _onSurfaceVariant,
-                ),
-                onPressed: () =>
-                    ref.read(themeProvider.notifier).toggleTheme(),
-                splashRadius: 24,
-              ),
-              if (isDesktop) ...[
-                const SizedBox(width: 12),
-                Container(height: 32, width: 1, color: _surfaceLow),
-                const SizedBox(width: 16),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      name,
-                      style: GoogleFonts.manrope(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : _onSurface,
-                      ),
-                    ),
-                    Text(
-                      'Paciente',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: _onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFDAE2FF),
-                    shape: BoxShape.circle,
+
+          // Actions
+          IconButton(
+            icon: const Icon(Icons.notifications_none,
+                color: _onSurfaceVariant),
+            onPressed: () => _navigate(5),
+            splashRadius: 24,
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            icon: Icon(
+              isDark ? Icons.light_mode : Icons.dark_mode,
+              color: _onSurfaceVariant,
+            ),
+            onPressed: () =>
+                ref.read(themeProvider.notifier).toggleTheme(),
+            splashRadius: 24,
+          ),
+          if (isDesktop) ...[
+            const SizedBox(width: 12),
+            Container(height: 32, width: 1, color: _surfaceLow),
+            const SizedBox(width: 16),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  name,
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : _onSurface,
                   ),
-                  child: Center(
-                    child: Text(
-                      name.isNotEmpty ? name[0].toUpperCase() : 'P',
-                      style: GoogleFonts.manrope(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: const Color(0xFF003D9B),
-                      ),
-                    ),
-                  ),
+                ),
+                Text(
+                  'Paciente',
+                  style: GoogleFonts.inter(
+                      fontSize: 12, color: _onSurfaceVariant),
                 ),
               ],
-            ],
-          ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                color: Color(0xFFDAE2FF),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : 'P',
+                  style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: const Color(0xFF003D9B),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -229,10 +249,10 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
     }
   }
 
-  // MOBILE SHELL: bottom nav bar, unchanged from the original.
+  // ─── MOBILE SHELL ──────────────────────────────────────────────────────────
+  // Unchanged from original: bottom navigation bar.
   Widget _buildMobileShell(BuildContext context) {
     return Scaffold(
-      key: MainDashboardScreen.scaffoldKey,
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
@@ -250,28 +270,34 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
           ),
           NavigationDestination(
             icon: const Icon(Icons.calendar_month_outlined),
-            selectedIcon: const Icon(Icons.calendar_month, color: Colors.white),
+            selectedIcon:
+                const Icon(Icons.calendar_month, color: Colors.white),
             label: 'Consultas',
           ),
           NavigationDestination(
             icon: ref.watch(chatProvider).totalUnreadCount > 0
                 ? Badge(
-                    label: Text(
-                        ref.watch(chatProvider).totalUnreadCount.toString()),
+                    label: Text(ref
+                        .watch(chatProvider)
+                        .totalUnreadCount
+                        .toString()),
                     child: const Icon(Icons.chat_bubble_outline),
                   )
                 : const Icon(Icons.chat_bubble_outline),
-            selectedIcon: const Icon(Icons.chat_bubble, color: Colors.white),
+            selectedIcon:
+                const Icon(Icons.chat_bubble, color: Colors.white),
             label: 'Chat',
           ),
           NavigationDestination(
             icon: const Icon(Icons.description_outlined),
-            selectedIcon: const Icon(Icons.description, color: Colors.white),
+            selectedIcon:
+                const Icon(Icons.description, color: Colors.white),
             label: 'Exames',
           ),
           NavigationDestination(
             icon: const Icon(Icons.medication_outlined),
-            selectedIcon: const Icon(Icons.medication, color: Colors.white),
+            selectedIcon:
+                const Icon(Icons.medication, color: Colors.white),
             label: 'Prescricoes',
           ),
         ],
