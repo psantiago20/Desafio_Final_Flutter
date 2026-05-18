@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/features/profile/screens/profile_screen.dart';
+import 'package:go_router/go_router.dart';
 import 'package:frontend/features/client/screens/main_dashboard_screen.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +13,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final PreferredSizeWidget? bottom;
   final bool showProfileButton;
   final Widget? leading;
+  final bool showMenuButton;
 
   const CustomAppBar({
     super.key,
@@ -21,6 +22,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.bottom,
     this.showProfileButton = true,
     this.leading,
+    this.showMenuButton = false,
   });
 
   @override
@@ -35,26 +37,25 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       iconTheme: IconThemeData(color: Theme.of(context).colorScheme.primary),
-      leading:
-          leading ??
-          Builder(
-            builder: (context) => IconButton(
-              icon: Icon(
-                Icons.menu,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              onPressed: () {
-                if (MainShell.scaffoldKey.currentState != null) {
-                  MainShell.scaffoldKey.currentState?.openDrawer();
-                } else if (MainDashboardScreen.scaffoldKey.currentState !=
-                    null) {
-                  MainDashboardScreen.scaffoldKey.currentState?.openDrawer();
-                } else {
-                  Scaffold.of(context).openDrawer();
-                }
-              },
-            ),
+      automaticallyImplyLeading: leading == null,
+      leading: leading ?? (showMenuButton ? Builder(
+        builder: (context) => IconButton(
+          icon: Icon(
+            Icons.menu,
+            color: Theme.of(context).colorScheme.primary,
           ),
+          onPressed: () {
+            if (MainShell.scaffoldKey.currentState != null) {
+              MainShell.scaffoldKey.currentState?.openDrawer();
+            } else if (MainDashboardScreen.scaffoldKey.currentState !=
+                null) {
+              MainDashboardScreen.scaffoldKey.currentState?.openDrawer();
+            } else {
+              Scaffold.of(context).openDrawer();
+            }
+          },
+        ),
+      ) : null),
       title: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -106,12 +107,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           IconButton(
             icon: const Icon(Icons.person_outline),
             color: Theme.of(context).colorScheme.primary,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfileScreen()),
-              );
-            },
+            onPressed: () => context.push('/profile'),
           ),
         const SizedBox(width: 8),
       ],

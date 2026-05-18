@@ -293,7 +293,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     return Scaffold(
       appBar: kIsWeb ? null : CustomAppBar(
         subtitle: 'Seus Resultados',
-        leading: widget.patientId != null 
+        leading: widget.patientId != null
           ? IconButton(
               icon: const Icon(Icons.arrow_back_ios_new_rounded),
               onPressed: () => context.pop(),
@@ -305,138 +305,32 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
         child: examsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, _) => Center(child: Text('Erro: $err')),
-          data: (_) => ListView.builder(
-                padding: const EdgeInsets.all(16.0),
-                itemCount: filteredExams.length,
-                itemBuilder: (context, index) {
-                  final exam = filteredExams[index];
-
-                  // Formatação de data
-                  DateTime? date;
-                  try {
-                    date = DateTime.parse(exam['created_at'] as String);
-                  } catch (_) {}
-                  final dateStr = date != null
-                      ? DateFormat('dd/MM/yyyy').format(date)
-                      : '—';
-                  final title = exam['title'] as String? ?? 'Exame';
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.successGreenLight,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.check_circle,
-                                  color: AppTheme.successGreen,
-                                ),
-                              ),
-                              SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      title,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    Text(
-                                      dateStr,
-                                      style: TextStyle(
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: AppTheme.alertRed,
-                                  size: 20,
-                                ),
-                                onPressed: () => _deleteExam(exam['id'] as int),
-                                tooltip: 'Remover exame',
-                              ),
-                            ],
-                          ),
-                          if (widget.patientId != null && exam['summary'] != null) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.analytics_outlined, size: 14, color: AppColors.primary),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Análise Médica',
-                                        style: GoogleFonts.dmSans(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    exam['summary'],
-                                    style: GoogleFonts.dmSans(
-                                      fontSize: 13,
-                                      color: AppColors.textPrimary,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          const Divider(height: 24),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Resultado Liberado',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              TextButton.icon(
-                                onPressed: () => _showFilePopup(exam),
-                                icon: const Icon(Icons.visibility, size: 18),
-                                label: const Text('Ver Resultado'),
-                              ),
-                            ],
-                          ),
-                        ],
+          data: (_) => filteredExams.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.biotech_outlined,
+                          size: 64,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.3)),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Nenhum exame encontrado.',
+                        style: GoogleFonts.dmSans(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: filteredExams.length,
+                  itemBuilder: (context, index) => _buildExamCard(filteredExams[index]),
+                ),
         ),
       ),
       floatingActionButton: FloatingActionButton(

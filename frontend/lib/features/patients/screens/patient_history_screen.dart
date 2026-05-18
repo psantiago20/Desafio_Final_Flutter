@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import '../../appointments/providers/appointments_provider.dart';
-import '../../client/providers/exams_provider.dart';
 import '../providers/patients_provider.dart';
 import '../../../shared/models/appointment_model.dart';
 import '../../../shared/models/patient_model.dart';
@@ -64,11 +63,33 @@ class _PatientHistoryScreenState extends ConsumerState<PatientHistoryScreen> wit
   @override
   Widget build(BuildContext context) {
     final patientAsync = ref.watch(patientByIdProvider(widget.patientId));
-
     final isDesktop = MediaQuery.of(context).size.width >= 768;
 
     return Scaffold(
       backgroundColor: _bg,
+      // On mobile, provide a standard AppBar with a back button.
+      appBar: isDesktop
+          ? null
+          : AppBar(
+              backgroundColor: _surface,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                    color: _primary),
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/dashboard');
+                  }
+                },
+              ),
+              title: Text(
+                'Histórico do Paciente',
+                style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.bold, color: _onSurface),
+              ),
+            ),
       body: Row(
         children: [
           if (isDesktop) const DoctorSidebar(selectedIndex: 1),
@@ -159,15 +180,21 @@ class _PatientHistoryScreenState extends ConsumerState<PatientHistoryScreen> wit
           ),
           const Spacer(),
           ElevatedButton.icon(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back),
-            label: const Text('Voltar'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _bg,
-              foregroundColor: _onSurface,
-              elevation: 0,
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/dashboard');
+                }
+              },
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Voltar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _bg,
+                foregroundColor: _onSurface,
+                elevation: 0,
+              ),
             ),
-          ),
         ],
       ),
     );

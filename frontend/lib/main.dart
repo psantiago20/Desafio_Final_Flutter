@@ -48,18 +48,22 @@ void main() async {
     debugPrint("⚠️ Erro ao inicializar TokenStorage: $e");
   }
 
-  try {
-    // Initialize the notification service (Request permission & get token)
-    await NotificationService().init();
-  } catch (e) {
-    debugPrint("⚠️ Erro ao inicializar NotificationService: $e");
-  }
-
+  // Run the app immediately — do NOT block on notification permission.
+  // NotificationService.init() fires after the first frame so the UI
+  // appears instantly regardless of how long the browser permission prompt
+  // takes to respond (or whether FCM token fetch is slow).
   runApp(
     const ProviderScope(
       child: OmniConnectApp(),
     ),
   );
+
+  // Initialize FCM in the background after the app is already visible.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    NotificationService().init().catchError((e) {
+      debugPrint("⚠️ Erro ao inicializar NotificationService: $e");
+    });
+  });
 }
 
 class OmniConnectApp extends ConsumerWidget {
