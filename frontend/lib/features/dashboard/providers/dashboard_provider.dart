@@ -6,6 +6,9 @@ import '../../../shared/models/dashboard_stats_model.dart';
 final dashboardRepositoryProvider =
     Provider<DashboardRepository>((_) => DashboardRepository());
 
+// Navigation state for doctor's desktop dashboard
+final doctorNavIndexProvider = StateProvider<int>((ref) => 0);
+
 // Stats
 final dashboardStatsProvider =
     FutureProvider.autoDispose<DashboardStats>((ref) {

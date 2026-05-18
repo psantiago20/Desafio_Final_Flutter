@@ -26,7 +26,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  int _selectedNavIndex = 0;
   String _selectedFilter = 'Todos';
   int? _selectedChatPatientId;
   String? _selectedChatPatientName;
@@ -58,39 +57,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final statsAsync = ref.watch(dashboardStatsProvider);
     final todayAsync = ref.watch(appointmentsListProvider);
 
+    final selectedNavIndex = ref.watch(doctorNavIndexProvider);
+
     return Scaffold(
       backgroundColor: _bg,
       body: Row(
         children: [
-          if (isDesktop) DoctorSidebar(selectedIndex: _selectedNavIndex),
+          if (isDesktop) DoctorSidebar(selectedIndex: selectedNavIndex),
           Expanded(
-            child: _buildMainContent(isDesktop, user?.displayName ?? '', statsAsync, todayAsync),
+            child: _buildMainContent(selectedNavIndex, isDesktop, user?.displayName ?? '', statsAsync, todayAsync),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMainContent(bool isDesktop, String name, AsyncValue<DashboardStats> statsAsync, AsyncValue<List<AppointmentModel>> todayAsync) {
-    if (_selectedNavIndex == 1) {
+  Widget _buildMainContent(int selectedNavIndex, bool isDesktop, String name, AsyncValue<DashboardStats> statsAsync, AsyncValue<List<AppointmentModel>> todayAsync) {
+    if (selectedNavIndex == 1) {
       return const AppointmentsScreen();
     }
-    if (_selectedNavIndex == 2) {
+    if (selectedNavIndex == 2) {
       return const ProntuariosScreen();
     }
-    if (_selectedNavIndex == 3) {
+    if (selectedNavIndex == 3) {
       return DoctorMessagesScreen(
         initialPatientId: _selectedChatPatientId,
         initialPatientName: _selectedChatPatientName,
       );
     }
-    if (_selectedNavIndex == 5) {
+    if (selectedNavIndex == 5) {
       return const ProfileScreen();
     }
-    if (_selectedNavIndex == 6) {
+    if (selectedNavIndex == 6) {
       return const FinancialScreen();
     }
-    if (_selectedNavIndex != 0) {
+    if (selectedNavIndex != 0) {
 
       return Scaffold(
         backgroundColor: _bg,
@@ -388,7 +389,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      Icon(icon, color: iconColor, size: 24),
+                      Center(
+                        child: Icon(icon, color: iconColor, size: 24),
+                      ),
                       if (badge)
                         Positioned(
                           right: -2,
@@ -530,7 +533,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: InkWell(
-              onTap: () => setState(() => _selectedNavIndex = 1),
+              onTap: () => ref.read(doctorNavIndexProvider.notifier).state = 1,
               borderRadius: BorderRadius.circular(8),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -725,8 +728,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             IconButton(
               icon: const Icon(Icons.chat_bubble_outline, color: _primary),
               onPressed: () {
+                ref.read(doctorNavIndexProvider.notifier).state = 3;
                 setState(() {
-                  _selectedNavIndex = 3;
                   _selectedChatPatientId = appointment.patientId;
                   _selectedChatPatientName = appointment.patientName;
                 });
@@ -765,8 +768,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     IconButton(
                       icon: const Icon(Icons.chat_bubble_outline, color: _primary, size: 20),
                       onPressed: () {
+                        ref.read(doctorNavIndexProvider.notifier).state = 3;
                         setState(() {
-                          _selectedNavIndex = 3;
                           _selectedChatPatientId = appointment.patientId;
                           _selectedChatPatientName = appointment.patientName;
                         });
