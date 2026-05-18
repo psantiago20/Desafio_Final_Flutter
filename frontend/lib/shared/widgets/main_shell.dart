@@ -88,7 +88,7 @@ class MainShell extends ConsumerWidget {
             ),
             onTap: () {
               Navigator.pop(context);
-              ref.read(activeDashboardTabProvider.notifier).state = 0;
+              ref.read(doctorNavIndexProvider.notifier).state = 0;
               context.go('/dashboard');
             },
           ),

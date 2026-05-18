@@ -21,17 +21,39 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  } catch (e) {
+    debugPrint("⚠️ Erro ao inicializar o Firebase: $e");
+  }
 
-  await initializeDateFormatting('pt_BR', null);
-  await dotenv.load(fileName: "assets/.env");
-  await TokenStorage.init();
+  try {
+    await initializeDateFormatting('pt_BR', null);
+  } catch (e) {
+    debugPrint("⚠️ Erro ao inicializar formatação de datas: $e");
+  }
 
-  // Initialize the notification service (Request permission & get token)
-  await NotificationService().init();
+  try {
+    await dotenv.load(fileName: "assets/.env");
+  } catch (e) {
+    debugPrint("⚠️ Erro ao carregar arquivo .env: $e");
+  }
+
+  try {
+    await TokenStorage.init();
+  } catch (e) {
+    debugPrint("⚠️ Erro ao inicializar TokenStorage: $e");
+  }
+
+  try {
+    // Initialize the notification service (Request permission & get token)
+    await NotificationService().init();
+  } catch (e) {
+    debugPrint("⚠️ Erro ao inicializar NotificationService: $e");
+  }
 
   runApp(
     const ProviderScope(

@@ -141,7 +141,7 @@ class DoctorSidebar extends ConsumerWidget {
     final isActive = selectedIndex == index;
     return InkWell(
       onTap: () {
-        ref.read(activeDashboardTabProvider.notifier).state = index;
+        ref.read(doctorNavIndexProvider.notifier).state = index;
         final location = GoRouterState.of(context).uri.toString();
         if (!location.startsWith('/dashboard')) {
           context.go('/dashboard');

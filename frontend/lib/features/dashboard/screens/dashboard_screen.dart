@@ -26,7 +26,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  int _selectedNavIndex = 0;
   String _selectedFilter = 'Todos';
   int? _selectedChatPatientId;
   String? _selectedChatPatientName;
@@ -57,7 +56,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final user = ref.watch(authProvider).user;
     final statsAsync = ref.watch(dashboardStatsProvider);
     final todayAsync = ref.watch(appointmentsListProvider);
-    final selectedNavIndex = isDesktop ? ref.watch(activeDashboardTabProvider) : _selectedNavIndex;
+    final selectedNavIndex = isDesktop ? ref.watch(doctorNavIndexProvider) : _selectedNavIndex;
 
     return Scaffold(
       backgroundColor: _bg,
@@ -591,7 +590,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: InkWell(
               onTap: () {
                 if (isDesktop) {
-                  ref.read(activeDashboardTabProvider.notifier).state = 1;
+                  ref.read(doctorNavIndexProvider.notifier).state = 1;
                 } else {
                   setState(() => _selectedNavIndex = 1);
                 }
@@ -793,7 +792,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             IconButton(
               icon: const Icon(Icons.chat_bubble_outline, color: _primary),
               onPressed: () {
-                ref.read(activeDashboardTabProvider.notifier).state = 3;
+                ref.read(doctorNavIndexProvider.notifier).state = 3;
                 setState(() {
                   _selectedChatPatientId = appointment.patientId;
                   _selectedChatPatientName = appointment.patientName;
@@ -833,8 +832,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     IconButton(
                       icon: const Icon(Icons.chat_bubble_outline, color: _primary, size: 20),
                       onPressed: () {
+                        ref.read(doctorNavIndexProvider.notifier).state = 3;
                         setState(() {
-                          _selectedNavIndex = 3;
                           _selectedChatPatientId = appointment.patientId;
                           _selectedChatPatientName = appointment.patientName;
                         });
