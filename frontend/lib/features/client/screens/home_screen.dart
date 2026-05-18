@@ -928,15 +928,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.primaryBlue, AppTheme.primaryBlueDark],
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.75),
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -947,7 +950,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   children: [
                     Text(
                       'Olá, ${user?.fullName?.split(' ')[0] ?? user?.username ?? 'Paciente'}!',
-                      style: TextStyle(
+                      style: GoogleFonts.manrope(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -1033,22 +1036,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text(
+                                 Text(
                                       DateFormat('MMM', 'pt_BR')
                                           .format(nextApt.appointmentDate)
                                           .toUpperCase(),
                                       style: TextStyle(
-                                        color: AppTheme.primaryBlue,
+                                        color: Theme.of(context).colorScheme.primary,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    Text(
+                                     Text(
                                       DateFormat(
                                         'dd',
                                       ).format(nextApt.appointmentDate),
                                       style: TextStyle(
-                                        color: AppTheme.primaryBlue,
+                                        color: Theme.of(context).colorScheme.primary,
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -1089,7 +1092,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               onPressed: () => widget.onNavigate(1),
                               style: TextButton.styleFrom(
                                 backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.12),
-                                foregroundColor: AppTheme.primaryBlue,
+                                foregroundColor: Theme.of(context).colorScheme.primary,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1140,7 +1143,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     icon: Icons.description_outlined,
                     color: AppTheme.successGreen,
                     lightColor: AppTheme.successGreenLight,
-                    onTap: () => widget.onNavigate(2),
+                    onTap: () => widget.onNavigate(3),
                   ),
                   _buildActionCard(
                     context,
@@ -1167,6 +1170,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ),
     );
   }
+  // Stat card matching the web's doctor-dashboard style:
+  // decorative circle bleed top-right, FittedBox value, uppercase label.
   Widget _buildStatCard(
     BuildContext context, {
     required String title,
@@ -1174,38 +1179,76 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     required IconData icon,
     required Color iconColor,
   }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final circleColor = iconColor.withValues(alpha: 0.15);
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -16,
+            top: -16,
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: circleColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, color: iconColor, size: 24),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: circleColor,
+                    shape: BoxShape.circle,
                   ),
+                  child: Icon(icon, color: iconColor, size: 20),
+                ),
+                const SizedBox(height: 12),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: GoogleFonts.manrope(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  title.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    letterSpacing: 0.8,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
-            const Spacer(),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              maxLines: 1,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1220,12 +1263,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(24),
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
               color: color.withValues(alpha: 0.05),
@@ -1243,13 +1286,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 color: lightColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: color, size: 24),
+              child: Icon(icon, color: color, size: 22),
             ),
-            const Spacer(),
+            const SizedBox(height: 12),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 16,
+              style: GoogleFonts.manrope(
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurface,
               ),

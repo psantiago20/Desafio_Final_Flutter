@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/features/profile/screens/profile_screen.dart';
+import 'package:go_router/go_router.dart';
 import 'package:frontend/features/client/screens/main_dashboard_screen.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -106,12 +106,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           IconButton(
             icon: const Icon(Icons.person_outline),
             color: Theme.of(context).colorScheme.primary,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfileScreen()),
-              );
-            },
+            onPressed: () => context.push('/profile'),
           ),
         const SizedBox(width: 8),
       ],

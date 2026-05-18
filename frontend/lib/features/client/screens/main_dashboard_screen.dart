@@ -249,17 +249,28 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
     }
   }
 
+  // Maps mobile bottom nav index (0-5) → _screens index (0,1,2,3,4,6)
+  // Index 5 (Notificações placeholder) is intentionally skipped on mobile.
+  static const List<int> _mobileNavToScreen = [0, 1, 2, 3, 4, 6];
+
   // ─── MOBILE SHELL ──────────────────────────────────────────────────────────
-  // Unchanged from original: bottom navigation bar.
+  // Bottom navigation bar with 6 tabs (Home, Consultas, Chat, Exames,
+  // Prescrições, Perfil). Uses a nav→screen index map to reach ProfileScreen
+  // (which lives at _screens[6]) without breaking the web shell indices.
   Widget _buildMobileShell(BuildContext context) {
+    // Determine which bottom-nav tab should be highlighted.
+    final mobileNavIdx = _mobileNavToScreen.indexOf(_currentIndex).clamp(0, 5);
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: _navigate,
+        selectedIndex: mobileNavIdx,
+        onDestinationSelected: (navIdx) {
+          _navigate(_mobileNavToScreen[navIdx]);
+        },
         backgroundColor: Theme.of(context).colorScheme.surface,
         indicatorColor: Theme.of(context).colorScheme.primary,
         destinations: [
@@ -299,6 +310,11 @@ class _MainDashboardScreenState extends ConsumerState<MainDashboardScreen> {
             selectedIcon:
                 const Icon(Icons.medication, color: Colors.white),
             label: 'Prescricoes',
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person, color: Colors.white),
+            label: 'Perfil',
           ),
         ],
       ),

@@ -119,15 +119,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Container(
             padding: const EdgeInsets.all(24.0),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppTheme.primaryBlue, AppTheme.primaryBlueDark],
+              gradient: LinearGradient(
+                colors: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.primaryContainer,
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(24.0),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -365,7 +368,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: TextButton.icon(
               onPressed: () {
                 ref.read(authProvider.notifier).logout();
-                context.go('/');
+                context.go('/login');
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Sessão encerrada com sucesso.')),
                 );

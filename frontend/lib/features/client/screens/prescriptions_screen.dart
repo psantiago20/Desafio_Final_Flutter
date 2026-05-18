@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/appointment_model.dart';
+import '../../../shared/widgets/custom_app_bar.dart';
 import '../../appointments/providers/appointments_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../patients/providers/patients_provider.dart';
@@ -58,10 +59,13 @@ class _PrescriptionsScreenState extends ConsumerState<PrescriptionsScreen> {
     final patientProfileAsync = ref.watch(patientProfileProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: kIsWeb
           ? null
-          : AppBar(title: const Text('Minhas Prescricoes'), elevation: 0),
+          : const CustomAppBar(
+              subtitle: 'Minhas Prescrições',
+              showProfileButton: false,
+            ),
       body: Column(
         children: [
           _buildFilterBar(),
@@ -135,8 +139,15 @@ class _PrescriptionsScreenState extends ConsumerState<PrescriptionsScreen> {
 
   Widget _buildFilterBar() {
     return Container(
-      padding: const EdgeInsets.all(12),
-      color: AppColors.surface,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.15),
+          ),
+        ),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

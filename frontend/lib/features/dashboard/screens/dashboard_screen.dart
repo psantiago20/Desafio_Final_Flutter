@@ -59,16 +59,64 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     final selectedNavIndex = ref.watch(doctorNavIndexProvider);
 
+    // Mobile nav maps 5 bottom tabs → doctorNavIndexProvider values
+    // 0=Dashboard, 1=Consultas, 2=Prontuários, 3=Mensagens, 5=Perfil
+    const mobileNavToDocIndex = [0, 1, 2, 3, 5];
+    final mobileNavIdx = mobileNavToDocIndex.indexOf(selectedNavIndex).clamp(0, 4);
+
     return Scaffold(
       backgroundColor: _bg,
       body: Row(
         children: [
           if (isDesktop) DoctorSidebar(selectedIndex: selectedNavIndex),
           Expanded(
-            child: _buildMainContent(selectedNavIndex, isDesktop, user?.displayName ?? '', statsAsync, todayAsync),
+            child: _buildMainContent(
+                selectedNavIndex, isDesktop, user?.displayName ?? '', statsAsync, todayAsync),
           ),
         ],
       ),
+      // Mobile bottom navigation bar (hidden on desktop/web)
+      bottomNavigationBar: isDesktop
+          ? null
+          : NavigationBar(
+              selectedIndex: mobileNavIdx,
+              onDestinationSelected: (navIdx) {
+                ref.read(doctorNavIndexProvider.notifier).state =
+                    mobileNavToDocIndex[navIdx];
+              },
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              indicatorColor: Theme.of(context).colorScheme.primary,
+              destinations: [
+                NavigationDestination(
+                  icon: const Icon(Icons.dashboard_outlined),
+                  selectedIcon: const Icon(Icons.dashboard, color: Colors.white),
+                  label: 'Painel',
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  selectedIcon:
+                      const Icon(Icons.calendar_month, color: Colors.white),
+                  label: 'Consultas',
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.folder_shared_outlined),
+                  selectedIcon:
+                      const Icon(Icons.folder_shared, color: Colors.white),
+                  label: 'Prontuários',
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  selectedIcon:
+                      const Icon(Icons.chat_bubble, color: Colors.white),
+                  label: 'Mensagens',
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.person_outline),
+                  selectedIcon: const Icon(Icons.person, color: Colors.white),
+                  label: 'Perfil',
+                ),
+              ],
+            ),
     );
   }
 
