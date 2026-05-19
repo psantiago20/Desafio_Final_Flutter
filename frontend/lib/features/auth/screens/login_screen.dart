@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,12 +17,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  // FocusNode dedicado ao KeyboardListener para capturar Enter no web/desktop
+  final _keyboardFocusNode = FocusNode();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
+    _keyboardFocusNode.dispose();
     super.dispose();
   }
 
@@ -64,152 +68,164 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 32),
-                // Logo / Branding
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(Icons.medical_services_rounded,
-                      color: Colors.white, size: 28),
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  'Bem-vindo\nde volta.',
-                  style: GoogleFonts.dmSerifDisplay(
-                    fontSize: 36,
-                    height: 1.1,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Acesse sua conta Sua Consulta',
-                  style: GoogleFonts.dmSans(
-                    fontSize: 15,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 48),
-
-                // Username
-                TextFormField(
-                  controller: _usernameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Usuário',
-                    prefixIcon:
-                        Icon(Icons.person_outline, color: AppColors.textHint),
-                  ),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Informe o usuário' : null,
-                  textInputAction: TextInputAction.next,
-                ),
-                const SizedBox(height: 16),
-
-                // Password
-                TextFormField(
-                  controller: _passwordCtrl,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Senha',
-                    prefixIcon: const Icon(Icons.lock_outline,
-                        color: AppColors.textHint),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: AppColors.textHint,
-                      ),
-                      onPressed: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                    ),
-                  ),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Informe a senha' : null,
-                  onFieldSubmitted: (_) => _submit(),
-                ),
-
-                // Erro
-                if (auth.error != null) ...[
-                  const SizedBox(height: 16),
+          // KeyboardListener captura a tecla Enter no web e desktop,
+          // complementando o onFieldSubmitted já existente no campo de senha.
+          child: KeyboardListener(
+            focusNode: _keyboardFocusNode,
+            onKeyEvent: (event) {
+              if (event is KeyDownEvent &&
+                  event.logicalKey == LogicalKeyboardKey.enter) {
+                _submit();
+              }
+            },
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 32),
+                  // Logo / Branding
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    width: 56,
+                    height: 56,
                     decoration: BoxDecoration(
-                      color: AppColors.cancelled.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: AppColors.cancelled.withValues(alpha: 0.3)),
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error_outline,
-                            color: AppColors.cancelled, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            auth.error!,
-                            style: GoogleFonts.dmSans(
-                              color: AppColors.cancelled,
-                              fontSize: 13,
-                            ),
-                          ),
+                    child: const Icon(Icons.medical_services_rounded,
+                        color: Colors.white, size: 28),
+                  ),
+                  const SizedBox(height: 32),
+                  Text(
+                    'Bem-vindo\nde volta.',
+                    style: GoogleFonts.dmSerifDisplay(
+                      fontSize: 36,
+                      height: 1.1,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Acesse sua conta Sua Consulta',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 15,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 48),
+
+                  // Username
+                  TextFormField(
+                    controller: _usernameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Usuário',
+                      prefixIcon:
+                          Icon(Icons.person_outline, color: AppColors.textHint),
+                    ),
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Informe o usuário' : null,
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Password
+                  TextFormField(
+                    controller: _passwordCtrl,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'Senha',
+                      prefixIcon: const Icon(Icons.lock_outline,
+                          color: AppColors.textHint),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: AppColors.textHint,
                         ),
-                      ],
+                        onPressed: () =>
+                            setState(() => _obscurePassword = !_obscurePassword),
+                      ),
                     ),
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Informe a senha' : null,
+                    // Garante o Enter via teclado virtual (mobile) e teclado físico
+                    onFieldSubmitted: (_) => _submit(),
                   ),
-                ],
 
-                const SizedBox(height: 32),
-
-                // Botão de Login
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: auth.isLoading ? null : _submit,
-                    child: auth.isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2),
-                          )
-                        : const Text('Entrar'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Ir para cadastro
-                Center(
-                  child: TextButton(
-                    onPressed: () => context.go('/register'),
-                    child: Text.rich(
-                      TextSpan(
-                        text: 'Não tem conta? ',
-                        style: GoogleFonts.dmSans(
-                            color: AppColors.textSecondary, fontSize: 14),
+                  // Erro
+                  if (auth.error != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.cancelled.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: AppColors.cancelled.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
                         children: [
-                          TextSpan(
-                            text: 'Cadastre-se',
-                            style: GoogleFonts.dmSans(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
+                          const Icon(Icons.error_outline,
+                              color: AppColors.cancelled, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              auth.error!,
+                              style: GoogleFonts.dmSans(
+                                color: AppColors.cancelled,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
+                  ],
+
+                  const SizedBox(height: 32),
+
+                  // Botão de Login
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: auth.isLoading ? null : _submit,
+                      child: auth.isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Text('Entrar'),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+
+                  // Ir para cadastro
+                  Center(
+                    child: TextButton(
+                      onPressed: () => context.go('/register'),
+                      child: Text.rich(
+                        TextSpan(
+                          text: 'Não tem conta? ',
+                          style: GoogleFonts.dmSans(
+                              color: AppColors.textSecondary, fontSize: 14),
+                          children: [
+                            TextSpan(
+                              text: 'Cadastre-se',
+                              style: GoogleFonts.dmSans(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
