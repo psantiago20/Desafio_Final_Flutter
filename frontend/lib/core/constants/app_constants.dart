@@ -1,8 +1,15 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AppConstants {
-  // Troque pelo IP da sua máquina quando rodar no emulador/dispositivo físico
-  static String get baseUrl => dotenv.env['API_URL'] ?? 'http://localhost:8000';
+  /// Retorna a URL base correta dependendo da plataforma.
+  /// Configurada exclusivamente via .env (API_URL_WEB ou API_URL_MOBILE).
+  static String get baseUrl {
+    final key = kIsWeb ? 'API_URL_WEB' : 'API_URL_MOBILE';
+    final url = dotenv.env[key];
+    assert(url != null && url.isNotEmpty, 'Variável $key não definida no .env');
+    return url!;
+  }
 
   // Auth
   static const String loginEndpoint = '/api/auth/login';

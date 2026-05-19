@@ -33,76 +33,61 @@ def clear_db(db: Session):
 def seed_users(db: Session):
     print("Semeando usuários...")
     
+    default_password = os.getenv("DEFAULT_PASSWORD", "senha123")
+    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+    
     users_data = [
-        # Admin
+        # Admin master
         {
             "email": "admin@omniconnect.com",
             "username": "admin",
             "full_name": "Administrador do Sistema",
             "role": UserRole.ADMIN.value,
-            "password": "admin123"
-        },
+            "password": admin_password
+        }
+    ]
+    
+    # Administradores adicionais
+    # A lista de administradores e a senha correspondente são dinamicamente lidas a partir do .env
+    admin_names_str = os.getenv("ADMIN_USERNAMES", "")
+    admin_names = [name.strip() for name in admin_names_str.split(",") if name.strip()]
+    for name in admin_names:
+        users_data.append({
+            "email": f"{name}@omniconnect.com",
+            "username": name,
+            "full_name": name.capitalize(),
+            "role": UserRole.ADMIN.value,
+            "password": name  # Senha dinâmica idêntica ao login
+        })
+
         # 4 Médicos
         {
-            "email": "dr.carlos@omniconnect.com",
-            "username": "dr.carlos",
-            "full_name": "Dr. Carlos Mendes",
+            "email": "marina.costa@suaconsulta.com",
+            "username": "marina.costa",
+            "full_name": "Dra. Marina Costa",
             "role": UserRole.DOCTOR.value,
-            "password": "senha123"
+            "password": default_password
         },
         {
-            "email": "dra.maria@omniconnect.com",
-            "username": "dra.maria",
-            "full_name": "Dra. Maria Oliveira",
+            "email": "thorne.blackwood@suaconsulta.com",
+            "username": "thorne.blackwood",
+            "full_name": "Dr. Thorne Blackwood",
             "role": UserRole.DOCTOR.value,
-            "password": "senha123"
+            "password": default_password
         },
         {
-            "email": "dr.roberto@omniconnect.com",
-            "username": "dr.roberto",
-            "full_name": "Dr. Roberto Santos",
+            "email": "ana.costa@suaconsulta.com",
+            "username": "ana.costa",
+            "full_name": "Dra. Ana Costa",
             "role": UserRole.DOCTOR.value,
-            "password": "senha123"
+            "password": default_password
         },
         {
-            "email": "dra.julia@omniconnect.com",
-            "username": "dra.julia",
-            "full_name": "Dra. Julia Costa",
+            "email": "ricardo.mello@suaconsulta.com",
+            "username": "ricardo.mello",
+            "full_name": "Dr. Ricardo Mello",
             "role": UserRole.DOCTOR.value,
-            "password": "senha123"
-        },
-        # 4 Pacientes
-        {
-            "email": "joao.silva@email.com",
-            "username": "joao.silva",
-            "full_name": "João Silva",
-            "role": UserRole.PATIENT.value,
-            "password": "senha123",
-            "phone": "5511987654321"
-        },
-        {
-            "email": "ana.souza@email.com",
-            "username": "ana.souza",
-            "full_name": "Ana Souza",
-            "role": UserRole.PATIENT.value,
-            "password": "senha123",
-            "phone": "5511999998888"
-        },
-        {
-            "email": "pedro.santiago@email.com",
-            "username": "pedro.santiago",
-            "full_name": "Pedro Santiago",
-            "role": UserRole.PATIENT.value,
-            "password": "senha123",
-            "phone": "5511977776666"
-        },
-        {
-            "email": "carla.ferreira@email.com",
-            "username": "carla.ferreira",
-            "full_name": "Carla Ferreira",
-            "role": UserRole.PATIENT.value,
-            "password": "senha123",
-            "phone": "5511966665555"
+            "password": default_password
         }
     ]
     
@@ -130,63 +115,63 @@ def seed_medicos(db: Session, users: dict):
     
     medicos_data = [
         {
-            "nome_completo": "Dr. Carlos Mendes",
-            "crm": "12345",
+            "nome_completo": "Dra. Marina Costa",
+            "crm": "123456",
             "crm_estado": "SP",
             "cidade": "São Paulo",
             "endereco": "Av. Paulista, 1000",
-            "especialidade": "Cardiologia",
-            "email": "dr.carlos@omniconnect.com",
+            "especialidade": "Clínica Geral",
+            "email": "marina.costa@suaconsulta.com",
             "telefone": "5511911111111",
             "whatsapp": "5511911111111",
             "valor_consulta": 300.00,
             "aceita_convenio": True,
-            "convenios": json.dumps(["Unimed", "Bradesco"]),
-            "username": "dr.carlos"
+            "convenios": json.dumps(["Unimed", "Bradesco", "SulAmérica"]),
+            "username": "marina.costa"
         },
         {
-            "nome_completo": "Dra. Maria Oliveira",
-            "crm": "54321",
+            "nome_completo": "Dr. Thorne Blackwood",
+            "crm": "654321",
+            "crm_estado": "RJ",
+            "cidade": "Rio de Janeiro",
+            "endereco": "Av. Atlântica, 200",
+            "especialidade": "Cardiologia",
+            "email": "thorne.blackwood@suaconsulta.com",
+            "telefone": "5521922222222",
+            "whatsapp": "5521922222222",
+            "valor_consulta": 400.00,
+            "aceita_convenio": False,
+            "username": "thorne.blackwood"
+        },
+        {
+            "nome_completo": "Dra. Ana Costa",
+            "crm": "789123",
             "crm_estado": "SP",
             "cidade": "São Paulo",
             "endereco": "Rua Augusta, 500",
             "especialidade": "Dermatologia",
-            "email": "dra.maria@omniconnect.com",
-            "telefone": "5511922222222",
-            "whatsapp": "5511922222222",
+            "email": "ana.costa@suaconsulta.com",
+            "telefone": "5511933333333",
+            "whatsapp": "5511933333333",
             "valor_consulta": 350.00,
             "aceita_convenio": True,
             "convenios": json.dumps(["Amil", "SulAmérica"]),
-            "username": "dra.maria"
+            "username": "ana.costa"
         },
         {
-            "nome_completo": "Dr. Roberto Santos",
-            "crm": "98765",
-            "crm_estado": "RJ",
-            "cidade": "Rio de Janeiro",
-            "endereco": "Av. Atlântica, 200",
-            "especialidade": "Ortopedia",
-            "email": "dr.roberto@omniconnect.com",
-            "telefone": "5521933333333",
-            "whatsapp": "5521933333333",
-            "valor_consulta": 250.00,
-            "aceita_convenio": False,
-            "username": "dr.roberto"
-        },
-        {
-            "nome_completo": "Dra. Julia Costa",
-            "crm": "65432",
-            "crm_estado": "MG",
-            "cidade": "Belo Horizonte",
-            "endereco": "Praça da Liberdade, 10",
-            "especialidade": "Pediatria",
-            "email": "dra.julia@omniconnect.com",
-            "telefone": "5531944444444",
-            "whatsapp": "5531944444444",
-            "valor_consulta": 280.00,
+            "nome_completo": "Dr. Ricardo Mello",
+            "crm": "987654",
+            "crm_estado": "SP",
+            "cidade": "São Paulo",
+            "endereco": "Praça da Sé, 100",
+            "especialidade": "Neurologia",
+            "email": "ricardo.mello@suaconsulta.com",
+            "telefone": "5511944444444",
+            "whatsapp": "5511944444444",
+            "valor_consulta": 380.00,
             "aceita_convenio": True,
-            "convenios": json.dumps(["Unimed", "Allianz"]),
-            "username": "dra.julia"
+            "convenios": json.dumps(["Bradesco", "NotreDame"]),
+            "username": "ricardo.mello"
         }
     ]
     
@@ -204,97 +189,16 @@ def seed_medicos(db: Session, users: dict):
 
 def seed_patients(db: Session, users: dict):
     print("Semeando pacientes...")
-    
-    patients_data = [
-        {
-            "name": "João Silva",
-            "email": "joao.silva@email.com",
-            "phone": "5511987654321",
-            "whatsapp": "5511987654321",
-            "date_of_birth": datetime(1990, 5, 15),
-            "gender": Gender.MALE.value,
-            "cpf": "123.456.789-00",
-            "city": "São Paulo",
-            "state": "SP",
-            "insurance": "Unimed",
-            "username": "joao.silva",
-            "heart_rate": "72",
-            "blood_pressure": "12/8",
-            "glucose": "95",
-            "temperature": "36.5",
-            "weight": "80kg",
-            "height": "1.80m"
-        },
-        {
-            "name": "Ana Souza",
-            "email": "ana.souza@email.com",
-            "phone": "5511999998888",
-            "whatsapp": "5511999998888",
-            "date_of_birth": datetime(1985, 8, 20),
-            "gender": Gender.FEMALE.value,
-            "cpf": "222.222.222-22",
-            "city": "São Paulo",
-            "state": "SP",
-            "insurance": "Bradesco",
-            "username": "ana.souza",
-            "heart_rate": "68",
-            "blood_pressure": "11/7",
-            "glucose": "88",
-            "temperature": "36.2",
-            "weight": "65kg",
-            "height": "1.65m"
-        },
-        {
-            "name": "Pedro Santiago",
-            "email": "pedro.santiago@email.com",
-            "phone": "5511977776666",
-            "whatsapp": "5511977776666",
-            "date_of_birth": datetime(1995, 12, 10),
-            "gender": Gender.MALE.value,
-            "cpf": "333.333.333-33",
-            "city": "São Paulo",
-            "state": "SP",
-            "username": "pedro.santiago",
-            "heart_rate": "75",
-            "blood_pressure": "12/8",
-            "glucose": "92",
-            "temperature": "36.6"
-        },
-        {
-            "name": "Carla Ferreira",
-            "email": "carla.ferreira@email.com",
-            "phone": "5511966665555",
-            "whatsapp": "5511966665555",
-            "date_of_birth": datetime(1982, 2, 28),
-            "gender": Gender.FEMALE.value,
-            "cpf": "444.444.444-44",
-            "city": "São Paulo",
-            "state": "SP",
-            "insurance": "SulAmérica",
-            "username": "carla.ferreira",
-            "heart_rate": "70",
-            "blood_pressure": "13/9",
-            "glucose": "110",
-            "temperature": "36.8"
-        }
-    ]
-    
-    patients = []
-    for p_data in patients_data:
-        username = p_data.pop("username")
-        patient = Patient(**p_data, user_id=users[username].id)
-        db.add(patient)
-        db.flush()
-        patients.append(patient)
-        print(f"Paciente {patient.name} criado e vinculado ao usuário {username}.")
-        
-    db.commit()
-    return patients
+    print("Nenhum paciente semeado por padrão (pacientes devem se cadastrar pela página inicial).")
+    return []
 
 import shutil
 
 def seed_exams(db: Session, patients: list):
     print("Semeando exames reais...")
+    if not patients:
+        print("Nenhum paciente semeado. Pulando semeadura de exames de teste.")
+        return
     
     # Pasta de origem
     exams_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "exames-teste")

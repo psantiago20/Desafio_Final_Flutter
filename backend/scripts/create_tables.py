@@ -1,18 +1,10 @@
-import os
 import sys
-from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from app.models import User, Patient, Appointment, Message, Service, Medico, DoctorProfile, Exam
 from app.db.database import Base
+from app.core.config import settings
 
-load_dotenv()
-
-# Prioriza a URL do .env, caso contrário usa o padrão do projeto
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://omniconnect:omniconnect123@localhost:5432/omniconnect')
-
-# Se estiver rodando dentro do Docker, substitui localhost por postgres
-if os.getenv('DOCKER_CONTAINER') or os.path.exists('/.dockerenv'):
-    DATABASE_URL = DATABASE_URL.replace('localhost', 'postgres')
+DATABASE_URL = settings.DATABASE_URL
 
 engine = create_engine(DATABASE_URL)
 

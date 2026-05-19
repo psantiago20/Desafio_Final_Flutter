@@ -114,27 +114,7 @@ class ProfileScreen extends ConsumerWidget {
 
             const SizedBox(height: 20),
 
-            // Logout
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  ref.read(authProvider.notifier).logout();
-                  context.go('/login');
-                },
-                icon: const Icon(Icons.logout_rounded,
-                    color: AppColors.cancelled),
-                label: Text('Sair da conta',
-                    style: GoogleFonts.dmSans(color: AppColors.cancelled)),
-                style: OutlinedButton.styleFrom(
-                  side:
-                      const BorderSide(color: AppColors.cancelled, width: 1),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
+
             const SizedBox(height: 32),
           ],
         ),

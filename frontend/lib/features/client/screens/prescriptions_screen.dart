@@ -114,7 +114,8 @@ class _PrescriptionsScreenState extends ConsumerState<PrescriptionsScreen> {
                         final filteredItems = allItems.where((item) {
                           if (_validityFilter == 'all') return true;
                           final date = item['date'] as DateTime;
-                          final bool isValid = now.difference(date).inHours < 24;
+                          final expirationDate = date.add(const Duration(hours: 24));
+                          final bool isValid = now.isBefore(expirationDate) && now.isAfter(date.subtract(const Duration(minutes: 5)));
                           return _validityFilter == 'valid' ? isValid : !isValid;
                         }).toList();
 
@@ -177,10 +178,15 @@ class _PrescriptionsScreenState extends ConsumerState<PrescriptionsScreen> {
 
   Widget _buildPrescriptionCard(Map<String, dynamic> item, DateTime now) {
     final date = item['date'] as DateTime;
-    final diff = now.difference(date);
-    final bool isValid = diff.inHours < 24;
-    final int hoursLeft = 24 - diff.inHours;
-    final int minutesLeft = 60 - (diff.inMinutes % 60);
+    final expirationDate = date.add(const Duration(hours: 24));
+    
+    // A prescription is valid only if current time is before the expiration date
+    // and difference is non-negative (to protect against minor local clock drift)
+    final bool isValid = now.isBefore(expirationDate) && now.isAfter(date.subtract(const Duration(minutes: 5)));
+    
+    final Duration remaining = expirationDate.difference(now);
+    final int hoursLeft = remaining.inHours.clamp(0, 24);
+    final int minutesLeft = (remaining.inMinutes % 60).clamp(0, 59);
     
     final dateFmt = DateFormat("dd/MM/yyyy - HH:mm", 'pt_BR');
     

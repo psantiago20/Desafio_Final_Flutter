@@ -30,8 +30,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final ok = await ref
         .read(authProvider.notifier)
         .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
-    if (ok && mounted) {
-      // Redirecionamento automático via GoRouter
+    if (!mounted) return;
+    if (!ok) {
+      // Show a SnackBar as a redundant error display (the inline error widget
+      // below the form also shows the error, but the SnackBar ensures the user
+      // always sees feedback regardless of scroll position).
+      final errorMsg = ref.read(authProvider).error ??
+          'Usuário ou senha incorretos. Verifique seus dados.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white, size: 18),
+              const SizedBox(width: 10),
+              Expanded(child: Text(errorMsg)),
+            ],
+          ),
+          backgroundColor: AppColors.cancelled,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
   }
 

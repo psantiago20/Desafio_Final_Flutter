@@ -4,15 +4,15 @@ services:
     container_name: omniconnect-db
     restart: always
     environment:
-      POSTGRES_USER: omniconnect
-      POSTGRES_PASSWORD: omniconnect123
-      POSTGRES_DB: omniconnect
+      POSTGRES_USER: ${POSTGRES_USER:-omniconnect}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omniconnect123}
+      POSTGRES_DB: ${POSTGRES_DB:-omniconnect}
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U omniconnect"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,8 +26,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://omniconnect:omniconnect123@postgres:5432/omniconnect
-      - SECRET_KEY=supersecretkeychangeinproduction
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-omniconnect}:${POSTGRES_PASSWORD:-omniconnect123}@postgres:5432/${POSTGRES_DB:-omniconnect}
+      - SECRET_KEY=${SECRET_KEY}
       - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
       - DEBUG=True
       - FAQ_DIR=/app/faq

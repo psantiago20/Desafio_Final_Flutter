@@ -91,13 +91,11 @@ flutter run -d windows # Windows (se estiver no Windows)
 
 ---
 
-## 👥 4. Credenciais de Teste
-
-| Usuário       | Login        | Senha      |
-| :------------ | :----------- | :--------- |
-| Administrador | `admin`      | `admin123` |
-| Paciente      | `joao.silva` | `senha123` |
-| Médico        | `dr.carlos`  | `senha123` |
+| Usuário       | Login            | Senha      |
+| :------------ | :--------------- | :--------- |
+| Administrador | `pedro` ou `admin`| `pedro` ou `admin123` |
+| Médico        | `marina.costa`   | `senha123` |
+| Paciente      | (Cadastre no app)| (Criado no cadastro) |
 
 ---
 

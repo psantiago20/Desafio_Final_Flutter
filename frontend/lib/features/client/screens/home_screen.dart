@@ -970,29 +970,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(height: 24),
 
               statsAsync.when(
-                data: (stats) => GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  childAspectRatio: 1.15,
-                  children: [
-                    _buildStatCard(
-                      context,
-                      title: 'Próximas consultas',
-                      value: stats.pendingAppointments.toString(),
-                      icon: Icons.calendar_today,
-                      iconColor: AppTheme.primaryBlue,
-                    ),
-                    _buildStatCard(
-                      context,
-                      title: 'Exames prontos',
-                      value: stats.completedAppointments.toString(),
-                      icon: Icons.description_outlined,
-                      iconColor: AppTheme.successGreen,
-                    ),
-                  ],
+                data: (stats) => LayoutBuilder(
+                  builder: (context, constraints) {
+                    final cardWidth = (constraints.maxWidth - 12) / 2;
+                    // Keep a comfortable ratio: 36px icon + 8 + value + 1 + label + 20 padding
+                    final cardHeight = (cardWidth * 0.90).clamp(132.0, 165.0);
+                    final ratio = cardWidth / cardHeight;
+                    return GridView.count(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      childAspectRatio: ratio,
+                      children: [
+                        _buildStatCard(
+                          context,
+                          title: 'Próximas consultas',
+                          value: stats.pendingAppointments.toString(),
+                          icon: Icons.calendar_today,
+                          iconColor: AppTheme.primaryBlue,
+                        ),
+                        _buildStatCard(
+                          context,
+                          title: 'Exames prontos',
+                          value: stats.completedAppointments.toString(),
+                          icon: Icons.description_outlined,
+                          iconColor: AppTheme.successGreen,
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, stack) => _buildInlineError(_cleanError(err)),
@@ -1113,55 +1121,73 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 24),
 
-              Text(
-                'Ações Rápidas',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
+              statsAsync.when(
+                data: (stats) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Sinais Vitais Recentes',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Vitals cards fit comfortably in 2x2 grid
+                        final cardWidth = (constraints.maxWidth - 12) / 2;
+                        final cardHeight = (cardWidth * 0.95).clamp(115.0, 160.0);
+                        final ratio = cardWidth / cardHeight;
+                        return GridView.count(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          childAspectRatio: ratio,
+                          children: [
+                            _buildMobileVitalCard(
+                              context,
+                              title: 'Frequência Cardíaca',
+                              value: stats.heartRate,
+                              unit: 'BPM',
+                              icon: Icons.favorite,
+                              color: const Color(0xFFEF4444),
+                            ),
+                            _buildMobileVitalCard(
+                              context,
+                              title: 'Pressão Arterial',
+                              value: stats.bloodPressure,
+                              unit: 'mmHg',
+                              icon: Icons.speed,
+                              color: const Color(0xFF3B82F6),
+                            ),
+                            _buildMobileVitalCard(
+                              context,
+                              title: 'Glicemia',
+                              value: stats.glucose,
+                              unit: 'mg/dL',
+                              icon: Icons.water_drop,
+                              color: const Color(0xFFF59E0B),
+                            ),
+                            _buildMobileVitalCard(
+                              context,
+                              title: 'Temperatura',
+                              value: stats.temperature,
+                              unit: '°C',
+                              icon: Icons.thermostat,
+                              color: const Color(0xFF10B981),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _buildActionCard(
-                    context,
-                    title: 'Agendar',
-                    icon: Icons.calendar_today,
-                    color: AppTheme.primaryBlue,
-                    lightColor: Theme.of(context).colorScheme.primary.withOpacity(0.12),
-                    onTap: () => widget.onNavigate(1),
-                  ),
-                  _buildActionCard(
-                    context,
-                    title: 'Resultados',
-                    icon: Icons.description_outlined,
-                    color: AppTheme.successGreen,
-                    lightColor: AppTheme.successGreenLight,
-                    onTap: () => widget.onNavigate(3),
-                  ),
-                  _buildActionCard(
-                    context,
-                    title: 'Mensagens',
-                    icon: Icons.chat_bubble_outline,
-                    color: const Color(0xFF9333EA),
-                    lightColor: const Color(0xFFF3E8FF),
-                    onTap: () => widget.onNavigate(2),
-                  ),
-                  _buildActionCard(
-                    context,
-                    title: 'Exames',
-                    icon: Icons.description_outlined,
-                    color: AppTheme.successGreen,
-                    lightColor: AppTheme.successGreenLight,
-                    onTap: () => widget.onNavigate(3),
-                  ),
-                ],
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => const SizedBox(),
               ),
             ],
           ),
@@ -1170,6 +1196,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ),
     );
   }
+
   // Stat card matching the web's doctor-dashboard style:
   // decorative circle bleed top-right, FittedBox value, uppercase label.
   Widget _buildStatCard(
@@ -1207,43 +1234,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            // Use compact padding on small screens to prevent vertical overflow
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min, // Keep column tight
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: circleColor,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, color: iconColor, size: 20),
+                  child: Icon(icon, color: iconColor, size: 18),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Text(
                     value,
                     style: GoogleFonts.manrope(
-                      fontSize: 28,
+                      fontSize: 26,
                       fontWeight: FontWeight.w800,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  title.toUpperCase(),
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    letterSpacing: 0.8,
+                const SizedBox(height: 1),
+                Expanded(
+                  child: Text(
+                    title.toUpperCase(),
+                    style: GoogleFonts.inter(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      letterSpacing: 0.5,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -1253,52 +1284,116 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildActionCard(
+  Widget _buildMobileVitalCard(
     BuildContext context, {
     required String title,
+    required String? value,
+    required String unit,
     required IconData icon,
     required Color color,
-    required Color lightColor,
-    required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
+    final bool hasValue = value != null && value.isNotEmpty;
+    final circleColor = color.withValues(alpha: 0.12);
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -12,
+            top: -12,
+            child: Container(
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
-                color: lightColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: GoogleFonts.manrope(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: circleColor,
+                shape: BoxShape.circle,
               ),
             ),
-          ],
-        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Top Row: icon
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: circleColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 16),
+                ),
+                const SizedBox(height: 8),
+                // Value and Unit
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              hasValue ? value : '--',
+                              style: GoogleFonts.manrope(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            if (hasValue) ...[
+                              const SizedBox(width: 4),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 3),
+                                child: Text(
+                                  unit,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: color,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        title.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          letterSpacing: 0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

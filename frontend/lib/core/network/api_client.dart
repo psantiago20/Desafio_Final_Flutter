@@ -177,8 +177,17 @@ class ApiClient {
     }
 
     if (response.statusCode == 401) {
-      Future.microtask(() => onUnauthorized?.call());
-      throw ApiException(statusCode: 401, message: 'Sua sessão expirou ou os dados de acesso estão incorretos.');
+      // Only trigger the global logout if there is already an active token
+      // (i.e. the session expired). If _token is null, this is a fresh login
+      // attempt with wrong credentials – we must NOT clear auth state here,
+      // otherwise the error message set by the login flow is immediately wiped.
+      if (_token != null) {
+        Future.microtask(() => onUnauthorized?.call());
+      }
+      throw ApiException(
+        statusCode: 401,
+        message: 'Usuário ou senha incorretos. Verifique seus dados e tente novamente.',
+      );
     }
 
     if (response.statusCode == 403) {

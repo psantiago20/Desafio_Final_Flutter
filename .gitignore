@@ -78,28 +78,12 @@ scratch/*
 !scratch/.gitkeep
 
 # Development and Debug Utilities
-backend/scripts/check_db.py
-backend/scripts/check_messages.py
-backend/scripts/debug_api.py
-backend/scripts/debug_whatsapp.py
-backend/scripts/diagnostic.py
-backend/scripts/test_notifications.py
-backend/scripts/test_rag.py
-backend/scripts/test_template.py
-backend/scripts/test_wa_direct.py
-backend/scripts/verify_phone.py
-backend/scripts/verify_whatsapp.py
-
-!frontend/lib/
+backend/scratch/
+backend/static/exams/
 
 # Ignorar templates visuais
 docs/templates-sua-consulta/
 
-# Scratch and local dev
-backend/scratch/
-
-# Backend static files
-backend/static/exams/
-
-# Local scripts
+# Test credentials documentation
+credentials_test.md
 

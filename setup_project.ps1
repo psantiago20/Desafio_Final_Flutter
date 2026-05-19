@@ -99,7 +99,7 @@ Write-Host "━━━━━━━━━━━━━━━━━━━━━━�
 Write-Host "`nPara rodar o aplicativo agora, use:" -ForegroundColor $Blue
 Write-Host "  cd frontend; flutter run -d chrome" -ForegroundColor $Yellow
 Write-Host "`nCredenciais de teste:" -ForegroundColor $Blue
-Write-Host "  - Médico: dr.carlos / senha123"
+Write-Host "  - Médico: marina.costa / senha123"
 Write-Host "  - Admin: admin / admin123"
-Write-Host "  - Paciente: joao.silva / senha123"
+Write-Host "  - Paciente: (Cadastre-se na tela inicial)"
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor $Green

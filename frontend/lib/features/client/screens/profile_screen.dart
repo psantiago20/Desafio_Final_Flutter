@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/custom_app_bar.dart';
@@ -362,30 +363,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Logout
-          SizedBox(
-            width: double.infinity,
-            child: TextButton.icon(
-              onPressed: () {
-                ref.read(authProvider.notifier).logout();
-                context.go('/login');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Sessão encerrada com sucesso.')),
-                );
-              },
-              icon: const Icon(Icons.logout),
-              label: const Text('Sair da Conta'),
-              style: TextButton.styleFrom(
-                backgroundColor: AppTheme.alertRedLight,
-                foregroundColor: AppTheme.alertRed,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          const SizedBox(height: 24),
+
+          // ── Sair — só visível no app mobile (web tem o menu lateral) ──────
+          if (!kIsWeb) ...[
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.logout_rounded, size: 20),
+                label: const Text('Sair da conta'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.alertRed,
+                  side: BorderSide(color: AppTheme.alertRed.withOpacity(0.5)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
+                onPressed: () => _confirmLogout(context),
               ),
             ),
-          ),
-          SizedBox(height: 24),
+            const SizedBox(height: 16),
+          ],
+
           Center(
             child: Text(
               'Sua Consulta v1.0.0',
@@ -409,6 +409,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.logout_rounded, color: AppTheme.alertRed, size: 24),
+            const SizedBox(width: 12),
+            const Text('Sair da conta'),
+          ],
+        ),
+        content: const Text('Tem certeza que deseja sair? Você precisará fazer login novamente.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.alertRed),
+            child: Text(
+              'Sair',
+              style: GoogleFonts.manrope(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      ref.read(authProvider.notifier).logout();
+      if (mounted) context.go('/login');
+    }
   }
 
   Widget _buildInfoTile(IconData icon, String title, String value, {Color? iconColor}) {
