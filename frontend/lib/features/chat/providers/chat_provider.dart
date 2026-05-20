@@ -405,6 +405,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final url = Uri.parse('${AppConstants.baseUrl}/api/rag/upload-exam');
       var request = http.MultipartRequest('POST', url);
       request.fields['wa_from'] = waFrom;
+
+      final token = TokenStorage.getToken();
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
       request.files.add(
         http.MultipartFile.fromBytes('file', bytes, filename: fileName),
       );
@@ -418,29 +424,49 @@ class ChatNotifier extends StateNotifier<ChatState> {
           text: data['message'] ?? 'Exame processado com sucesso!',
           isMe: false,
         );
+        final cleanMessages = state.messages
+            .where((m) => !m.text.contains('Enviando exame'))
+            .toList();
+        final cleanIsis = state.isisMessages
+            .where((m) => !m.text.contains('Enviando exame'))
+            .toList();
         state = state.copyWith(
-          messages: [...state.messages, aiMessage],
-          isisMessages: [...state.isisMessages, aiMessage],
+          messages: [...cleanMessages, aiMessage],
+          isisMessages: [...cleanIsis, aiMessage],
           isLoading: false,
         );
         fetchMessages(); // Não dar await aqui para liberar a UI
       } else {
+        final cleanMessages = state.messages
+            .where((m) => !m.text.contains('Enviando exame'))
+            .toList();
+        final cleanIsis = state.isisMessages
+            .where((m) => !m.text.contains('Enviando exame'))
+            .toList();
         final errorMessage = ChatMessage(
           text: 'Erro ao enviar o exame. Tente novamente.',
           isMe: false,
         );
         state = state.copyWith(
-          messages: [...state.messages, errorMessage],
+          messages: [...cleanMessages, errorMessage],
+          isisMessages: [...cleanIsis, errorMessage],
           isLoading: false,
         );
       }
     } catch (e) {
+      final cleanMessages = state.messages
+          .where((m) => !m.text.contains('Enviando exame'))
+          .toList();
+      final cleanIsis = state.isisMessages
+          .where((m) => !m.text.contains('Enviando exame'))
+          .toList();
       final errorMessage = ChatMessage(
         text: 'Erro ao enviar a imagem: $e',
         isMe: false,
       );
       state = state.copyWith(
-        messages: [...state.messages, errorMessage],
+        messages: [...cleanMessages, errorMessage],
+        isisMessages: [...cleanIsis, errorMessage],
         isLoading: false,
       );
     }
