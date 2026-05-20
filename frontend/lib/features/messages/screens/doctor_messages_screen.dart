@@ -84,6 +84,16 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
       for (final m in msgs) {
         final patientId = m['patient_id'];
         if (patientId != null) {
+          final source = m['source'];
+
+          // Para pacientes reais (diferentes da Isis/ID 15), só consideramos mensagens da conversa direta médico-paciente
+          if (patientId != 15) {
+            final isDoctorMessage = m['sender_id'] == currentUserId || source == 'app_doctor';
+            if (!isDoctorMessage) {
+              continue;
+            }
+          }
+
           final patient = m['patient'];
           final name = patient != null ? patient['name'] : 'Paciente $patientId';
           
@@ -105,12 +115,11 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
             };
           }
           
-          // Contagem de não lidas (qualquer mensagem não lida vinda do paciente ou whatsapp)
+          // Contagem de não lidas
           final isFromMe = m['sender_id'] == currentUserId;
           final isRead = m['is_read'] == true;
-          final source = m['source'];
           
-          if (!isRead && !isFromMe && (source == 'app_doctor' || source == 'whatsapp' || m['sender_id'] != null)) {
+          if (!isRead && !isFromMe) {
             conversations[patientId]!['unreadCount'] = (conversations[patientId]!['unreadCount'] as int) + 1;
           }
         }
@@ -200,15 +209,32 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
       }
 
       setState(() {
-        _messagesByPatient[patientId] = msgs.map((m) {
+        final filteredMsgs = patientId == 0
+            ? msgs
+            : msgs.where((m) {
+                final source = m['source'];
+                final isDoctorMessage = m['sender_id'] == currentUserId || source == 'app_doctor';
+                return isDoctorMessage;
+              }).toList();
+
+        _messagesByPatient[patientId] = filteredMsgs.map((m) {
           final content = m['content'];
           final waFrom = m['wa_from'];
           final senderId = m['sender_id'];
           
           String sender = 'patient';
-          if (waFrom == 'isis_ia' || m['source'] == 'system' || m['source'] == 'bot') {
+          final source = m['source'];
+          // Mensagens da Isis/IA: qualquer source de IA ou wa_from isis_ia
+          final isIsisMessage = waFrom == 'isis_ia' ||
+              source == 'system' ||
+              source == 'bot' ||
+              source == 'ai';
+          // Mensagens do médico: enviadas pelo médico logado
+          final isDoctorMessage = senderId == currentUserId;
+
+          if (isIsisMessage) {
             sender = 'isis';
-          } else if (senderId == currentUserId) {
+          } else if (isDoctorMessage) {
             sender = 'doctor';
           } else if (patientId == 0) {
             sender = 'doctor';
@@ -541,7 +567,7 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
                             children: [
                               if (!isDesktop || !_isSidebarOpen)
                                 IconButton(
-                                  icon: const Icon(Icons.menu),
+                                  icon: Icon(isDesktop ? Icons.menu : Icons.arrow_back),
                                   onPressed: _toggleSidebar,
                                   color: AppColors.textPrimary,
                                 ),
@@ -599,16 +625,17 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
                                 final isDoctor = sender == 'doctor';
                                 final isIsis = sender == 'isis';
                                 final isPatient = sender == 'patient';
+                                final isOutgoing = isDoctor || (isIsis && _selectedPatientId != 0);
 
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 16.0),
                                   child: Row(
-                                    mainAxisAlignment: isDoctor
+                                    mainAxisAlignment: isOutgoing
                                         ? MainAxisAlignment.end
                                         : MainAxisAlignment.start,
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      if (!isDoctor) ...[
+                                      if (!isOutgoing) ...[
                                         CircleAvatar(
                                           radius: 16,
                                           backgroundColor: isIsis
@@ -638,19 +665,21 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
                                           decoration: BoxDecoration(
                                             color: isDoctor
                                                 ? AppTheme.primaryBlueDark
-                                                : AppColors.surface,
+                                                : (isIsis && _selectedPatientId != 0)
+                                                    ? AppColors.primary
+                                                    : AppColors.surface,
                                             borderRadius:
                                                 BorderRadius.circular(
                                                   16,
                                                 ).copyWith(
-                                                  bottomRight: isDoctor
+                                                  bottomRight: isOutgoing
                                                       ? const Radius.circular(0)
                                                       : null,
-                                                  bottomLeft: !isDoctor
+                                                  bottomLeft: !isOutgoing
                                                       ? const Radius.circular(0)
                                                       : null,
                                                 ),
-                                            border: isDoctor
+                                            border: isOutgoing
                                                 ? null
                                                 : Border.all(
                                                     color: AppColors.border,
@@ -659,14 +688,14 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
                                               BoxShadow(
                                                 color: Colors.black.withOpacity(
                                                   0.05,
-                                                ),
+                                                  ),
                                                 blurRadius: 5,
                                                 offset: const Offset(0, 2),
                                               ),
                                             ],
                                           ),
                                           child: Column(
-                                            crossAxisAlignment: isDoctor
+                                            crossAxisAlignment: isOutgoing
                                                 ? CrossAxisAlignment.end
                                                 : CrossAxisAlignment.start,
                                             children: [
@@ -679,7 +708,7 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.bold,
                                                     color: isIsis
-                                                        ? AppColors.primary
+                                                        ? (isOutgoing ? Colors.white70 : AppColors.primary)
                                                         : AppColors.textSecondary,
                                                   ),
                                                 ),
@@ -687,7 +716,7 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
                                               Text(
                                                 msg['text'],
                                                 style: TextStyle(
-                                                  color: isDoctor
+                                                  color: isOutgoing
                                                       ? Colors.white
                                                       : AppColors.textPrimary,
                                                 ),
@@ -697,7 +726,7 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
                                                 msg['time'],
                                                 style: TextStyle(
                                                   fontSize: 10,
-                                                  color: isDoctor
+                                                  color: isOutgoing
                                                       ? Colors.white70
                                                       : AppColors.textHint,
                                                 ),
@@ -706,14 +735,15 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
                                           ),
                                         ),
                                       ),
-                                      if (isDoctor) ...[
+                                      if (isOutgoing) ...[
                                         const SizedBox(width: 8),
                                         CircleAvatar(
                                           radius: 16,
-                                          backgroundColor:
-                                              AppTheme.primaryBlueDark,
-                                          child: const Icon(
-                                            Icons.local_hospital,
+                                          backgroundColor: isDoctor
+                                              ? AppTheme.primaryBlueDark
+                                              : AppColors.primary,
+                                          child: Icon(
+                                            isDoctor ? Icons.local_hospital : Icons.smart_toy,
                                             size: 16,
                                             color: Colors.white,
                                           ),

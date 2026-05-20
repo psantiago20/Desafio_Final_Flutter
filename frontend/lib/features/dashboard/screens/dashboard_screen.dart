@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,12 +22,13 @@ import 'package:frontend/shared/models/dashboard_stats_model.dart';
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
+  static final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  int _selectedNavIndex = 0;
   String _selectedFilter = 'Todos';
   int? _selectedChatPatientId;
   String? _selectedChatPatientName;
@@ -43,9 +45,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   static const Color _primary = Color(0xFF003D9B);
   static const Color _primaryContainer = Color(0xFF0052CC);
   static const Color _primaryFixed = Color(0xFFDAE2FF);
-  static const Color _secondaryFixed = Color(0xFF86F8C8);
-  static const Color _onSecondaryFixed = Color(0xFF007352);
-  static const Color _tertiaryFixed = Color(0xFFFFDBCF);
+  static const Color _onPrimaryFixed = Color(0xFF001947);
   static const Color _tertiary = Color(0xFF7B2600);
 
   @override
@@ -53,11 +53,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     ref.watch(appointmentsLiveSyncProvider);
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 768;
+    final useGlobalTopBar = kIsWeb || isDesktop;
 
     final user = ref.watch(authProvider).user;
     final statsAsync = ref.watch(dashboardStatsProvider);
     final todayAsync = ref.watch(appointmentsListProvider);
-    final selectedNavIndex = isDesktop ? ref.watch(doctorNavIndexProvider) : _selectedNavIndex;
+    final selectedNavIndex = ref.watch(doctorNavIndexProvider);
 
     // Mobile nav maps 5 bottom tabs → doctorNavIndexProvider values
     // 0=Dashboard, 1=Consultas, 2=Prontuários, 3=Mensagens, 5=Perfil
@@ -65,17 +66,47 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final mobileNavIdx = mobileNavToDocIndex.indexOf(selectedNavIndex).clamp(0, 4);
 
     return Scaffold(
+      key: DashboardScreen.scaffoldKey,
       backgroundColor: _bg,
+      drawer: (kIsWeb && !isDesktop)
+          ? Drawer(
+              width: 280,
+              child: DoctorSidebar(selectedIndex: selectedNavIndex),
+            )
+          : null,
       body: Row(
         children: [
           if (isDesktop) DoctorSidebar(selectedIndex: selectedNavIndex),
           Expanded(
-            child: _buildMainContent(isDesktop, user?.displayName ?? '', statsAsync, todayAsync, selectedNavIndex),
+            child: useGlobalTopBar
+                ? Column(
+                    children: [
+                      _buildTopBar(isDesktop, user?.displayName ?? '', selectedNavIndex),
+                      Expanded(
+                        child: _buildMainContent(
+                          isDesktop,
+                          user?.displayName ?? '',
+                          statsAsync,
+                          todayAsync,
+                          selectedNavIndex,
+                          excludeTopBar: true,
+                        ),
+                      ),
+                    ],
+                  )
+                : _buildMainContent(
+                    isDesktop,
+                    user?.displayName ?? '',
+                    statsAsync,
+                    todayAsync,
+                    selectedNavIndex,
+                    excludeTopBar: false,
+                  ),
           ),
         ],
       ),
       // Mobile bottom navigation bar (hidden on desktop/web)
-      bottomNavigationBar: isDesktop
+      bottomNavigationBar: (kIsWeb || isDesktop)
           ? null
           : NavigationBar(
               selectedIndex: mobileNavIdx,
@@ -119,7 +150,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildMainContent(bool isDesktop, String name, AsyncValue<DashboardStats> statsAsync, AsyncValue<List<AppointmentModel>> todayAsync, int selectedNavIndex) {
+  String _pageTitle(int index) {
+    switch (index) {
+      case 0:
+        return 'Sua Consulta';
+      case 1:
+        return 'Consultas';
+      case 2:
+        return 'Prontuários';
+      case 3:
+        return 'Conversas';
+      case 5:
+        return 'Perfil';
+      case 6:
+        return 'Financeiro';
+      default:
+        return 'Sua Consulta';
+    }
+  }
+
+  Widget _buildMainContent(
+    bool isDesktop,
+    String name,
+    AsyncValue<DashboardStats> statsAsync,
+    AsyncValue<List<AppointmentModel>> todayAsync,
+    int selectedNavIndex, {
+    required bool excludeTopBar,
+  }) {
     if (selectedNavIndex == 1) {
       return const AppointmentsScreen();
     }
@@ -147,6 +204,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             'Página em desenvolvimento',
             style: GoogleFonts.manrope(fontSize: 24, color: _onSurfaceVariant),
           ),
+        ),
+      );
+    }
+
+    if (excludeTopBar) {
+      return RefreshIndicator(
+        color: _primary,
+        onRefresh: () async {
+          ref.invalidate(dashboardStatsProvider);
+          ref.invalidate(todayAppointmentsProvider);
+        },
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.only(
+                top: 24, // Reduced from 88 because topbar is not floating
+                left: isDesktop ? 40 : 24,
+                right: isDesktop ? 40 : 24,
+                bottom: 32,
+              ),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  _buildHeader(name),
+                  const SizedBox(height: 32),
+                  statsAsync.when(
+                    data: (stats) => _buildStatsGrid(stats, isDesktop),
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => Center(child: Text('Erro: $e')),
+                  ),
+                  const SizedBox(height: 48),
+                  _buildAppointmentsSection(todayAsync, isDesktop),
+                ]),
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -185,16 +277,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ],
           ),
         ),
-        _buildTopBar(isDesktop, name),
+        _buildTopBar(isDesktop, name, selectedNavIndex),
       ],
     );
   }
 
-  Widget _buildTopBar(bool isDesktop, String name) {
+  Widget _buildTopBar(bool isDesktop, String name, int selectedNavIndex) {
     return Container(
       height: 64,
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 40 : 24),
+      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 40 : (kIsWeb ? 16 : 24)),
       decoration: BoxDecoration(
         color: _bg.withOpacity(0.8),
         boxShadow: const [
@@ -211,28 +303,38 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Row(
             children: [
               if (!isDesktop) ...[
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: const BoxDecoration(
-                    color: _primaryFixed,
-                    shape: BoxShape.circle,
+                if (kIsWeb) ...[
+                  IconButton(
+                    icon: const Icon(Icons.menu, color: _onSurfaceVariant),
+                    onPressed: () {
+                      DashboardScreen.scaffoldKey.currentState?.openDrawer();
+                    },
+                    splashRadius: 24,
                   ),
-                  child: Center(
-                    child: Text(
-                      'S',
-                      style: GoogleFonts.manrope(
-                        fontWeight: FontWeight.bold,
-                        color: _primary,
-                        fontSize: 14,
+                ] else ...[
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      color: _primaryFixed,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        'S',
+                        style: GoogleFonts.manrope(
+                          fontWeight: FontWeight.bold,
+                          color: _primary,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
                 const SizedBox(width: 12),
               ],
               Text(
-                'Sua Consulta',
+                _pageTitle(selectedNavIndex),
                 style: GoogleFonts.manrope(
                   fontSize: isDesktop ? 20 : 18,
                   fontWeight: FontWeight.w800,
@@ -636,11 +738,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             alignment: Alignment.centerRight,
             child: InkWell(
               onTap: () {
-                if (isDesktop) {
-                  ref.read(doctorNavIndexProvider.notifier).state = 1;
-                } else {
-                  setState(() => _selectedNavIndex = 1);
-                }
+                ref.read(doctorNavIndexProvider.notifier).state = 1;
               },
               borderRadius: BorderRadius.circular(8),
               child: Padding(

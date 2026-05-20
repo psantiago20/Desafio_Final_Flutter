@@ -44,6 +44,35 @@ def seed_users(db: Session):
             "full_name": "Administrador do Sistema",
             "role": UserRole.ADMIN.value,
             "password": admin_password
+                },
+                # 4 Médicos
+                {
+                    "email": "marina.costa@suaconsulta.com",
+                    "username": "marina.costa",
+                    "full_name": "Dra. Marina Costa",
+                    "role": UserRole.DOCTOR.value,
+                    "password": default_password
+                },
+                {
+                    "email": "thorne.blackwood@suaconsulta.com",
+                    "username": "thorne.blackwood",
+                    "full_name": "Dr. Thorne Blackwood",
+                    "role": UserRole.DOCTOR.value,
+                    "password": default_password
+                },
+                {
+                    "email": "ana.costa@suaconsulta.com",
+                    "username": "ana.costa",
+                    "full_name": "Dra. Ana Costa",
+                    "role": UserRole.DOCTOR.value,
+                    "password": default_password
+                },
+                {
+                    "email": "ricardo.mello@suaconsulta.com",
+                    "username": "ricardo.mello",
+                    "full_name": "Dr. Ricardo Mello",
+                    "role": UserRole.DOCTOR.value,
+                    "password": default_password
         }
     ]
     
@@ -59,37 +88,6 @@ def seed_users(db: Session):
             "role": UserRole.ADMIN.value,
             "password": name  # Senha dinâmica idêntica ao login
         })
-
-        # 4 Médicos
-        {
-            "email": "marina.costa@suaconsulta.com",
-            "username": "marina.costa",
-            "full_name": "Dra. Marina Costa",
-            "role": UserRole.DOCTOR.value,
-            "password": default_password
-        },
-        {
-            "email": "thorne.blackwood@suaconsulta.com",
-            "username": "thorne.blackwood",
-            "full_name": "Dr. Thorne Blackwood",
-            "role": UserRole.DOCTOR.value,
-            "password": default_password
-        },
-        {
-            "email": "ana.costa@suaconsulta.com",
-            "username": "ana.costa",
-            "full_name": "Dra. Ana Costa",
-            "role": UserRole.DOCTOR.value,
-            "password": default_password
-        },
-        {
-            "email": "ricardo.mello@suaconsulta.com",
-            "username": "ricardo.mello",
-            "full_name": "Dr. Ricardo Mello",
-            "role": UserRole.DOCTOR.value,
-            "password": default_password
-        }
-    ]
     
     users = {}
     for u_data in users_data:

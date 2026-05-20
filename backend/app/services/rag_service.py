@@ -117,12 +117,22 @@ langchain_tools = [
 
 class RAGService:
     def __init__(self):
+        # Define patient tools to prevent the patient assistant LLM from having access to sensitive tools
+        patient_tools = [
+            buscar_faq_tool, 
+            buscar_medico_tool, 
+            buscar_horarios_tool, 
+            agendar_consulta_tool, 
+            cancelar_consulta_tool, 
+            buscar_agendamentos_tool
+        ]
+
         # Configuração de Modelos (Upgrade para 70B para garantir estabilidade nas ferramentas)
         if settings.GROQ_API_KEY:
-            self.llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=settings.GROQ_API_KEY, temperature=0.1, max_tokens=600).bind_tools(langchain_tools)
+            self.llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=settings.GROQ_API_KEY, temperature=0.1, max_tokens=600).bind_tools(patient_tools)
             self.llm_base = ChatGroq(model="llama-3.3-70b-versatile", api_key=settings.GROQ_API_KEY, temperature=0.1, max_tokens=600)
         else:
-            self.llm = ChatNVIDIA(model="meta/llama-3.1-8b-instruct", nvidia_api_key=settings.NVIDIA_API_KEY, temperature=0.1).bind_tools(langchain_tools)
+            self.llm = ChatNVIDIA(model="meta/llama-3.1-8b-instruct", nvidia_api_key=settings.NVIDIA_API_KEY, temperature=0.1).bind_tools(patient_tools)
             self.llm_base = ChatNVIDIA(model="meta/llama-3.1-8b-instruct", nvidia_api_key=settings.NVIDIA_API_KEY, temperature=0.1)
 
         self._setup_graph()
@@ -240,7 +250,10 @@ class RAGService:
 
             # Vincula apenas as ferramentas relevantes para o médico
             doctor_tools = [buscar_consultas_medico_tool, buscar_info_paciente_tool, agendar_consulta_tool]
-            doctor_llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=settings.GROQ_API_KEY, temperature=0.1, max_tokens=400).bind_tools(doctor_tools)
+            if settings.GROQ_API_KEY:
+                doctor_llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=settings.GROQ_API_KEY, temperature=0.1, max_tokens=400).bind_tools(doctor_tools)
+            else:
+                doctor_llm = ChatNVIDIA(model="meta/llama-3.1-8b-instruct", nvidia_api_key=settings.NVIDIA_API_KEY, temperature=0.1).bind_tools(doctor_tools)
             
             patient_id = state.get("patient_id")
             sys_prompt = (
@@ -270,12 +283,13 @@ class RAGService:
                 "Você é a Isis, assistente virtual doce, prestativa e organizada da clínica. ✨\n"
                 f"O usuário está LOGADO. Nome: {user_name or 'Paciente'}. ID do Paciente: {patient_id or 'desconhecido'}.\n"
                 "Sempre trate o paciente pelo nome. Como ele está logado, você JÁ TEM acesso aos agendamentos dele via ferramenta `buscar_agendamentos`. NÃO peça CPF.\n"
-                "Sempre comece a conversa se identificando: 'Oi! Sou a Isis, assistente virtual da clínica.' se for a primeira mensagem.\n"
-                "REGRA DE OURO: Você SÓ fala sobre assuntos da clínica (médicos, horários, exames, convênios e saúde).\n"
+                "REGRA DE OURO 1: Você SÓ fala sobre assuntos da clínica (médicos, horários, exames, convênios e saúde).\n"
+                "REGRA DE OURO 2: Os resultados das ferramentas SÃO INVISÍVEIS para o paciente! Você DEVE ler os dados retornados e ESCREVÊ-LOS na sua resposta.\n"
+                "REGRA DE OURO 3: Quando listar médicos, especialidades ou horários, você DEVE sempre usar formato de tópicos (bullet points) com marcadores, um por linha.\n"
+                "REGRA DE OURO 4: NUNCA invente ou presuma informações sobre pagamentos, parcelamentos, convênios ou políticas da clínica se não estiverem EXPLICITAMENTE escritas nos dados das ferramentas. Se os dados não mencionarem parcelamento, diga EXATAMENTE: 'Desculpe, não tenho as opções de parcelamento aqui. Por favor, fale com nossa recepção! ✨'. NUNCA assuma que 'não parcela'.\n"
                 "Se o usuário pedir para cancelar uma consulta, use a ferramenta de cancelar_consulta. Se pedir para remarcar, cancele a anterior e agende a nova.\n"
-                "Se o usuário perguntar sobre QUALQUER outro assunto (esportes, política, notícias, etc), negue educadamente e diga que você está aqui apenas para ajudar com os atendimentos da clínica.\n"
-                "Responda sempre baseada nos dados das ferramentas. Se não houver dados, peça para falar com a recepção. ✨\n"
-                "REGRA CRÍTICA: Se uma ferramenta pedir um CPF e você não souber o do paciente, NÃO invente um número! Como ele está logado, use o patient_id na ferramenta `buscar_agendamentos`."
+                "Se o usuário perguntar sobre QUALQUER outro assunto, negue educadamente.\n"
+                "REGRA CRÍTICA: Se uma ferramenta pedir um CPF e você não souber o do paciente, NÃO invente um número! Use o patient_id."
             )
             active_doc = state.get("active_doctor_name")
             active_id = state.get("active_doctor_id")
@@ -306,7 +320,7 @@ class RAGService:
         if any(k in query for k in ["valor", "preço", "quanto", "custo"]):
             logger.info("[Force Search] Intenção de VALOR detectada.")
             args = {"nome": state.get("active_doctor_name")} if target_id else {}
-            res = execute_tool("buscar_medico", args, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
+            res = execute_tool("buscar_medico", args, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"), user_role=state.get("user_role"))
             tid = f"m_{uuid.uuid4().hex[:4]}"
             return {"messages": [
                 AIMessage(content="", tool_calls=[{"name": "buscar_medico_tool", "args": args, "id": tid}]),
@@ -319,8 +333,8 @@ class RAGService:
             
             # Se a dúvida for sobre CONVÊNIOS, buscamos nos MÉDICOS primeiro (onde estão os dados reais)
             if "convênio" in query or "convenio" in query:
-                res_medicos = execute_tool("buscar_medico", {}, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
-                res_faq = execute_tool("buscar_faq", {"pergunta": "Quais os convênios aceitos?"}, db, wa_from=state["wa_from"])
+                res_medicos = execute_tool("buscar_medico", {}, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"), user_role=state.get("user_role"))
+                res_faq = execute_tool("buscar_faq", {"pergunta": "Quais os convênios aceitos?"}, db, wa_from=state["wa_from"], user_role=state.get("user_role"))
                 
                 # Agregamos os dois para uma resposta completa
                 tid_m, tid_f = f"m_{uuid.uuid4().hex[:4]}", f"f_{uuid.uuid4().hex[:4]}"
@@ -337,7 +351,7 @@ class RAGService:
 
             # Se for apenas parcelamento
             pergunta = "Formas de pagamento e parcelamento?" if "parcela" in query else "Formas de pagamento?"
-            res = execute_tool("buscar_faq", {"pergunta": pergunta}, db, wa_from=state["wa_from"])
+            res = execute_tool("buscar_faq", {"pergunta": pergunta}, db, wa_from=state["wa_from"], user_role=state.get("user_role"))
             if not res or "Nenhuma informação" in res or len(res) < 15:
                 return {"messages": [AIMessage(content="Não tenho os detalhes de parcelamento aqui. 😅 Por favor, fale com nossa recepção! ✨")]}
             tid = f"f_{uuid.uuid4().hex[:4]}"
@@ -356,13 +370,13 @@ class RAGService:
                 for i, m in enumerate(medicos):
                     tid = f"b{i}_{uuid.uuid4().hex[:4]}"
                     args = {"medico_id": m.id}
-                    res = execute_tool("buscar_horarios", args, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
+                    res = execute_tool("buscar_horarios", args, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"), user_role=state.get("user_role"))
                     tool_calls.append({"name": "buscar_horarios_tool", "args": args, "id": tid})
                     messages.append(ToolMessage(tool_call_id=tid, content=res, name="buscar_horarios_tool"))
                 return {"messages": [AIMessage(content="", tool_calls=tool_calls)] + messages}
             
             args = {"medico_id": target_id}
-            res = execute_tool("buscar_horarios", args, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
+            res = execute_tool("buscar_horarios", args, db, wa_from=state["wa_from"], patient_id=state.get("patient_id"), user_role=state.get("user_role"))
             tid = f"c_{uuid.uuid4().hex[:4]}"
             return {"messages": [
                 AIMessage(content="", tool_calls=[{"name": "buscar_horarios_tool", "args": args, "id": tid}]),
@@ -373,7 +387,7 @@ class RAGService:
         if any(k in query for k in ['médico', 'medico', 'doutor', 'dra', 'dr', 'especialista']):
             nome_medico = state.get("active_doctor_name")
             args = {"nome": nome_medico} if nome_medico else {}
-            res = execute_tool("buscar_medico", args, db, wa_from=state["wa_from"])
+            res = execute_tool("buscar_medico", args, db, wa_from=state["wa_from"], user_role=state.get("user_role"))
             tid = f"m_{uuid.uuid4().hex[:4]}"
             return {"messages": [
                 AIMessage(content="", tool_calls=[{"name": "buscar_medico_tool", "args": args, "id": tid}]),
@@ -387,7 +401,14 @@ class RAGService:
         results = []
         db = config["configurable"].get("db")
         for tc in last_msg.tool_calls:
-            res = execute_tool(tc["name"].replace("_tool",""), tc["args"], db, wa_from=state["wa_from"], patient_id=state.get("patient_id"))
+            res = execute_tool(
+                tc["name"].replace("_tool",""), 
+                tc["args"], 
+                db, 
+                wa_from=state["wa_from"], 
+                patient_id=state.get("patient_id"), 
+                user_role=state.get("user_role")
+            )
             results.append(ToolMessage(tool_call_id=tc["id"], content=str(res)))
         # Incrementa loop_count aqui, pois o nó é persistido no estado do LangGraph!
         return {"messages": results, "loop_count": state.get("loop_count", 0) + 1}

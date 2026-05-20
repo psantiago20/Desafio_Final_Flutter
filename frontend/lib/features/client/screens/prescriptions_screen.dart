@@ -91,7 +91,7 @@ class _PrescriptionsScreenState extends ConsumerState<PrescriptionsScreen> {
                             allItems.add({
                               'type': 'appointment',
                               'doctor': a.doctorName,
-                              'date': a.appointmentDate,
+                              'date': a.updatedAt,
                               'html': a.prescriptionHtml,
                               'id': a.id,
                             });

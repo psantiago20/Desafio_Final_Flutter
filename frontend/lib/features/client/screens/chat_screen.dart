@@ -244,37 +244,39 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ref.read(chatProvider.notifier).setActiveChat('isis');
                         },
                       ),
-                      ListTile(
-                        leading: doctorPhotoUrl != null
-                            ? CircleAvatar(
-                                backgroundImage: NetworkImage(doctorPhotoUrl!),
+                      // Só exibe o atendimento humano se o médico tiver enviado mensagens
+                      if (chatState.doctorMessages.isNotEmpty)
+                        ListTile(
+                          leading: doctorPhotoUrl != null
+                              ? CircleAvatar(
+                                  backgroundImage: NetworkImage(doctorPhotoUrl!),
+                                )
+                              : const CircleAvatar(
+                                  backgroundColor: Colors.green,
+                                  child: Text('M', style: TextStyle(color: Colors.white)),
+                                ),
+                          title: Text(doctorName),
+                          subtitle: Text(
+                            chatState.lastDoctorMessage ?? 'Atendimento Humano',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          ),
+                          trailing: chatState.doctorUnreadCount > 0 
+                            ? Badge(
+                                label: Text(chatState.doctorUnreadCount.toString()),
+                                backgroundColor: Colors.red,
                               )
-                            : const CircleAvatar(
-                                backgroundColor: Colors.green,
-                                child: Text('M', style: TextStyle(color: Colors.white)),
-                              ),
-                        title: Text(doctorName),
-                        subtitle: Text(
-                          chatState.lastDoctorMessage ?? 'Atendimento Humano',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            : null,
+                          selected: _selectedChat == 'doctor',
+                          selectedTileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          onTap: () {
+                            setState(() {
+                              _selectedChat = 'doctor';
+                            });
+                            ref.read(chatProvider.notifier).setActiveChat('doctor');
+                          },
                         ),
-                        trailing: chatState.doctorUnreadCount > 0 
-                          ? Badge(
-                              label: Text(chatState.doctorUnreadCount.toString()),
-                              backgroundColor: Colors.red,
-                            )
-                          : null,
-                        selected: _selectedChat == 'doctor',
-                        selectedTileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        onTap: () {
-                          setState(() {
-                            _selectedChat = 'doctor';
-                          });
-                          ref.read(chatProvider.notifier).setActiveChat('doctor');
-                        },
-                      ),
                     ],
                   ),
                 ),
@@ -368,12 +370,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     label: 'Isis IA',
                     icon: Icons.smart_toy_outlined,
                     value: 'isis',
+                    badgeCount: chatState.isisUnreadCount,
                   ),
                   _mobileTab(
                     label: 'Médico',
                     icon: Icons.person_outlined,
                     value: 'doctor',
-                    badgeCount: chatState.totalUnreadCount,
+                    badgeCount: chatState.doctorUnreadCount,
                   ),
                 ],
               ),
@@ -480,7 +483,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final isSelected = _selectedChat == value;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedChat = value),
+        onTap: () {
+          setState(() => _selectedChat = value);
+          ref.read(chatProvider.notifier).setActiveChat(value);
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           margin: const EdgeInsets.all(4),

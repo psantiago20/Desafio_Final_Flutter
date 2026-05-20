@@ -37,14 +37,19 @@ def list_messages(
         if patient_id:
             query = query.filter(Message.patient_id == patient_id)
             
-        # Garante que o médico só veja:
-        # 1. Mensagens que têm um remetente ou destinatário definido
-        # Isso esconde a conversa privada do paciente com a IA (onde ambos são null)
-        query = query.filter((Message.sender_id.isnot(None)) | (Message.receiver_id.isnot(None)))
-        
         # Se for especificamente o chat da Isis (ID 15), filtra apenas o histórico deste médico
         if patient_id == 15:
             query = query.filter((Message.sender_id == current_user.id) | (Message.receiver_id == current_user.id))
+        else:
+            # Garante que o médico só veja:
+            # 1. Mensagens que têm um remetente ou destinatário definido
+            # 2. Mensagens do canal do WhatsApp (ou respostas da IA para o WhatsApp)
+            # Isso esconde a conversa privada do paciente com a IA no aplicativo móvel
+            query = query.filter(
+                (Message.sender_id.isnot(None)) | 
+                (Message.receiver_id.isnot(None)) |
+                (Message.source.in_(["whatsapp", "ai", "bot", "app_doctor"]))
+            )
     
     if unread_only:
         query = query.filter(Message.is_read == False)

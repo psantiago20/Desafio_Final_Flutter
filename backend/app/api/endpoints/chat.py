@@ -55,6 +55,13 @@ async def chat_with_ia(
         if not wa_from:
             wa_from = f"user_{current_user.id}"
 
+        # Obter o patient_id real se o usuário logado for paciente
+        p_id = chat_message.patient_id
+        if current_user.role == "patient":
+            patient_rec = db.query(Patient).filter(Patient.user_id == current_user.id).first()
+            if patient_rec:
+                p_id = patient_rec.id
+
         # Obter resposta do RAG
         response_text = await rag_service.get_rag_response(
             query=chat_message.message,
@@ -63,11 +70,12 @@ async def chat_with_ia(
             wa_from=wa_from,
             source=chat_message.source if chat_message.source else current_user.role,
             user_name=current_user.full_name,
-            user_id=current_user.id
+            user_id=current_user.id,
+            patient_id=p_id
         )
 
         # Salvar mensagem no histórico
-        target_patient_id = chat_message.patient_id or 15 # ID 15 é a Isis (Assistente)
+        target_patient_id = p_id or 15 # ID 15 é a Isis (Assistente)
         
         # Salvar mensagem do usuário
         db_message = Message(

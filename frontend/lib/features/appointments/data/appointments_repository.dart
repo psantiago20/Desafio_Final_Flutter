@@ -52,7 +52,7 @@ class AppointmentsRepository {
       'appointment_date': date.toIso8601String(),
       'duration_minutes': durationMinutes,
       'type': type,
-      'reason': ?reason,
+      'reason': reason,
       'price': price,
     });
     return AppointmentModel.fromJson(data as Map<String, dynamic>);

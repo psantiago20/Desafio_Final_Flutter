@@ -20,6 +20,9 @@ def list_patients(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    if current_user.role not in ["admin", "doctor", "receptionist"]:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
+        
     query = db.query(Patient).filter(Patient.is_active == True)
     
     if search:
@@ -139,6 +142,13 @@ def get_patient(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    if current_user.role == "patient":
+        patient_record = db.query(Patient).filter(Patient.user_id == current_user.id).first()
+        if not patient_record or patient_record.id != patient_id:
+            raise HTTPException(status_code=403, detail="Acesso não autorizado")
+    elif current_user.role not in ["admin", "doctor", "receptionist"]:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
+
     patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
@@ -151,6 +161,9 @@ def create_patient(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    if current_user.role not in ["admin", "doctor", "receptionist"]:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
+
     from app.utils.phone_utils import find_patient_by_messaging_phone
     
     # Verificar se já existe um paciente com este telefone ou whatsapp
@@ -163,6 +176,21 @@ def create_patient(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Já existe um paciente cadastrado com este número (ID: {existing.id})"
         )
+
+    # Verificar unicidade do CPF se informado
+    if patient.cpf:
+        cpf_clean = "".join(c for c in patient.cpf if c.isdigit())
+        if cpf_clean:
+            cpf_format = f"{cpf_clean[:3]}.{cpf_clean[3:6]}.{cpf_clean[6:9]}-{cpf_clean[9:]}" if len(cpf_clean) == 11 else cpf_clean
+            existing_cpf = db.query(Patient).filter(
+                (Patient.cpf == cpf_clean) | (Patient.cpf == cpf_format)
+            ).first()
+            if existing_cpf:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Já existe um paciente cadastrado com este CPF (ID: {existing_cpf.id})"
+                )
+            patient.cpf = cpf_clean
 
     db_patient = Patient(**patient.model_dump())
     db.add(db_patient)
@@ -178,11 +206,32 @@ def update_patient(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    if current_user.role == "patient":
+        patient_record = db.query(Patient).filter(Patient.user_id == current_user.id).first()
+        if not patient_record or patient_record.id != patient_id:
+            raise HTTPException(status_code=403, detail="Acesso não autorizado")
+    elif current_user.role not in ["admin", "doctor", "receptionist"]:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
+
     db_patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not db_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
     
     update_data = patient.model_dump(exclude_unset=True)
+    if "cpf" in update_data and update_data["cpf"]:
+        cpf_clean = "".join(c for c in update_data["cpf"] if c.isdigit())
+        if cpf_clean:
+            cpf_format = f"{cpf_clean[:3]}.{cpf_clean[3:6]}.{cpf_clean[6:9]}-{cpf_clean[9:]}" if len(cpf_clean) == 11 else cpf_clean
+            existing_cpf = db.query(Patient).filter(
+                ((Patient.cpf == cpf_clean) | (Patient.cpf == cpf_format)) & (Patient.id != patient_id)
+            ).first()
+            if existing_cpf:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Já existe outro paciente cadastrado com este CPF (ID: {existing_cpf.id})"
+                )
+            update_data["cpf"] = cpf_clean
+
     for key, value in update_data.items():
         setattr(db_patient, key, value)
     
@@ -197,6 +246,9 @@ def delete_patient(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    if current_user.role not in ["admin", "doctor", "receptionist"]:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
+
     db_patient = db.query(Patient).filter(Patient.id == patient_id).first()
     if not db_patient:
         raise HTTPException(status_code=404, detail="Patient not found")

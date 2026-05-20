@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:frontend/features/client/screens/main_dashboard_screen.dart';
+import 'package:frontend/features/dashboard/screens/dashboard_screen.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/theme/theme_provider.dart';
@@ -50,6 +51,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             } else if (MainDashboardScreen.scaffoldKey.currentState !=
                 null) {
               MainDashboardScreen.scaffoldKey.currentState?.openDrawer();
+            } else if (DashboardScreen.scaffoldKey.currentState != null) {
+              DashboardScreen.scaffoldKey.currentState?.openDrawer();
             } else {
               Scaffold.of(context).openDrawer();
             }

@@ -5,9 +5,16 @@ class AppConstants {
   /// Retorna a URL base correta dependendo da plataforma.
   /// Configurada exclusivamente via .env (API_URL_WEB ou API_URL_MOBILE).
   static String get baseUrl {
-    final key = kIsWeb ? 'API_URL_WEB' : 'API_URL_MOBILE';
-    final url = dotenv.env[key];
-    assert(url != null && url.isNotEmpty, 'Variável $key não definida no .env');
+    if (kIsWeb) {
+      final envUrl = dotenv.env['API_URL_WEB'] ?? dotenv.env['API_URL'];
+      if (envUrl != null && envUrl.isNotEmpty && !envUrl.contains('localhost')) {
+        return envUrl;
+      }
+      return Uri.base.origin;
+    }
+    final key = 'API_URL_MOBILE';
+    final url = dotenv.env[key] ?? dotenv.env['API_URL'];
+    assert(url != null && url.isNotEmpty, 'Variável $key (ou API_URL) não definida no .env');
     return url!;
   }
 

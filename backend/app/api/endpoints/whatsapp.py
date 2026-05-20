@@ -62,8 +62,12 @@ async def process_rag_background(wa_from: str, content: str, phone_number_id: st
         doctor = doctor_mapper.get_doctor_by_phone_number_id(phone_number_id, db)
         wa_to = doctor.whatsapp if doctor else None
 
-        ai_response = await rag_service.get_rag_response(content, wa_to, db, wa_from=wa_from)
-        
+        # Buscar paciente no banco
+        from app.models.patient import Patient
+        patient = db.query(Patient).filter(Patient.id == patient_id).first()
+        patient_name = patient.name if patient else "Paciente"
+
+        ai_response = await rag_service.get_rag_response(content, wa_to, db, wa_from=wa_from, user_name=patient_name, patient_id=patient_id)        
         bot_message = Message(
             patient_id=patient_id,
             content=ai_response,
@@ -615,7 +619,7 @@ async def chat_direct(
         
         # Pipeline RAG: Passa wa_from e wa_to para gerenciamento de estado e contexto do médico
         ai_response = await rag_service.get_rag_response(
-            content, wa_to=wa_to_effective, db=db, wa_from=wa_from, source="app"
+            content, wa_to=wa_to_effective, db=db, wa_from=wa_from, source="app", patient_id=patient.id
         )
         
         bot_message = Message(

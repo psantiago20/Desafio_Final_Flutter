@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
+import 'package:printing/printing.dart';
 import '../providers/appointments_provider.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
@@ -381,10 +383,8 @@ class _AppointmentDetailScreenState
                         ),
                         const SizedBox(height: 10),
                         _PrescriptionField(
-                          appointmentId: _appointment.id,
-                          patientId: _appointment.patientId,
+                          appointment: _appointment,
                           controller: _prescriptionCtrl,
-                          enabled: true, // Always enabled for direct typing
                           onSent: (updated) {
                             if (updated != null) {
                               setState(() => _appointment = updated);
@@ -686,31 +686,146 @@ class _SmallClinicalField extends StatelessWidget {
   }
 }
 
-class _PrescriptionField extends ConsumerWidget {
-  final int appointmentId;
-  final int patientId;
+class _PrescriptionField extends ConsumerStatefulWidget {
+  final AppointmentModel appointment;
   final TextEditingController controller;
-  final bool enabled;
   final Function(AppointmentModel?) onSent;
 
   const _PrescriptionField({
-    required this.appointmentId,
-    required this.patientId,
+    super.key,
+    required this.appointment,
     required this.controller,
-    required this.enabled,
     required this.onSent,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PrescriptionField> createState() => _PrescriptionFieldState();
+}
+
+class _PrescriptionFieldState extends ConsumerState<_PrescriptionField> {
+  bool _showEditor = false;
+  bool _isDownloadingPdf = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final appointment = widget.appointment;
+    final hasPrescription = appointment.prescriptionHtml != null && appointment.prescriptionHtml!.isNotEmpty;
     final isLoading = ref.watch(appointmentActionsProvider).isLoading;
+
+    if (hasPrescription && !_showEditor) {
+      return Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: Colors.green.withOpacity(0.5),
+            width: 1.5,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Receita Enviada ao Paciente',
+                    style: GoogleFonts.dmSans(
+                      color: Colors.green[800],
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (_isDownloadingPdf)
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                    )
+                  else
+                    IconButton(
+                      icon: const Icon(Icons.print_rounded, color: AppColors.primary, size: 20),
+                      tooltip: 'Visualizar / Imprimir PDF',
+                      onPressed: () async {
+                        setState(() => _isDownloadingPdf = true);
+                        try {
+                          final bytes = await ref
+                              .read(appointmentsRepositoryProvider)
+                              .downloadPrescriptionPdf(appointment.id);
+                          await Printing.layoutPdf(
+                            onLayout: (format) => bytes,
+                            name: 'Receita_Consulta_${appointment.id}.pdf',
+                          );
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Erro ao carregar PDF: $e')),
+                            );
+                          }
+                        } finally {
+                          if (mounted) setState(() => _isDownloadingPdf = false);
+                        }
+                      },
+                    ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Container(
+              padding: const EdgeInsets.all(16),
+              constraints: const BoxConstraints(maxHeight: 250),
+              width: double.infinity,
+              child: SingleChildScrollView(
+                child: HtmlWidget(
+                  appointment.prescriptionHtml!,
+                  textStyle: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textPrimary),
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        widget.controller.text = '';
+                        _showEditor = true;
+                      });
+                    },
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('Enviar Nova Receita'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: enabled ? AppColors.primary : AppColors.border,
+          color: AppColors.primary,
         ),
       ),
       child: Column(
@@ -720,46 +835,92 @@ class _PrescriptionField extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(
               children: [
-                const Icon(Icons.medication_outlined,
-                    size: 16, color: AppColors.primary),
+                const Icon(Icons.medication_outlined, size: 16, color: AppColors.primary),
                 const SizedBox(width: 8),
-                Text('Prescrição',
-                    style: GoogleFonts.dmSans(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    )),
+                Text(
+                  hasPrescription ? 'Nova Prescrição' : 'Prescrição',
+                  style: GoogleFonts.dmSans(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
                 const Spacer(),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      widget.controller.text =
+                          "Receituário:\n\n"
+                          "1. [Nome do Medicamento] ----------- [Dosagem]\n"
+                          "   Tomar: [Frequência e Duração]\n\n"
+                          "2. [Nome do Medicamento] ----------- [Dosagem]\n"
+                          "   Tomar: [Frequência e Duração]\n\n"
+                          "Orientações:\n"
+                          "- [Orientações adicionais ao paciente]";
+                    });
+                  },
+                  icon: const Icon(Icons.description_outlined, size: 14),
+                  label: const Text('Usar Modelo'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (hasPrescription) ...[
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _showEditor = false;
+                      });
+                    },
+                    child: const Text('Cancelar'),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 TextButton.icon(
                   onPressed: isLoading
                       ? null
                       : () async {
+                          if (widget.controller.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Por favor, digite o conteúdo da prescrição.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
                           final notifier = ref.read(appointmentActionsProvider.notifier);
-                          
+
                           // 1. Save current prescription text to DB
-                          await notifier.updateAppointment(appointmentId, {
-                            'prescription': controller.text,
+                          await notifier.updateAppointment(appointment.id, {
+                            'prescription': widget.controller.text,
                           });
-                          
+
                           // 2. Trigger the send (PDF generation/WhatsApp)
-                          final updated = await notifier.sendPrescription(appointmentId);
-                          
+                          final updated = await notifier.sendPrescription(appointment.id);
+
                           // 3. Invalidate history to ensure archived shows up if they navigate there
-                          ref.invalidate(archivedPrescriptionsProvider(patientId));
+                          ref.invalidate(archivedPrescriptionsProvider(appointment.patientId));
                           ref.invalidate(appointmentsListProvider);
-                          
+
                           if (updated != null) {
                             // Get patient name for the snackbar
-                            final patient = ref.read(patientByIdProvider(patientId)).value;
+                            final patient = ref.read(patientByIdProvider(appointment.patientId)).value;
                             final name = patient?.name ?? "Paciente";
-                            
-                            controller.clear(); // Use clear() for safety
-                            onSent(updated);
-                            
+
+                            widget.controller.clear(); // Use clear() for safety
+                            widget.onSent(updated);
+                            setState(() {
+                              _showEditor = false;
+                            });
+
                             // Forçar atualização de todos os providers relacionados
                             ref.invalidate(appointmentsListProvider);
-                            ref.invalidate(archivedPrescriptionsProvider(patientId));
-                            
+                            ref.invalidate(archivedPrescriptionsProvider(appointment.patientId));
+
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
@@ -774,8 +935,7 @@ class _PrescriptionField extends ConsumerWidget {
                       ? const SizedBox(
                           width: 14,
                           height: 14,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.primary),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                         )
                       : const Icon(Icons.send_rounded, size: 14),
                   label: Text(isLoading ? 'Enviando...' : 'Enviar ao Paciente'),
@@ -789,17 +949,14 @@ class _PrescriptionField extends ConsumerWidget {
           ),
           const Divider(height: 1),
           TextField(
-            controller: controller,
-            enabled: enabled,
+            controller: widget.controller,
             maxLines: 5,
-            style:
-                GoogleFonts.dmSans(fontSize: 14, color: AppColors.textPrimary),
+            style: GoogleFonts.dmSans(fontSize: 14, color: AppColors.textPrimary),
             decoration: InputDecoration(
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(14),
               hintText: 'Digite a prescrição aqui...',
-              hintStyle:
-                  GoogleFonts.dmSans(color: AppColors.textHint, fontSize: 13),
+              hintStyle: GoogleFonts.dmSans(color: AppColors.textHint, fontSize: 13),
               filled: false,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,

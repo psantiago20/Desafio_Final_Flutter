@@ -146,6 +146,10 @@ class DoctorSidebar extends ConsumerWidget {
         if (!location.startsWith('/dashboard')) {
           context.go('/dashboard');
         }
+        final scaffold = Scaffold.maybeOf(context);
+        if (scaffold != null && scaffold.isDrawerOpen) {
+          Navigator.of(context).pop();
+        }
       },
       borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(

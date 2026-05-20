@@ -542,7 +542,7 @@ def buscar_horarios(
         return "Desculpe, tive um erro ao consultar a agenda. Tente novamente em instantes."
 
 
-def buscar_agendamentos(db: Session, cpf: str = "", wa_from: str = None, patient_id: int = None) -> str:
+def buscar_agendamentos(db: Session, cpf: str = "", wa_from: str = None, patient_id: int = None, user_role: str = None) -> str:
     """
     Busca os agendamentos (consultas) de um paciente pelo CPF ou WhatsApp.
     """
@@ -561,14 +561,33 @@ def buscar_agendamentos(db: Session, cpf: str = "", wa_from: str = None, patient
     try:
         # 0. Tentar por ID de paciente (Prioridade Máxima se estiver logado)
         patient = None
-        if patient_id:
+        if user_role == "patient":
+            if not patient_id:
+                return "Acesso não autorizado."
             patient = db.query(Patient).filter(Patient.id == patient_id).first()
+            if not patient:
+                return "Acesso não autorizado."
+        else:
+            if patient_id:
+                patient = db.query(Patient).filter(Patient.id == patient_id).first()
 
         # 1. Tentar por CPF se fornecido
         if not patient and cpf and len(cpf.strip()) > 5:
-            patient = db.query(Patient).filter(
+            resolved_patient = db.query(Patient).filter(
                 (Patient.cpf == cpf_limpo) | (Patient.cpf == cpf_formatado) | (Patient.cpf == cpf)
             ).first()
+            if resolved_patient:
+                # Se for canal de whatsapp/sms do paciente, valida se o telefone bate
+                if wa_from and not wa_from.startswith("user_"):
+                    wa_digits = "".join(c for c in wa_from if c.isdigit())
+                    p_phone_digits = "".join(c for c in resolved_patient.phone if c.isdigit()) if resolved_patient.phone else ""
+                    p_wa_digits = "".join(c for c in resolved_patient.whatsapp if c.isdigit()) if resolved_patient.whatsapp else ""
+                    if len(wa_digits) >= 8 and (wa_digits[-8:] == p_phone_digits[-8:] or wa_digits[-8:] == p_wa_digits[-8:]):
+                        patient = resolved_patient
+                    else:
+                        return "Desculpe, você só pode consultar agendamentos associados ao seu próprio número de telefone."
+                else:
+                    patient = resolved_patient
 
         # 2. Tentar por wa_from (WhatsApp) como fallback
         if not patient and wa_from:
@@ -738,7 +757,7 @@ def buscar_info_paciente(db: Session, nome_ou_cpf: str) -> str:
 #  EXECUTOR DE TOOLS
 # ------------------------------------------------------------------ #
 
-def execute_tool(tool_name: str, arguments: dict, db: Session, wa_from: str = None, patient_id: int = None) -> str:
+def execute_tool(tool_name: str, arguments: dict, db: Session, wa_from: str = None, patient_id: int = None, user_role: str = None) -> str:
     """
     Executa uma tool pelo nome e retorna o resultado como string.
     
@@ -1034,19 +1053,24 @@ def execute_tool(tool_name: str, arguments: dict, db: Session, wa_from: str = No
                 db=db,
                 cpf=arguments.get("cpf", ""),
                 wa_from=wa_from,
-                patient_id=patient_id
+                patient_id=patient_id,
+                user_role=user_role
             )
 
         elif tool_name == "listar_especialidades":
             return listar_especialidades(db=db)
 
         elif tool_name == "buscar_consultas_medico":
+            if user_role not in ["doctor", "admin", "receptionist"]:
+                return "Acesso não autorizado. Esta ferramenta é restrita a médicos e funcionários."
             return buscar_consultas_medico(
                 db=db,
                 medico_id=arguments.get("medico_id")
             )
 
         elif tool_name == "buscar_info_paciente":
+            if user_role not in ["doctor", "admin", "receptionist"]:
+                return "Acesso não autorizado. Esta ferramenta é restrita a médicos e funcionários."
             return buscar_info_paciente(
                 db=db,
                 nome_ou_cpf=arguments.get("nome_ou_cpf")

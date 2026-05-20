@@ -92,7 +92,7 @@ class _PatientHistoryScreenState extends ConsumerState<PatientHistoryScreen> wit
             ),
       body: Row(
         children: [
-          if (isDesktop) const DoctorSidebar(selectedIndex: 1),
+          if (isDesktop) const DoctorSidebar(selectedIndex: 2),
           Expanded(
             child: patientAsync.when(
               data: (patient) => _buildContent(patient),
@@ -231,7 +231,7 @@ class _PatientHistoryScreenState extends ConsumerState<PatientHistoryScreen> wit
             
             for (var a in patientAppointments) {
               if (a.prescription != null && a.prescription!.trim().isNotEmpty) {
-                allItems.add({'type': 'prescription', 'data': a, 'date': _parseDateTime(a.appointmentDate)});
+                allItems.add({'type': 'prescription', 'data': a, 'date': _parseDateTime(a.updatedAt)});
               }
             }
             

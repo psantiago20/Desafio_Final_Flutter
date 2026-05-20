@@ -178,9 +178,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
         if (senderId != null) {
           isMe = senderId == currentUserId;
         } else if (source == 'app') {
-          isMe = true; // Mensagens enviadas pelo app sem sender_id (raro, mas possível) são do próprio usuário
+          isMe = true; 
+        } else if (source == 'whatsapp') {
+          // Mensagens vindas do webhook do WhatsApp são do paciente.
+          // Se quem está vendo for o paciente, isMe = true. Se for médico, isMe = false.
+          final role = authState.user?.role;
+          isMe = (role == 'patient' || role == 'paciente');
         } else {
-          // Se não tem sender_id e não é 'app', assumimos que não é 'me' (ex: whatsapp do bot, system, etc)
           isMe = false;
         }
 
@@ -214,13 +218,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
         loadedMessages.add(chatMsg);
 
         // Separação das mensagens por aba e contagem de não lidas
-        final isIsis = waFrom == 'isis_ia' || source == 'system' || source == 'ai' || source == 'bot' || 
-                      (!isMe && senderName == 'Isis (Assistente)') ||
-                      (isMe && source == 'app' && m['receiver_id'] == null); // Se não tem receptor, assume que é IA
-        
-        final isDoctor = source == 'app_doctor' || source == 'whatsapp' || senderName == 'Médico' || 
-                        (!isMe && senderName != 'Isis (Assistente)') ||
-                        (isMe && m['receiver_id'] != null); // Se tem receptor, é médico
+        // Mensagem é de médico SOMENTE se source='app_doctor' ou se foi enviada por um usuário médico
+        final isExplicitlyDoctor = source == 'app_doctor' || 
+                                   (!isMe && senderName != null && senderName != 'Isis (Assistente)');
+
+        // Mensagem é da Isis se: veio da IA, é do sistema, ou é do próprio paciente (exceto se enviado para o médico)
+        final isIsis = (waFrom == 'isis_ia' || 
+                       source == 'system' || source == 'ai' || source == 'bot' ||
+                       (!isMe && senderName == 'Isis (Assistente)') ||
+                       isMe) && source != 'app_doctor';
+
+        final isDoctor = isExplicitlyDoctor && !isIsis;
 
         if (isIsis) {
           isisMessages.add(chatMsg);

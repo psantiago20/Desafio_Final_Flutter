@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import '../../client/providers/patient_provider.dart';
 import '../../../shared/models/patient_model.dart';
 
@@ -380,20 +381,46 @@ class _ProntuariosScreenState extends ConsumerState<ProntuariosScreen> {
             ),
           ],
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: _secondaryFixed,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            'Ativo',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: _onSecondaryFixed,
+        Row(
+          children: [
+            ElevatedButton.icon(
+              onPressed: () {
+                context.push('/patients/${patient.id}/history');
+              },
+              icon: const Icon(Icons.history_edu_rounded, size: 18),
+              label: Text(
+                'Prescrições e Exames',
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: _secondaryFixed,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Ativo',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: _onSecondaryFixed,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
