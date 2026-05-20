@@ -203,6 +203,58 @@ async def handle_webhook(request: Request, background_tasks: BackgroundTasks, db
                 except Exception as e:
                     logger.error(f"Erro ao processar áudio do WhatsApp: {e}")
                     content = "[Erro ao processar áudio]"
+            elif msg_type in ("image", "document"):
+                media_data = msg_data.get(msg_type, {})
+                media_id = media_data.get("id")
+                mime_type = media_data.get("mime_type")
+                filename = media_data.get("filename") or f"whatsapp_{media_id}"
+
+                if msg_type == "image" and "." not in filename:
+                    filename += ".jpg"
+                elif (
+                    msg_type == "document"
+                    and mime_type == "application/pdf"
+                    and not filename.lower().endswith(".pdf")
+                ):
+                    filename += ".pdf"
+
+                patient = find_patient_by_messaging_phone(db, wa_from)
+                if not patient:
+                    patient = Patient(
+                        name=f"WhatsApp User {wa_from[-4:]}",
+                        phone=wa_from,
+                        whatsapp=wa_from
+                    )
+                    db.add(patient)
+                    db.commit()
+                    db.refresh(patient)
+                else:
+                    ensure_canonical_whatsapp(db, patient, wa_from)
+
+                try:
+                    media_url = await wa_service.get_media_url(media_id)
+                    media_bytes = await wa_service.download_media(media_url)
+                    from app.api.endpoints.rag import process_exam_file
+
+                    result = await process_exam_file(
+                        db=db,
+                        content=media_bytes,
+                        filename=filename,
+                        wa_from=wa_from,
+                        mime_type=mime_type,
+                        patient=patient,
+                        source="whatsapp",
+                        message_type=msg_type,
+                    )
+                    reply = result.get("message") or "Recebi seu exame!"
+                    await wa_service.send_message(to=wa_from, message=reply)
+                except Exception as e:
+                    logger.error(f"Erro ao processar exame do WhatsApp: {e}", exc_info=True)
+                    await wa_service.send_message(
+                        to=wa_from,
+                        message="Recebi o arquivo, mas nao consegui processar o exame agora. Pode tentar enviar novamente?"
+                    )
+                continue
             else:
                 logger.warning(f"Tipo de mensagem não suportado: {msg_type}")
                 continue # Pula outros tipos por enquanto

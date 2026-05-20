@@ -31,7 +31,7 @@ from app.models.message import Message, MessageSource
 from app.models.patient import Patient
 from app.models.appointment import Appointment
 from app.models.exam import Exam
-from app.api.endpoints.whatsapp import find_patient_by_messaging_phone
+from app.utils.phone_utils import find_patient_by_messaging_phone, find_patient_for_contact
 from app.services.ingest_faq import ingest_doctor_faq, ingest_all_doctors, get_collection_stats
 from app.services.rag_service import rag_service
 from app.services.transcription_service import transcription_service
@@ -182,7 +182,6 @@ async def query_rag(
     try:
         from app.models.message import Message, MessageSource
         from app.models.patient import Patient
-        from app.api.endpoints.whatsapp import find_patient_by_messaging_phone
         from app.services.content_moderation_service import content_moderation_service
 
         # 1. Identificar o paciente (Prioridade: Usuário Logado)
@@ -289,6 +288,165 @@ def rag_stats(
         logger.error(f"Erro ao obter stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+async def process_exam_file(
+    *,
+    db: Session,
+    content: bytes,
+    filename: str,
+    wa_from: str,
+    mime_type: Optional[str] = None,
+    patient: Optional[Patient] = None,
+    source: str = MessageSource.APP.value,
+    message_type: str = "image",
+):
+    """Analisa e salva exame enviado por fluxos autenticados ou WhatsApp."""
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    exams_dir = os.path.join(base_dir, "static", "exams")
+    os.makedirs(exams_dir, exist_ok=True)
+
+    if not mime_type:
+        mime_type, _ = mimetypes.guess_type(filename)
+    is_pdf = mime_type == "application/pdf" or filename.lower().endswith(".pdf")
+
+    if not patient:
+        patient = find_patient_for_contact(db, wa_from)
+
+    from app.services.content_moderation_service import content_moderation_service
+    if is_pdf:
+        is_safe, reason = await content_moderation_service.check_pdf_safety(content)
+    else:
+        is_safe, reason = await content_moderation_service.check_image_safety(content, mime_type or "image/png")
+
+    if not is_safe:
+        if patient:
+            db.add(Message(
+                patient_id=patient.id,
+                content=f"Enviou arquivo inadequado: {filename}",
+                message_type=message_type,
+                source=source,
+                wa_from=wa_from
+            ))
+            db.add(Message(
+                patient_id=patient.id,
+                content=f"Arquivo bloqueado por seguranca: {reason}",
+                message_type="text",
+                source=MessageSource.SYSTEM.value,
+                wa_from="isis_ia"
+            ))
+            db.commit()
+        return {
+            "status": "blocked",
+            "message": f"O arquivo enviado violou as politicas de seguranca: {reason}."
+        }
+
+    ext = os.path.splitext(filename)[1]
+    if not ext:
+        ext = ".pdf" if is_pdf else ".jpg"
+    unique_filename = f"{uuid.uuid4()}{ext}"
+    file_path = os.path.join(exams_dir, unique_filename)
+    with open(file_path, "wb") as buffer:
+        buffer.write(content)
+
+    exam_title = f"Exame: {filename}"
+    exam_summary = "Analise automatica indisponivel."
+
+    try:
+        if is_pdf:
+            from io import BytesIO
+            reader = PdfReader(BytesIO(content))
+            text_content = ""
+            for page in reader.pages:
+                text_content += (page.extract_text() or "") + "\n"
+
+            if not text_content.strip():
+                exam_summary = "O PDF parece ser uma imagem digitalizada. Por favor, envie uma foto nitida do exame para analise."
+            else:
+                llm = ChatNVIDIA(model="meta/llama-3.1-70b-instruct", nvidia_api_key=settings.NVIDIA_API_KEY)
+                prompt = (
+                    "Analise o texto deste exame medico e retorne APENAS um JSON.\n"
+                    "REGRAS CRITICAS PARA O CAMPO 'summary':\n"
+                    "1. Se todos os valores estiverem NORMAIS: O campo 'summary' deve ser EXATAMENTE 'Os resultados estao dentro dos valores de referencia.' e ABSOLUTAMENTE MAIS NADA.\n"
+                    "2. Se houver ALTERACOES: Liste APENAS os dados alterados (ex: 'Glicemia: 120 mg/dL'). NAO mencione valores que estao normais.\n"
+                    "3. Proibido usar saudacoes ou textos explicativos.\n"
+                    f"TEXTO DO EXAME: {text_content[:4000]}\n\n"
+                    "FORMATO JSON:\n"
+                    "{\n"
+                    "  \"title\": \"Nome curto do exame\",\n"
+                    "  \"summary\": \"\"\n"
+                    "}"
+                )
+                response = llm.invoke(prompt)
+                clean_content = response.content.replace("```json", "").replace("```", "").strip()
+                ai_data = json.loads(clean_content)
+                exam_title = ai_data.get("title", exam_title)
+                exam_summary = ai_data.get("summary", exam_summary)
+        else:
+            encoded_image = base64.b64encode(content).decode("utf-8")
+            vision_model = ChatNVIDIA(model="meta/llama-3.2-11b-vision-instruct", nvidia_api_key=settings.NVIDIA_API_KEY)
+            prompt = (
+                "Analise a imagem deste exame medico e retorne APENAS um JSON.\n"
+                "REGRAS CRITICAS PARA O CAMPO 'summary':\n"
+                "1. Se todos os valores estiverem NORMAIS: O campo 'summary' deve ser EXATAMENTE 'Os resultados estao dentro dos valores de referencia.' e ABSOLUTAMENTE MAIS NADA.\n"
+                "2. Se houver ALTERACOES: Liste APENAS os dados alterados (ex: 'Hemoglobina: 9.0 g/dL'). NAO mencione valores que estao normais.\n"
+                "3. Proibido usar saudacoes ou textos explicativos.\n"
+                "FORMATO JSON:\n"
+                "{\n"
+                "  \"title\": \"Nome curto do exame\",\n"
+                "  \"summary\": \"\"\n"
+                "}"
+            )
+            message = HumanMessage(
+                content=[
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:{mime_type or 'image/png'};base64,{encoded_image}"}},
+                ]
+            )
+            response = vision_model.invoke([message])
+            clean_content = response.content.replace("```json", "").replace("```", "").strip()
+            ai_data = json.loads(clean_content)
+            exam_title = ai_data.get("title", exam_title)
+            exam_summary = ai_data.get("summary", exam_summary)
+    except Exception as ai_err:
+        logger.error(f"[AI ERROR] Falha na analise: {str(ai_err)}")
+        exam_summary = "Analise automatica indisponivel."
+
+    if not patient:
+        return {"status": "error", "message": "Paciente nao encontrado."}
+
+    public_url = f"/static/exams/{unique_filename}"
+    db.add(Exam(
+        patient_id=patient.id,
+        title=exam_title,
+        exam_url=public_url,
+        summary=exam_summary
+    ))
+    db.add(Message(
+        patient_id=patient.id,
+        content=f"Enviou exame: {filename}",
+        message_type=message_type,
+        source=source,
+        wa_from=wa_from
+    ))
+
+    receipt = f"Recebi seu exame!\n\n{exam_summary}"
+    db.add(Message(
+        patient_id=patient.id,
+        content=receipt,
+        message_type="text",
+        source=MessageSource.SYSTEM.value,
+        wa_from="isis_ia"
+    ))
+    db.commit()
+    return {
+        "status": "success",
+        "title": exam_title,
+        "summary": exam_summary,
+        "url": public_url,
+        "message": receipt,
+        "patient_id": patient.id
+    }
+
+
 @router.post("/upload-exam")
 async def upload_exam(
     wa_from: str = Form(...),
@@ -314,6 +472,17 @@ async def upload_exam(
         content = await file.read()
         mime_type, _ = mimetypes.guess_type(file.filename)
         is_pdf = mime_type == "application/pdf" or file.filename.lower().endswith(".pdf")
+        patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
+        return await process_exam_file(
+            db=db,
+            content=content,
+            filename=file.filename,
+            wa_from=wa_from,
+            mime_type=mime_type,
+            patient=patient,
+            source=MessageSource.APP.value,
+            message_type="document" if is_pdf else "image",
+        )
 
         # --- MODERAÇÃO DE SEGURANÇA DO ARQUIVO ---
         from app.services.content_moderation_service import content_moderation_service
@@ -507,8 +676,7 @@ async def audio_query(
         # 2. Identificar o paciente ANTES de tudo (para poder gravar erros no banco)
         from app.models.message import Message, MessageSource
         from app.models.patient import Patient
-        from app.api.endpoints.whatsapp import find_patient_by_messaging_phone
-        
+
         patient = None
         if source == "app" and current_user:
             logger.info(f"Buscando paciente vinculado ao User ID: {current_user.id}")
