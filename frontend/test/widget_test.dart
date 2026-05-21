@@ -1,23 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/shared/widgets/custom_app_bar.dart';
 
-/// 🧪 Basic App Load Test
+/// 🧪 CustomAppBar Widget Test
 /// Responsabilidade: qa-test-engineer
 void main() {
-  testWidgets('App starts and shows MainDashboardScreen', (
+  testWidgets('CustomAppBar renders subtitle, app bar title and controls theme', (
     WidgetTester tester,
   ) async {
-    // Build our app and trigger a frame.
-    // await tester.pumpWidget(const OmniConnectApp());
+    // 1. Defina um subtitle de teste
+    const testSubtitle = 'Sua Saúde de Forma Inteligente';
 
-    // Verify that the bottom navigation bar is rendered (now using Material 3 NavigationBar)
-    expect(find.byType(NavigationBar), findsOneWidget);
+    // 2. Monte o widget sob o ProviderScope e MaterialApp
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            appBar: CustomAppBar(
+              subtitle: testSubtitle,
+              showProfileButton: false,
+            ),
+          ),
+        ),
+      ),
+    );
 
-    // Verify that the Home screen is the default one (has the 'Portal do Paciente' text)
-    expect(find.text('Portal do Paciente'), findsOneWidget);
+    // 3. Verifique se o título principal da aplicação "Sua Consulta" é exibido
+    expect(find.text('Sua Consulta'), findsOneWidget);
 
-    // Verify that tabs Consultas and Exames exist in the bottom bar
-    expect(find.text('Consultas'), findsWidgets);
-    expect(find.text('Exames'), findsWidgets);
+    // 4. Verifique se o subtítulo customizado é exibido
+    expect(find.text(testSubtitle), findsOneWidget);
+
+    // 5. Verifique se o ícone do botão de toggle de tema está presente
+    expect(find.byIcon(Icons.dark_mode), findsOneWidget);
+
+    // 6. Toque no botão de toggle de tema
+    await tester.tap(find.byIcon(Icons.dark_mode));
+    await tester.pumpAndSettle();
+
+    // 7. Como o tema mudou para escuro, o botão deve agora mostrar o ícone de light_mode
+    expect(find.byIcon(Icons.light_mode), findsOneWidget);
   });
 }

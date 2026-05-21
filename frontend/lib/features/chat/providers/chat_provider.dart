@@ -178,7 +178,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         if (senderId != null) {
           isMe = senderId == currentUserId;
         } else if (source == 'app') {
-          isMe = true; 
+          isMe = true;
         } else if (source == 'whatsapp') {
           // Mensagens vindas do webhook do WhatsApp são do paciente.
           // Se quem está vendo for o paciente, isMe = true. Se for médico, isMe = false.
@@ -218,17 +218,26 @@ class ChatNotifier extends StateNotifier<ChatState> {
         loadedMessages.add(chatMsg);
 
         // Separação das mensagens por aba e contagem de não lidas
-        // Mensagem é de médico SOMENTE se source='app_doctor' ou se foi enviada por um usuário médico
-        final isExplicitlyDoctor = source == 'app_doctor' || 
-                                   (!isMe && senderName != null && senderName != 'Isis (Assistente)');
+        final isAssistantMessage = waFrom == 'isis_ia' ||
+            waFrom == 'system' ||
+            waFrom == 'BOT' ||
+            source == 'system' ||
+            source == 'ai' ||
+            source == 'bot' ||
+            (!isMe && senderName == 'Isis (Assistente)');
+
+        // source=app_doctor identifica a aba do medico, nao o remetente.
+        // O lado do balao continua vindo de sender_id/isMe.
+        final isDoctorChannel = source == 'app_doctor' ||
+            (!isAssistantMessage &&
+                !isMe &&
+                senderName != null &&
+                senderName != 'Isis (Assistente)');
 
         // Mensagem é da Isis se: veio da IA, é do sistema, ou é do próprio paciente (exceto se enviado para o médico)
-        final isIsis = (waFrom == 'isis_ia' || 
-                       source == 'system' || source == 'ai' || source == 'bot' ||
-                       (!isMe && senderName == 'Isis (Assistente)') ||
-                       isMe) && source != 'app_doctor';
+        final isIsis = isAssistantMessage || (!isDoctorChannel && isMe);
 
-        final isDoctor = isExplicitlyDoctor && !isIsis;
+        final isDoctor = isDoctorChannel && !isAssistantMessage;
 
         if (isIsis) {
           isisMessages.add(chatMsg);

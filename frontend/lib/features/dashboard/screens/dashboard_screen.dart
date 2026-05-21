@@ -46,6 +46,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   static const Color _primaryContainer = Color(0xFF0052CC);
   static const Color _primaryFixed = Color(0xFFDAE2FF);
   static const Color _onPrimaryFixed = Color(0xFF001947);
+  static const Color _secondaryFixed = Color(0xFF86F8C8);
+  static const Color _onSecondaryFixed = Color(0xFF007352);
+  static const Color _tertiaryFixed = Color(0xFFFFDBCF);
   static const Color _tertiary = Color(0xFF7B2600);
 
   @override
@@ -219,7 +222,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           slivers: [
             SliverPadding(
               padding: EdgeInsets.only(
-                top: 24, // Reduced from 88 because topbar is not floating
+                top: 24, // Reduzido de 88 porque a topbar não é mais flutuante
                 left: isDesktop ? 40 : 24,
                 right: isDesktop ? 40 : 24,
                 bottom: 32,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -764,7 +765,7 @@ class _PrescriptionFieldState extends ConsumerState<_PrescriptionField> {
                               .read(appointmentsRepositoryProvider)
                               .downloadPrescriptionPdf(appointment.id);
                           await Printing.layoutPdf(
-                            onLayout: (format) => bytes,
+                            onLayout: (format) => Uint8List.fromList(bytes),
                             name: 'Receita_Consulta_${appointment.id}.pdf',
                           );
                         } catch (e) {

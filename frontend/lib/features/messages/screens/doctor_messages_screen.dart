@@ -72,6 +72,32 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
     });
   }
 
+  bool _isAssistantMessage(Map<String, dynamic> message) {
+    final source = message['source'];
+    final waFrom = message['wa_from'];
+    return waFrom == 'isis_ia' ||
+        waFrom == 'system' ||
+        waFrom == 'BOT' ||
+        source == 'system' ||
+        source == 'bot' ||
+        source == 'ai';
+  }
+
+  bool _isDirectDoctorPatientMessage(
+    Map<String, dynamic> message,
+    int? currentUserId,
+  ) {
+    if (_isAssistantMessage(message)) return false;
+
+    final senderId = message['sender_id'];
+    final receiverId = message['receiver_id'];
+    final source = message['source'];
+
+    return source == 'app_doctor' ||
+        senderId == currentUserId ||
+        receiverId == currentUserId;
+  }
+
   Future<void> _loadConversations() async {
     try {
       final response = await ApiClient.get('/api/messages');
@@ -84,14 +110,11 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
       for (final m in msgs) {
         final patientId = m['patient_id'];
         if (patientId != null) {
-          final source = m['source'];
-
-          // Para pacientes reais (diferentes da Isis/ID 15), só consideramos mensagens da conversa direta médico-paciente
-          if (patientId != 15) {
-            final isDoctorMessage = m['sender_id'] == currentUserId || source == 'app_doctor';
-            if (!isDoctorMessage) {
-              continue;
-            }
+          final message = m as Map<String, dynamic>;
+          if (patientId != 15 &&
+              !_isDirectDoctorPatientMessage(message, currentUserId)) {
+            continue;
+          }
           }
 
           final patient = m['patient'];
@@ -119,7 +142,13 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
           final isFromMe = m['sender_id'] == currentUserId;
           final isRead = m['is_read'] == true;
           
-          if (!isRead && !isFromMe) {
+          if (!isRead &&
+              !isFromMe &&
+              patientId != 15 &&
+              !_isAssistantMessage(message) &&
+              (source == 'app_doctor' ||
+                  source == 'whatsapp' ||
+                  m['sender_id'] != null)) {
             conversations[patientId]!['unreadCount'] = (conversations[patientId]!['unreadCount'] as int) + 1;
           }
         }
@@ -211,11 +240,14 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
       setState(() {
         final filteredMsgs = patientId == 0
             ? msgs
-            : msgs.where((m) {
-                final source = m['source'];
-                final isDoctorMessage = m['sender_id'] == currentUserId || source == 'app_doctor';
-                return isDoctorMessage;
-              }).toList();
+            : msgs
+                .where(
+                  (m) => _isDirectDoctorPatientMessage(
+                    m as Map<String, dynamic>,
+                    currentUserId,
+                  ),
+                )
+                .toList();
 
         _messagesByPatient[patientId] = filteredMsgs.map((m) {
           final content = m['content'];
@@ -224,14 +256,13 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
           
           String sender = 'patient';
           final source = m['source'];
-          // Mensagens da Isis/IA: qualquer source de IA ou wa_from isis_ia
+          // Mensagens da Isis/IA: qualquer source de IA, bot, system ou wa_from isis_ia
           final isIsisMessage = waFrom == 'isis_ia' ||
               source == 'system' ||
               source == 'bot' ||
               source == 'ai';
-          // Mensagens do médico: enviadas pelo médico logado
+          // source=app_doctor indica o canal paciente-medico; sender_id indica quem enviou.
           final isDoctorMessage = senderId == currentUserId;
-
           if (isIsisMessage) {
             sender = 'isis';
           } else if (isDoctorMessage) {
