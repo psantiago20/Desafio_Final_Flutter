@@ -1,5 +1,5 @@
 import re
-from typing import Optional
+from typing import Optional, Set
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -11,6 +11,23 @@ def digits_only(value: Optional[str]) -> str:
     if not value:
         return ""
     return re.sub(r"\D", "", value)
+
+
+def canonical_phone_candidates(value: Optional[str]) -> Set[str]:
+    """
+    Retorna apenas formas deterministicas do mesmo numero.
+    Nao tenta inferir linhas parecidas; isso evita vincular conversas de pessoas diferentes.
+    """
+    d = digits_only(value)
+    if not d:
+        return set()
+
+    candidates = {d}
+    if d.startswith("55") and len(d) >= 12:
+        candidates.add(d[2:])
+    elif len(d) in (10, 11):
+        candidates.add(f"55{d}")
+    return candidates
 
 
 def br_mobile_key(digits: str) -> str:
@@ -28,6 +45,29 @@ def br_mobile_key(digits: str) -> str:
     if len(d) >= 10:
         return d[-10:]
     return d
+
+
+def find_patient_by_exact_messaging_phone(db: Session, phone: Optional[str]) -> Optional[Patient]:
+    """
+    Busca estrita para vincular cadastro/perfil a conversas pre-existentes.
+    Se houver mais de um paciente possivel para o mesmo numero canonico, nao vincula.
+    """
+    candidates = canonical_phone_candidates(phone)
+    if not candidates:
+        return None
+
+    matches = (
+        db.query(Patient)
+        .filter(
+            (Patient.whatsapp.in_(candidates)) |
+            (Patient.phone.in_(candidates))
+        )
+        .all()
+    )
+    unique = {patient.id: patient for patient in matches}
+    if len(unique) == 1:
+        return next(iter(unique.values()))
+    return None
 
 
 def same_messaging_line(a: Optional[str], b: Optional[str]) -> bool:
