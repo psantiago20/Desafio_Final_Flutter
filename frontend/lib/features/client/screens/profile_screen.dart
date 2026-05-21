@@ -339,28 +339,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
           // Estatísticas Removidas como solicitado
 
-          // Configurações
-          _buildSectionTitle('Configurações e Suporte'),
-          Card(
-            margin: EdgeInsets.zero,
-            child: Column(
-              children: [
-                _buildActionTile(Icons.settings_outlined, 'Configurações Gerais'),
-                const Divider(),
-                _buildActionTile(Icons.security_outlined, 'Privacidade e Dados'),
-                const Divider(),
-                _buildActionTile(Icons.help_outline, 'Central de Ajuda'),
-                if (user?.isAdmin ?? false) ...[
-                  const Divider(),
-                  _buildActionTile(
-                    Icons.admin_panel_settings_outlined, 
-                    'Painel do Administrador',
-                    onTap: () => context.push('/management-v1'),
-                  ),
-                ],
-              ],
-            ),
-          ),
           const SizedBox(height: 24),
 
           const SizedBox(height: 24),

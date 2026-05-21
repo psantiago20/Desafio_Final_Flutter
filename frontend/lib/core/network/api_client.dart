@@ -177,12 +177,12 @@ class ApiClient {
     }
 
     if (response.statusCode == 401) {
-      // Only trigger the global logout if there is already an active token
-      // (i.e. the session expired). If _token is null, this is a fresh login
-      // attempt with wrong credentials – we must NOT clear auth state here,
-      // otherwise the error message set by the login flow is immediately wiped.
       if (_token != null) {
         Future.microtask(() => onUnauthorized?.call());
+        throw ApiException(
+          statusCode: 401,
+          message: 'Sessão expirada. Por favor, faça login novamente.',
+        );
       }
       throw ApiException(
         statusCode: 401,

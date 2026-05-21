@@ -4,6 +4,7 @@ import 'package:frontend/core/theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:frontend/core/network/api_client.dart';
 import 'package:frontend/features/auth/providers/auth_provider.dart';
+import 'package:frontend/core/theme/theme_provider.dart';
 import 'dart:async';
 
 class DoctorMessagesScreen extends ConsumerStatefulWidget {

@@ -7,6 +7,7 @@ class RegisterForm extends StatefulWidget {
   final VoidCallback onToggle;
   final Future<void> Function({
     required String name,
+    required String username,
     required String phone,
     required String email,
     required String password,
@@ -28,6 +29,7 @@ class _RegisterFormState extends State<RegisterForm> {
   bool _isLoading = false;
 
   final nameController = TextEditingController();
+  final usernameController = TextEditingController();
   final birthController = TextEditingController();
   final phoneController = TextEditingController();
   final emailController = TextEditingController();
@@ -77,6 +79,20 @@ class _RegisterFormState extends State<RegisterForm> {
               hint: "João da Silva",
               validator: (v) =>
                   v!.isEmpty ? "Informe seu nome" : null,
+            ),
+
+            const SizedBox(height: 15),
+
+            _input(
+              "Nome de usuário",
+              controller: usernameController,
+              hint: "joaosilva123",
+              validator: (v) {
+                if (v == null || v.isEmpty) return "Informe o usuário";
+                if (v.length < 3) return "Mínimo 3 caracteres";
+                if (v.contains(' ')) return "Sem espaços";
+                return null;
+              },
             ),
 
             const SizedBox(height: 15),
@@ -182,6 +198,7 @@ class _RegisterFormState extends State<RegisterForm> {
                 setState(() => _isLoading = true);
                 await widget.onRegister(
                   name: nameController.text.trim(),
+                  username: usernameController.text.trim(),
                   phone: phoneMask.getUnmaskedText(),
                   email: emailController.text.trim(),
                   password: passwordController.text,

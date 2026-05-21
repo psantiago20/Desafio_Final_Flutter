@@ -352,6 +352,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ? null
           : CustomAppBar(
               subtitle: _selectedChat == 'doctor' ? 'Atendimento Médico' : 'Atendimento por IA',
+              showProfileButton: false,
             ),
       body: Container(
         decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),

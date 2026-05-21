@@ -23,6 +23,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
 
   Future<void> _handleRegister({
     required String name,
+    required String username,
     required String phone,
     required String email,
     required String password,
@@ -30,7 +31,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   }) async {
     final ok = await ref.read(authProvider.notifier).register(
       email: email,
-      username: email,
+      username: username,
       password: password,
       phone: phone,
       fullName: name,

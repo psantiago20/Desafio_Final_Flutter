@@ -26,7 +26,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const CustomAppBar(subtitle: 'Meu Perfil', showProfileButton: false),
+      appBar: const CustomAppBar(subtitle: 'Meu Perfil', showProfileButton: false, showThemeButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -97,24 +97,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   value: user.isActive ? 'Ativo' : 'Inativo',
                   valueColor:
                       user.isActive ? AppColors.completed : AppColors.cancelled,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // Ações
-            _ActionCard(
-              items: [
-                _ActionItem(
-                  icon: Icons.calendar_month_outlined,
-                  label: 'Minhas consultas',
-                  onTap: () => context.go('/appointments'),
-                ),
-                _ActionItem(
-                  icon: Icons.bar_chart_rounded,
-                  label: 'Dashboard',
-                  onTap: () => context.go('/dashboard'),
                 ),
               ],
             ),

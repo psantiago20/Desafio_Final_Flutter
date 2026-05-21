@@ -32,7 +32,7 @@ class AppointmentsScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       appBar: CustomAppBar(
         subtitle: 'Gerenciamento de Consultas',
-        showProfileButton: true,
+        showProfileButton: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded),
