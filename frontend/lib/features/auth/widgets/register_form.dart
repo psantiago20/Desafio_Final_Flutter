@@ -5,7 +5,13 @@ import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class RegisterForm extends StatefulWidget {
   final VoidCallback onToggle;
-  final VoidCallback onRegister;
+  final Future<void> Function({
+    required String name,
+    required String phone,
+    required String email,
+    required String password,
+    required String userType,
+  }) onRegister;
 
   const RegisterForm({
     super.key,
@@ -19,6 +25,7 @@ class RegisterForm extends StatefulWidget {
 
 class _RegisterFormState extends State<RegisterForm> {
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
 
   final nameController = TextEditingController();
   final birthController = TextEditingController();
@@ -170,9 +177,17 @@ class _RegisterFormState extends State<RegisterForm> {
 
             const SizedBox(height: 25),
 
-            _button("Cadastrar", () {
+            _button("Cadastrar", () async {
               if (_formKey.currentState!.validate()) {
-                widget.onRegister();
+                setState(() => _isLoading = true);
+                await widget.onRegister(
+                  name: nameController.text.trim(),
+                  phone: phoneMask.getUnmaskedText(),
+                  email: emailController.text.trim(),
+                  password: passwordController.text,
+                  userType: userType,
+                );
+                if (mounted) setState(() => _isLoading = false);
               }
             }),
 
@@ -300,21 +315,30 @@ class _RegisterFormState extends State<RegisterForm> {
 
   Widget _button(String text, VoidCallback onTap) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: _isLoading ? null : onTap,
       child: Container(
         height: 50,
         decoration: BoxDecoration(
-          color: AppTheme.primaryBlue,
+          color: _isLoading ? AppTheme.primaryBlue.withValues(alpha: 0.6) : AppTheme.primaryBlue,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Center(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Text(
+                  text,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
         ),
       ),
     );

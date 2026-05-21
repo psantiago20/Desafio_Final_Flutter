@@ -5,7 +5,6 @@ import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/features/auth/widgets/auth_header.dart';
 import 'package:frontend/features/auth/widgets/login_form.dart';
 import 'package:frontend/features/auth/widgets/register_form.dart';
-import 'package:frontend/features/auth/screens/otp_page.dart';
 import 'package:frontend/features/auth/providers/auth_provider.dart';
 
 class AuthPage extends ConsumerStatefulWidget {
@@ -22,8 +21,24 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     setState(() => isLogin = !isLogin);
   }
 
-  void goToOtp() {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const OtpPage()));
+  Future<void> _handleRegister({
+    required String name,
+    required String phone,
+    required String email,
+    required String password,
+    required String userType,
+  }) async {
+    final ok = await ref.read(authProvider.notifier).register(
+      email: email,
+      username: email,
+      password: password,
+      phone: phone,
+      fullName: name,
+      role: userType,
+    );
+    if (ok && mounted) {
+      // GoRouter will redirect automatically based on user role.
+    }
   }
 
   Future<void> _handleLogin(String username, String password) async {
@@ -123,7 +138,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                   : RegisterForm(
                       key: const ValueKey('register'),
                       onToggle: toggle,
-                      onRegister: goToOtp,
+                      onRegister: _handleRegister,
                     ),
             ),
           ),
