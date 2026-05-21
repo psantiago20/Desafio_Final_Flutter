@@ -111,10 +111,10 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
         final patientId = m['patient_id'];
         if (patientId != null) {
           final message = m as Map<String, dynamic>;
+          final source = message['source'];
           if (patientId != 15 &&
               !_isDirectDoctorPatientMessage(message, currentUserId)) {
             continue;
-          }
           }
 
           final patient = m['patient'];
