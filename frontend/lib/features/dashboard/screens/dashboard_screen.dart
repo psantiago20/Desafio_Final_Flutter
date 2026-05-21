@@ -46,6 +46,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   static const Color _primaryContainer = Color(0xFF0052CC);
   static const Color _primaryFixed = Color(0xFFDAE2FF);
   static const Color _onPrimaryFixed = Color(0xFF001947);
+  static const Color _secondaryFixed = Color(0xFFD9E2FF);
+  static const Color _onSecondaryFixed = Color(0xFF001947);
+  static const Color _tertiaryFixed = Color(0xFFFFDBCF);
   static const Color _tertiary = Color(0xFF7B2600);
 
   @override
