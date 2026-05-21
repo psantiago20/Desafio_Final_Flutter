@@ -85,10 +85,10 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     # Se for paciente, vincula ou cria perfil de paciente
     elif user.role == "patient":
         from app.models.patient import Patient
-        from app.utils.phone_utils import find_patient_by_messaging_phone
+        from app.utils.phone_utils import find_patient_by_exact_messaging_phone
         
         # Tenta localizar paciente pré-existente (ex: vindo do WhatsApp)
-        existing_patient = find_patient_by_messaging_phone(db, phone_clean)
+        existing_patient = find_patient_by_exact_messaging_phone(db, phone_clean)
         
         if existing_patient:
             # Vincula o usuário ao paciente existente

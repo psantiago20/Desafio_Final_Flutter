@@ -51,12 +51,12 @@ def get_my_patient_profile(
     
     if not patient:
         print(f"[DEBUG] Creating/Linking patient record for user {current_user.id}")
-        from app.utils.phone_utils import find_patient_by_messaging_phone, digits_only
+        from app.utils.phone_utils import find_patient_by_exact_messaging_phone, digits_only
         
         try:
             # Tenta localizar paciente pré-existente pelo telefone do User
             phone_clean = digits_only(current_user.phone) if current_user.phone else None
-            patient = find_patient_by_messaging_phone(db, phone_clean) if phone_clean else None
+            patient = find_patient_by_exact_messaging_phone(db, phone_clean) if phone_clean else None
             
             if patient:
                 # Vincula paciente órfão ao usuário logado
@@ -164,12 +164,12 @@ def create_patient(
     if current_user.role not in ["admin", "doctor", "receptionist"]:
         raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
-    from app.utils.phone_utils import find_patient_by_messaging_phone
+    from app.utils.phone_utils import find_patient_by_exact_messaging_phone
     
     # Verificar se já existe um paciente com este telefone ou whatsapp
-    existing = find_patient_by_messaging_phone(db, patient.phone)
+    existing = find_patient_by_exact_messaging_phone(db, patient.phone)
     if not existing and patient.whatsapp:
-        existing = find_patient_by_messaging_phone(db, patient.whatsapp)
+        existing = find_patient_by_exact_messaging_phone(db, patient.whatsapp)
         
     if existing:
         raise HTTPException(
