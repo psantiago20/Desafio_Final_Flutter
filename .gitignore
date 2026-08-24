@@ -6,6 +6,7 @@ env/
 .env
 .env.*
 !.env.example
+serviceAccountKey.json
 
 # Python
 __pycache__/
@@ -58,4 +59,37 @@ build/
 
 # Operating System
 .DS_Store
-Thumbs.db
+Thumbs.db
+sqlite3
+*.db
+*.sqlite3
+Thumbs.db
+
+# Project Specific - Logs and Temp
+robocopy_log.txt
+*.log
+backend/backend_logs.txt
+backend_debug.log
+mcp_config.json
+backend/scripts/test_payload.json
+
+# Scratch directory (ignore contents but keep folder)
+scratch/*
+!scratch/.gitkeep
+
+# Development and Debug Utilities
+backend/scratch/
+backend/static/exams/
+scratch/
+brain/
+agents/
+diff_*.txt
+tmp_*.*
+changes.zip
+
+# Ignorar templates visuais
+docs/templates-sua-consulta/
+
+# Test credentials documentation
+credentials_test.md
+

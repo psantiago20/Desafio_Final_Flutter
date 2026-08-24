@@ -1,0 +1,71 @@
+import 'package:frontend/core/constants/app_constants.dart';
+import 'package:frontend/core/network/api_client.dart';
+import 'package:frontend/core/utils/token_storage.dart';
+import 'package:frontend/shared/models/user_model.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+class AuthRepository {
+  Future<UserModel> login(String username, String password) async {
+    final data = await ApiClient.postForm(AppConstants.loginEndpoint, {
+      'username': username,
+      'password': password,
+    });
+
+    final token = data['access_token'] as String;
+    TokenStorage.saveToken(token);
+    ApiClient.setToken(token);
+
+    try {
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken != null) {
+        await ApiClient.patch('/api/auth/fcm-token', {'fcm_token': fcmToken});
+      }
+    } catch (_) {}
+
+    final user = await getMe();
+    return user;
+  }
+
+  Future<UserModel> register({
+    required String email,
+    required String username,
+    required String password,
+    required String phone,
+    String? fullName,
+    String role = 'doctor',
+    String? crm,
+    String? specialty,
+  }) async {
+    final data = await ApiClient.post(AppConstants.registerEndpoint, {
+      'email': email,
+      'username': username,
+      'password': password,
+      'phone': phone,
+      'full_name': ?fullName,
+      'role': role,
+      'crm': ?crm,
+      'specialty': ?specialty,
+    });
+
+    return UserModel.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<UserModel> getMe() async {
+    final data = await ApiClient.get(AppConstants.meEndpoint);
+    final user = UserModel.fromJson(data as Map<String, dynamic>);
+    TokenStorage.saveUser(user.toJson());
+    return user;
+  }
+
+  void logout() {
+    TokenStorage.clear();
+    ApiClient.clearToken();
+  }
+
+  Future<void> refreshToken() async {
+    final data = await ApiClient.post('/api/auth/refresh', {});
+    final token = data['access_token'] as String;
+    TokenStorage.saveToken(token);
+    ApiClient.setToken(token);
+  }
+}

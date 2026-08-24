@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html class="light" lang="pt-BR">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Sua Consulta</title>
+  
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Sua Consulta - Sanctuary Clinic">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Sua Consulta">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="manifest" href="manifest.json">
+
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  
+  <style>
+    body {
+      background-color: #f7f9fb;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    #loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Manrope', sans-serif;
+      color: #003d9b;
+      font-size: 24px;
+      font-weight: 800;
+      z-index: -1;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Carregando Sua Consulta...</div>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

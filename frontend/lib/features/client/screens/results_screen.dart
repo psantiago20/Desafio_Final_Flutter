@@ -1,0 +1,471 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/exams_provider.dart';
+import '../../appointments/providers/appointments_live_sync.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/custom_app_bar.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+
+
+/// Results Screen (Exams)
+/// Responsabilidade: flutter-frontend-agent
+/// Exibe lista de exames com status, resultados e alertas.
+class ResultsScreen extends ConsumerStatefulWidget {
+  final int? patientId;
+  const ResultsScreen({super.key, this.patientId});
+
+  @override
+  ConsumerState<ResultsScreen> createState() => _ResultsScreenState();
+}
+
+class _ResultsScreenState extends ConsumerState<ResultsScreen> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  Future<void> _fetchExams() async {
+    ref.invalidate(examsListProvider(widget.patientId));
+  }
+
+  Future<void> _deleteExam(int examId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir Exame'),
+        content: const Text(
+          'Tem certeza que deseja remover este exame? Esta ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.alertRed),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await ApiClient.delete('${AppConstants.examsEndpoint}/$examId');
+      _fetchExams();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Exame removido com sucesso')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao remover exame: $e')));
+      }
+    }
+  }
+
+  void _showFilePopup(Map<String, dynamic> exam) {
+    final url = exam['exam_url'] as String?;
+    final title = exam['title'] as String? ?? 'Exame';
+    if (url == null) return;
+
+    // Garantir que a URL está completa e tratar IPs de emulador legados
+    String fullUrl = url;
+    if (url.contains('10.0.2.2:8000')) {
+      fullUrl = url.replaceAll('http://10.0.2.2:8000', AppConstants.baseUrl);
+    } else if (!url.startsWith('http')) {
+      final cleanUrl = url.startsWith('/') ? url : '/$url';
+      fullUrl = '${AppConstants.baseUrl}$cleanUrl';
+    }
+
+    final isImage = fullUrl.toLowerCase().contains('.png') || 
+                  fullUrl.toLowerCase().contains('.jpg') || 
+                  fullUrl.toLowerCase().contains('.jpeg');
+
+    int rotationTurns = 0;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title, 
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.rotate_right),
+                  onPressed: () => setDialogState(() => rotationTurns = (rotationTurns + 1) % 4),
+                  tooltip: 'Girar 90°',
+                ),
+              ],
+            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            content: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.9,
+              height: MediaQuery.of(context).size.height * 0.7,
+              child: Column(
+                children: [
+                  if (isImage)
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Stack(
+                            children: [
+                              InteractiveViewer(
+                                minScale: 0.5,
+                                maxScale: 5.0,
+                                child: Center(
+                                  child: RotatedBox(
+                                    quarterTurns: rotationTurns,
+                                    child: Image.network(
+                                      fullUrl,
+                                      fit: BoxFit.contain,
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return const Center(child: CircularProgressIndicator());
+                                      },
+                                      errorBuilder: (context, error, stackTrace) => const Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.error_outline, color: AppTheme.alertRed, size: 40),
+                                            SizedBox(height: 8),
+                                            Text('Erro ao carregar imagem', textAlign: TextAlign.center),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'Dica: Use pinça para Zoom',
+                                    style: TextStyle(color: Colors.white, fontSize: 10),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    const Expanded(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.insert_drive_file, size: 80, color: AppTheme.primaryBlue),
+                            SizedBox(height: 16),
+                            Text(
+                              'Este arquivo não pode ser visualizado diretamente.',
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                        label: const Text('Fechar'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          final uri = Uri.parse(fullUrl);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        icon: const Icon(Icons.download),
+                        label: const Text('Abrir/Baixar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    ref.watch(appointmentsLiveSyncProvider);
+    final examsAsync = ref.watch(examsListProvider(widget.patientId));
+    final filteredExams = ref.watch(filteredExamsProvider(widget.patientId));
+
+    if (kIsWeb) {
+      return _buildWeb(examsAsync, filteredExams);
+    }
+    return _buildMobile(examsAsync, filteredExams);
+  }
+
+  Widget _buildWeb(AsyncValue<List<Map<String, dynamic>>> examsAsync, List<Map<String, dynamic>> filteredExams) {
+    return Scaffold(
+      appBar: kIsWeb ? null : CustomAppBar(
+        subtitle: 'Seus Resultados',
+        showProfileButton: false,
+        leading: widget.patientId != null 
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () => context.pop(),
+            )
+          : null,
+      ),
+      body: Container(
+        decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),
+        child: examsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Center(child: Text('Erro: $err')),
+          data: (_) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
+                  // Lista de Exames
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16.0),
+                      itemCount: filteredExams.length,
+                      itemBuilder: (context, index) {
+                        return _buildExamCard(filteredExams[index]);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _fetchExams,
+        child: const Icon(Icons.refresh),
+      ),
+    );
+  }
+
+  Widget _buildMobile(AsyncValue<List<Map<String, dynamic>>> examsAsync, List<Map<String, dynamic>> filteredExams) {
+    return Scaffold(
+      appBar: kIsWeb ? null : CustomAppBar(
+        subtitle: 'Seus Resultados',
+        showProfileButton: false,
+        leading: widget.patientId != null
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () => context.pop(),
+            )
+          : null,
+      ),
+      body: Container(
+        decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),
+        child: examsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Center(child: Text('Erro: $err')),
+          data: (_) => filteredExams.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.biotech_outlined,
+                          size: 64,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.3)),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Nenhum exame encontrado.',
+                        style: GoogleFonts.dmSans(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: filteredExams.length,
+                  itemBuilder: (context, index) => _buildExamCard(filteredExams[index]),
+                ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _fetchExams,
+        child: const Icon(Icons.refresh),
+      ),
+    );
+  }
+
+  Widget _buildExamCard(Map<String, dynamic> exam) {
+    final examUrl = exam['exam_url'] as String?;
+    final hasFile = examUrl != null && examUrl.isNotEmpty;
+
+    DateTime? date;
+    try {
+      date = DateTime.parse(exam['created_at'] as String);
+    } catch (_) {}
+    final dateStr = date != null
+        ? DateFormat('dd/MM/yyyy HH:mm').format(date)
+        : '—';
+    final title = exam['title'] as String? ?? 'Exame';
+
+    return Card(
+      color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: Theme.of(context).colorScheme.outline,
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.assignment,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        dateStr,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: AppTheme.alertRed,
+                  ),
+                  onPressed: () => _deleteExam(exam['id'] as int),
+                  tooltip: 'Remover exame',
+                ),
+              ],
+            ),
+            if (widget.patientId != null && exam['summary'] != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.analytics_outlined, size: 14, color: AppColors.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Análise Médica',
+                          style: GoogleFonts.dmSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      exam['summary'],
+                      style: GoogleFonts.dmSans(
+                        fontSize: 13,
+                        color: AppColors.textPrimary,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (hasFile) ...[
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () => _showFilePopup(exam),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Ver Arquivo Original'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
