@@ -1,4 +1,5 @@
 # 🏥 OmniConnect - Gestão Inteligente de Saúde
+## Aplicativo: Sua Consulta
 
 Este repositório contém uma plataforma Full Stack (FastAPI + Flutter) com integração de IA para saúde.
 
@@ -12,7 +13,7 @@ _Se você é um agente de IA, siga este fluxo para colocar o projeto no ar:_
 2.  **Configurar Env:** Você precisará de DOIS arquivos `.env`:
     - `/.env` (na raiz do projeto): Usado pelo Docker e Backend.
     - `/frontend/assets/.env` (dentro da pasta do Flutter): Usado pelo app mobile/web.
-    - Certifique-se de que a `NVIDIA_API_KEY` existe no arquivo da raiz.
+    - Certifique-se de que a `NVIDIA_API_KEY` ou `GROQ_API_KEY` existe no arquivo da raiz.
 3.  **Deploy Backend:** Execute `docker compose up -d --build`.
 4.  **Init DB:** Aguarde o container `omniconnect-db` estar `healthy`, então rode:
     - `docker compose exec backend python scripts/create_tables.py`
@@ -40,7 +41,7 @@ docker compose exec backend python scripts/seed_test_users.py
 
 ## ⚙️ 2. Variáveis de Ambiente (.env)
 
-O projeto utiliza **dois arquivos `.env`** para separar as configurações de infraestrutura das configurações do aplicativo.
+O projeto utiliza variáveis de ambiente para infraestrutura e aplicativo.
 
 ### 1. `.env` na Raiz (Backend & Docker)
 Local: `/.env`
@@ -50,6 +51,7 @@ Crie este arquivo na raiz do projeto. Ele é usado pelo Docker Compose e pelo co
 ```env
 # --- [ BACKEND & DOCKER ] ---
 NVIDIA_API_KEY=sua_chave_nvapi_aqui
+GROQ_API_KEY=sua_chave_groq_aqui
 SECRET_KEY=uma_chave_secreta_aleatoria
 DEBUG=True
 POSTGRES_USER=omniconnect
@@ -90,6 +92,8 @@ flutter run -d windows # Windows (se estiver no Windows)
 ```
 
 ---
+
+## 👥 4. Credenciais de Teste
 
 | Usuário       | Login            | Senha      |
 | :------------ | :--------------- | :--------- |
