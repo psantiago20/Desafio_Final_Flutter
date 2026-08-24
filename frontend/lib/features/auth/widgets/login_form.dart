@@ -17,7 +17,7 @@ class LoginForm extends StatefulWidget {
 }
 
 class _LoginFormState extends State<LoginForm> {
-  final emailController = TextEditingController();
+  final usernameController = TextEditingController();
   final passwordController = TextEditingController();
 
   bool showPassword = false;
@@ -31,9 +31,9 @@ class _LoginFormState extends State<LoginForm> {
           const SizedBox(height: 40),
 
           _input(
-            "Email",
-            controller: emailController,
-            hint: "exemplo@email.com",
+            "Usuário",
+            controller: usernameController,
+            hint: "seu_usuario",
           ),
 
           const SizedBox(height: 15),
@@ -58,7 +58,7 @@ class _LoginFormState extends State<LoginForm> {
           const SizedBox(height: 25),
 
           _button("Entrar", () {
-            widget.onLogin(emailController.text.trim(), passwordController.text);
+            widget.onLogin(usernameController.text.trim(), passwordController.text);
           }),
 
 

@@ -16,6 +16,7 @@ import 'package:frontend/features/patients/screens/patients_screen.dart';
 import 'package:frontend/features/dashboard/screens/financial_screen.dart';
 import 'package:frontend/features/dashboard/widgets/doctor_sidebar.dart';
 import 'package:frontend/shared/models/appointment_model.dart';
+import 'package:frontend/core/theme/theme_provider.dart';
 
 import 'package:frontend/shared/models/dashboard_stats_model.dart';
 
@@ -46,10 +47,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   static const Color _primaryContainer = Color(0xFF0052CC);
   static const Color _primaryFixed = Color(0xFFDAE2FF);
   static const Color _onPrimaryFixed = Color(0xFF001947);
-  static const Color _secondaryFixed = Color(0xFF86F8C8);
-  static const Color _onSecondaryFixed = Color(0xFF007352);
-  static const Color _tertiaryFixed = Color(0xFFFFDBCF);
   static const Color _tertiary = Color(0xFF7B2600);
+  static const Color _secondaryFixed = Color(0xFFDCFCE7);
+  static const Color _onSecondaryFixed = Color(0xFF16A34A);
+  static const Color _tertiaryFixed = Color(0xFFFFEDD5);
 
   @override
   Widget build(BuildContext context) {
@@ -222,9 +223,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           slivers: [
             SliverPadding(
               padding: EdgeInsets.only(
-                top: 24, // Reduzido de 88 porque a topbar não é mais flutuante
-                left: isDesktop ? 40 : 24,
-                right: isDesktop ? 40 : 24,
+                top: 24, // Reduced from 88 because topbar is not floating
+                left: isDesktop ? 40 : 16,
+                right: isDesktop ? 40 : 16,
                 bottom: 32,
               ),
               sliver: SliverList(
@@ -259,8 +260,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               SliverPadding(
                 padding: EdgeInsets.only(
                   top: 88, // Space for Topbar
-                  left: isDesktop ? 40 : 24,
-                  right: isDesktop ? 40 : 24,
+                  left: isDesktop ? 40 : 16,
+                  right: isDesktop ? 40 : 16,
                   bottom: 32,
                 ),
                 sliver: SliverList(
@@ -349,18 +350,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_none, color: _onSurfaceVariant),
-                onPressed: () {},
-                splashRadius: 24,
-              ),
               if (isDesktop) ...[
-                const SizedBox(width: 12),
-                Container(
-                  height: 32,
-                  width: 1,
-                  color: _surfaceLow,
-                ),
                 const SizedBox(width: 16),
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -391,14 +381,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     'https://lh3.googleusercontent.com/aida-public/AB6AXuBMX8qlX31tB6vkWfy_Zz-DK7twmO-VbFYtoyB5j8UDVKZ8D88EimlpADyfRtIAgT2O3fMAQKXJNaxlYXtyu9xzGF44bhGsrQPK54IjC5DDKun9ckp6-apH2R4twR__qvRKQL5EnICUTT-j8D_4TV2qjebNQTzUmdBaAHUCc805lh7ECpR2Y8fyWpXG6HQhA7fj-3EaVFo3c-bA5Q8YRjViPHJQw3cWNts03GDr77XPBIKhV1DwBmzTCWA2QvN84dviwb16MHYOFdg',
                   ),
                 ),
-              ] else
-                IconButton(
-                  icon: const Icon(Icons.logout, color: _onSurfaceVariant),
-                  onPressed: () {
-                    ref.read(authProvider.notifier).logout();
-                    context.go('/login');
-                  },
-                ),
+              ],
             ],
           ),
         ],
@@ -416,27 +399,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Olá, ${name}.',
-              style: GoogleFonts.manrope(
-                fontSize: 36,
-                fontWeight: FontWeight.w800,
-                color: _onSurface,
-                letterSpacing: -1,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Olá, ${name}.',
+                style: GoogleFonts.manrope(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w800,
+                  color: _onSurface,
+                  letterSpacing: -1,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              dateStr,
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                color: _onSurfaceVariant,
+              const SizedBox(height: 4),
+              Text(
+                dateStr,
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  color: _onSurfaceVariant,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -637,7 +622,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final showChipsInline = screenWidth >= 1100;
 
     return Container(
-      padding: EdgeInsets.all(isDesktop ? 32 : 24),
+      padding: EdgeInsets.all(isDesktop ? 32 : 16),
       decoration: BoxDecoration(
         color: _surfaceLow,
         borderRadius: BorderRadius.circular(24),
@@ -818,7 +803,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
-        padding: EdgeInsets.all(useDesktopLayout ? 24 : 16),
+        padding: EdgeInsets.all(useDesktopLayout ? 24 : 12),
         decoration: BoxDecoration(
           color: _surface,
           borderRadius: BorderRadius.circular(16),
@@ -834,7 +819,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: useDesktopLayout ? 16 : 12, vertical: 12),
             decoration: BoxDecoration(
               color: isCompleted ? _surfaceHigh : _primaryFixed.withOpacity(0.3),
               borderRadius: BorderRadius.circular(12),
@@ -860,7 +845,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 24),
+          SizedBox(width: useDesktopLayout ? 24 : 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -874,46 +859,60 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 4,
                   children: [
-                    Icon(Icons.schedule, size: 16, color: _onSurfaceVariant.withOpacity(isCompleted ? 0.7 : 1)),
-                    const SizedBox(width: 4),
-                    Text(
-                      timeFmt.format(appointment.appointmentDate),
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: _onSurfaceVariant.withOpacity(isCompleted ? 0.7 : 1),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Icon(Icons.timer_outlined, size: 16, color: _onSurfaceVariant.withOpacity(isCompleted ? 0.7 : 1)),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${appointment.durationMinutes} min',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: _onSurfaceVariant.withOpacity(isCompleted ? 0.7 : 1),
-                      ),
-                    ),
-                    if (useDesktopLayout) ...[
-                      const SizedBox(width: 16),
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: _outlineVariant,
-                          shape: BoxShape.circle,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.schedule, size: 16, color: _onSurfaceVariant.withOpacity(isCompleted ? 0.7 : 1)),
+                        const SizedBox(width: 4),
+                        Text(
+                          timeFmt.format(appointment.appointmentDate),
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: _onSurfaceVariant.withOpacity(isCompleted ? 0.7 : 1),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Text(
-                        'Consulta',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: _onSurfaceVariant.withOpacity(isCompleted ? 0.7 : 1),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.timer_outlined, size: 16, color: _onSurfaceVariant.withOpacity(isCompleted ? 0.7 : 1)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${appointment.durationMinutes} min',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: _onSurfaceVariant.withOpacity(isCompleted ? 0.7 : 1),
+                          ),
                         ),
+                      ],
+                    ),
+                    if (useDesktopLayout)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 4,
+                            height: 4,
+                            decoration: const BoxDecoration(
+                              color: _outlineVariant,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Text(
+                            'Consulta',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: _onSurfaceVariant.withOpacity(isCompleted ? 0.7 : 1),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
                   ],
                 ),
               ],

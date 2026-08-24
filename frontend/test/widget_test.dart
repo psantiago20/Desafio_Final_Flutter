@@ -20,6 +20,7 @@ void main() {
             appBar: CustomAppBar(
               subtitle: testSubtitle,
               showProfileButton: false,
+              showThemeButton: true,
             ),
           ),
         ),

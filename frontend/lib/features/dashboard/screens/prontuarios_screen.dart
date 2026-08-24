@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import '../../client/providers/patient_provider.dart';
 import '../../../shared/models/patient_model.dart';
+import 'package:frontend/core/theme/theme_provider.dart';
 
 class ProntuariosScreen extends ConsumerStatefulWidget {
   const ProntuariosScreen({super.key});

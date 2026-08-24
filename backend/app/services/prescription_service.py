@@ -36,16 +36,18 @@ class PrescriptionService:
                 
                 <div style="padding: 40px;">
                     <!-- Header -->
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 1px solid #f1f5f9; padding-bottom: 30px;">
-                        <div>
-                            <h2 style="margin: 0; color: #1e3a8a; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">OmniConnect</h2>
-                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">Intelligent Healthcare</p>
-                        </div>
-                        <div style="text-align: right;">
-                            <h3 style="margin: 0; color: #1e293b; font-size: 18px; font-weight: 700;">{doctor_name}</h3>
-                            <p style="margin: 4px 0 0 0; color: #3b82f6; font-size: 14px; font-weight: 600;">{doc_reg_label} {doc_reg_value}</p>
-                        </div>
-                    </div>
+                    <table width="100%" style="margin-bottom: 40px; border-bottom: 1px solid #f1f5f9; padding-bottom: 30px; border-collapse: collapse;">
+                        <tr>
+                            <td style="vertical-align: top;">
+                                <h2 style="margin: 0; color: #1e3a8a; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">OmniConnect</h2>
+                                <p style="margin: 4px 0 0 0; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">Intelligent Healthcare</p>
+                            </td>
+                            <td style="vertical-align: top; text-align: right; width: 45%;">
+                                <h3 style="margin: 0; color: #1e293b; font-size: 16px; font-weight: 700;">{doctor_name}</h3>
+                                <p style="margin: 4px 0 0 0; color: #3b82f6; font-size: 12px; font-weight: 600;">{doc_reg_label} {doc_reg_value}</p>
+                            </td>
+                        </tr>
+                    </table>
 
                     <!-- Title -->
                     <div style="text-align: center; margin-bottom: 40px;">
@@ -92,17 +94,19 @@ class PrescriptionService:
                     </div>
 
                     <!-- Signature Section -->
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 30px; border-top: 2px solid #f1f5f9;">
-                        <div style="text-align: center;">
-                            <img src="{qr_code_url}" style="width: 100px; height: 100px; padding: 6px; border: 1px solid #e2e8f0; border-radius: 12px; background: white;" alt="QR Code">
-                            <p style="margin: 8px 0 0 0; font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Assinatura Digital</p>
-                        </div>
-                        <div style="text-align: right; width: 300px;">
-                            <div style="border-top: 2px solid #1e3a8a; margin-bottom: 10px;"></div>
-                            <p style="margin: 0; font-size: 18px; font-weight: 700; color: #1e293b;">{doctor_name}</p>
-                            <p style="margin: 2px 0 0 0; font-size: 13px; color: #64748b; font-weight: 500;">{doc_reg_label} {doc_reg_value}</p>
-                        </div>
-                    </div>
+                    <table width="100%" style="margin-top: 30px; border-top: 2px solid #f1f5f9; padding-top: 30px; border-collapse: collapse;">
+                        <tr>
+                            <td style="vertical-align: bottom; width: 120px; text-align: center;">
+                                <img src="{qr_code_url}" style="width: 100px; height: 100px; padding: 6px; border: 1px solid #e2e8f0; border-radius: 12px; background: white;" alt="QR Code">
+                                <p style="margin: 8px 0 0 0; font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Assinatura Digital</p>
+                            </td>
+                            <td style="vertical-align: bottom; text-align: right;">
+                                <div style="border-top: 2px solid #1e3a8a; margin-bottom: 10px; display: inline-block; width: 80%;"></div>
+                                <p style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;">{doctor_name}</p>
+                                <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b; font-weight: 500;">{doc_reg_label} {doc_reg_value}</p>
+                            </td>
+                        </tr>
+                    </table>
                 </div>
 
                 <!-- Footer -->

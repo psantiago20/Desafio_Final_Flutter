@@ -76,6 +76,7 @@ class AgendaScreen extends ConsumerWidget {
     return Scaffold(
       appBar: kIsWeb ? null : const CustomAppBar(
         subtitle: 'Minhas Consultas',
+        showProfileButton: false,
         actions: [
           Icon(Icons.add_circle, color: AppTheme.primaryBlue, size: 32),
           SizedBox(width: 16),

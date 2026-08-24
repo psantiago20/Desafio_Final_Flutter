@@ -908,7 +908,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       appBar: const CustomAppBar(
         subtitle: 'Sua Saúde em um só lugar',
-        showProfileButton: true,
+        showProfileButton: false,
       ),
       body: Container(
         decoration: BoxDecoration(gradient: AppTheme.getBackgroundGradient(context)),

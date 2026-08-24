@@ -21,12 +21,14 @@ class ContentModerationService:
                 temperature=0.0,
                 max_tokens=150
             )
-        else:
+        elif settings.NVIDIA_API_KEY:
             self.llm = ChatNVIDIA(
                 model="meta/llama-3.1-8b-instruct",
                 nvidia_api_key=settings.NVIDIA_API_KEY,
                 temperature=0.0
             )
+        else:
+            self.llm = None
 
         # Vision Model para Imagens
         self.vision_model = ChatNVIDIA(
@@ -64,7 +66,25 @@ class ContentModerationService:
 
         try:
             logger.info("[Moderation] Iniciando moderação de texto...")
-            response = self.llm.invoke([HumanMessage(content=prompt)])
+            response = None
+            try:
+                if self.llm:
+                    response = self.llm.invoke([HumanMessage(content=prompt)])
+            except Exception as e_primary:
+                logger.warning(f"[Moderation] Falha no modelo primário: {e_primary}. Tentando fallback...")
+                if settings.NVIDIA_API_KEY:
+                    fallback_llm = ChatNVIDIA(
+                        model="meta/llama-3.1-8b-instruct",
+                        nvidia_api_key=settings.NVIDIA_API_KEY,
+                        temperature=0.0
+                    )
+                    response = fallback_llm.invoke([HumanMessage(content=prompt)])
+                else:
+                    raise e_primary
+
+            if not response:
+                return True, None
+
             content = response.content.replace("```json", "").replace("```", "").strip()
             
             # Tentar decodificar JSON

@@ -13,6 +13,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget>? actions;
   final PreferredSizeWidget? bottom;
   final bool showProfileButton;
+  final bool showThemeButton;
   final Widget? leading;
   final bool showMenuButton;
 
@@ -22,6 +23,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
     this.bottom,
     this.showProfileButton = true,
+    this.showThemeButton = false,
     this.leading,
     this.showMenuButton = false,
   });
@@ -64,48 +66,53 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         children: [
           const AppLogo(showText: false, iconSize: 22),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Sua Consulta',
-                style: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white
-                      : Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  letterSpacing: 0.5,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Sua Consulta',
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    letterSpacing: 0.5,
+                  ),
                 ),
-              ),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 1.0,
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 1.0,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
       actions: [
         ...?actions,
-        Consumer(
-          builder: (context, ref, child) {
-            final isDark = ref.watch(themeProvider) == ThemeMode.dark;
-            return IconButton(
-              icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
-              color: Theme.of(context).colorScheme.primary,
-              onPressed: () {
-                ref.read(themeProvider.notifier).toggleTheme();
-              },
-            );
-          },
-        ),
+        if (showThemeButton)
+          Consumer(
+            builder: (context, ref, child) {
+              final isDark = ref.watch(themeProvider) == ThemeMode.dark;
+              return IconButton(
+                icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+                color: Theme.of(context).colorScheme.primary,
+                onPressed: () {
+                  ref.read(themeProvider.notifier).toggleTheme();
+                },
+              );
+            },
+          ),
         if (showProfileButton)
           IconButton(
             icon: const Icon(Icons.person_outline),

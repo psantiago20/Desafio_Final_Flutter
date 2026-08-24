@@ -128,10 +128,13 @@ def edit_record(table: str, item_id: int, payload: EditPayload, db: Session = De
         if table == "usuarios":
             item = db.query(User).filter(User.id == item_id).first()
             if not item: raise HTTPException(status_code=404, detail="Usuário não encontrado")
-            if "full_name" in payload.data: item.full_name = payload.data["full_name"]
-            if "email" in payload.data: item.email = payload.data["email"]
-            if "role" in payload.data: item.role = payload.data["role"]
-            if "is_active" in payload.data: item.is_active = payload.data["is_active"]
+            if "full_name" in payload.data:    item.full_name   = payload.data["full_name"]
+            if "email"      in payload.data:    item.email       = payload.data["email"]
+            if "role"       in payload.data:    item.role        = payload.data["role"]
+            if "is_active" in payload.data:    item.is_active   = payload.data["is_active"]
+            # NOVO CAMPO: username
+            if "username" in payload.data:
+                item.username = payload.data["username"]
         elif table == "medicos":
             item = db.query(Medico).filter(Medico.id == item_id).first()
             if not item: raise HTTPException(status_code=404, detail="Médico não encontrado")

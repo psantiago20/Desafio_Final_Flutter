@@ -4,6 +4,7 @@ import 'package:frontend/core/theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:frontend/core/network/api_client.dart';
 import 'package:frontend/features/auth/providers/auth_provider.dart';
+import 'package:frontend/core/theme/theme_provider.dart';
 import 'dart:async';
 
 class DoctorMessagesScreen extends ConsumerStatefulWidget {
@@ -72,32 +73,6 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
     });
   }
 
-  bool _isAssistantMessage(Map<String, dynamic> message) {
-    final source = message['source'];
-    final waFrom = message['wa_from'];
-    return waFrom == 'isis_ia' ||
-        waFrom == 'system' ||
-        waFrom == 'BOT' ||
-        source == 'system' ||
-        source == 'bot' ||
-        source == 'ai';
-  }
-
-  bool _isDirectDoctorPatientMessage(
-    Map<String, dynamic> message,
-    int? currentUserId,
-  ) {
-    if (_isAssistantMessage(message)) return false;
-
-    final senderId = message['sender_id'];
-    final receiverId = message['receiver_id'];
-    final source = message['source'];
-
-    return source == 'app_doctor' ||
-        senderId == currentUserId ||
-        receiverId == currentUserId;
-  }
-
   Future<void> _loadConversations() async {
     try {
       final response = await ApiClient.get('/api/messages');
@@ -110,11 +85,14 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
       for (final m in msgs) {
         final patientId = m['patient_id'];
         if (patientId != null) {
-          final message = m as Map<String, dynamic>;
-          final source = message['source'];
-          if (patientId != 15 &&
-              !_isDirectDoctorPatientMessage(message, currentUserId)) {
-            continue;
+          final source = m['source'];
+
+          // Para pacientes reais (diferentes da Isis/ID 15), só consideramos mensagens da conversa direta médico-paciente
+          if (patientId != 15) {
+            final isDoctorMessage = m['sender_id'] == currentUserId || source == 'app_doctor';
+            if (!isDoctorMessage) {
+              continue;
+            }
           }
 
           final patient = m['patient'];
@@ -142,13 +120,7 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
           final isFromMe = m['sender_id'] == currentUserId;
           final isRead = m['is_read'] == true;
           
-          if (!isRead &&
-              !isFromMe &&
-              patientId != 15 &&
-              !_isAssistantMessage(message) &&
-              (source == 'app_doctor' ||
-                  source == 'whatsapp' ||
-                  m['sender_id'] != null)) {
+          if (!isRead && !isFromMe) {
             conversations[patientId]!['unreadCount'] = (conversations[patientId]!['unreadCount'] as int) + 1;
           }
         }
@@ -240,14 +212,11 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
       setState(() {
         final filteredMsgs = patientId == 0
             ? msgs
-            : msgs
-                .where(
-                  (m) => _isDirectDoctorPatientMessage(
-                    m as Map<String, dynamic>,
-                    currentUserId,
-                  ),
-                )
-                .toList();
+            : msgs.where((m) {
+                final source = m['source'];
+                final isDoctorMessage = m['sender_id'] == currentUserId || source == 'app_doctor';
+                return isDoctorMessage;
+              }).toList();
 
         _messagesByPatient[patientId] = filteredMsgs.map((m) {
           final content = m['content'];
@@ -256,13 +225,14 @@ class _DoctorMessagesScreenState extends ConsumerState<DoctorMessagesScreen> {
           
           String sender = 'patient';
           final source = m['source'];
-          // Mensagens da Isis/IA: qualquer source de IA, bot, system ou wa_from isis_ia
+          // Mensagens da Isis/IA: qualquer source de IA ou wa_from isis_ia
           final isIsisMessage = waFrom == 'isis_ia' ||
               source == 'system' ||
               source == 'bot' ||
               source == 'ai';
-          // source=app_doctor indica o canal paciente-medico; sender_id indica quem enviou.
+          // Mensagens do médico: enviadas pelo médico logado
           final isDoctorMessage = senderId == currentUserId;
+
           if (isIsisMessage) {
             sender = 'isis';
           } else if (isDoctorMessage) {

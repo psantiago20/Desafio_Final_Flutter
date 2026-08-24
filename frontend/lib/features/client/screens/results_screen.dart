@@ -252,6 +252,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     return Scaffold(
       appBar: kIsWeb ? null : CustomAppBar(
         subtitle: 'Seus Resultados',
+        showProfileButton: false,
         leading: widget.patientId != null 
           ? IconButton(
               icon: const Icon(Icons.arrow_back_ios_new_rounded),
@@ -293,6 +294,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     return Scaffold(
       appBar: kIsWeb ? null : CustomAppBar(
         subtitle: 'Seus Resultados',
+        showProfileButton: false,
         leading: widget.patientId != null
           ? IconButton(
               icon: const Icon(Icons.arrow_back_ios_new_rounded),

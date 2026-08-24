@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,11 +8,17 @@ import 'package:frontend/features/auth/providers/auth_provider.dart';
 import 'package:frontend/shared/widgets/custom_app_bar.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     if (user == null) return const SizedBox.shrink();
 
@@ -19,7 +26,7 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const CustomAppBar(subtitle: 'Meu Perfil', showProfileButton: false),
+      appBar: const CustomAppBar(subtitle: 'Meu Perfil', showProfileButton: false, showThemeButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -96,24 +103,26 @@ class ProfileScreen extends ConsumerWidget {
 
             const SizedBox(height: 20),
 
-            // Ações
-            _ActionCard(
-              items: [
-                _ActionItem(
-                  icon: Icons.calendar_month_outlined,
-                  label: 'Minhas consultas',
-                  onTap: () => context.go('/appointments'),
+            // ── Sair — só visível no app mobile (web tem o menu lateral) ──────
+            if (!kIsWeb) ...[
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.logout_rounded, size: 20),
+                  label: const Text('Sair da conta'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.cancelled,
+                    side: const BorderSide(color: AppColors.cancelled),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: () => _confirmLogout(context),
                 ),
-                _ActionItem(
-                  icon: Icons.bar_chart_rounded,
-                  label: 'Dashboard',
-                  onTap: () => context.go('/dashboard'),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
+              ),
+              const SizedBox(height: 16),
+            ],
 
             const SizedBox(height: 32),
           ],
@@ -132,6 +141,42 @@ class ProfileScreen extends ConsumerWidget {
         return 'Recepcionista';
       default:
         return role;
+    }
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.logout_rounded, color: AppColors.cancelled, size: 24),
+            const SizedBox(width: 12),
+            const Text('Sair da conta'),
+          ],
+        ),
+        content: const Text(
+            'Tem certeza que deseja sair? Você precisará fazer login novamente.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.cancelled),
+            child: Text(
+              'Sair',
+              style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      ref.read(authProvider.notifier).logout();
+      if (mounted) context.go('/login');
     }
   }
 }
