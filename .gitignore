@@ -80,6 +80,12 @@ scratch/*
 # Development and Debug Utilities
 backend/scratch/
 backend/static/exams/
+scratch/
+brain/
+agents/
+diff_*.txt
+tmp_*.*
+changes.zip
 
 # Ignorar templates visuais
 docs/templates-sua-consulta/
